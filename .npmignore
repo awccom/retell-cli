@@ -39,7 +39,7 @@ node_modules/
 .env
 .env.*
 
-# Documentation (keep only README in package)
+# Documentation (keep README and CHANGELOG in package)
 CONTRIBUTING.md
 PHASE-*.md
 

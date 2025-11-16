@@ -29,7 +29,7 @@ Verify installation:
 
 ```bash
 retell --version
-# Output: 0.1.0
+# Output: 1.0.0
 ```
 
 ### Using npx (No Installation)

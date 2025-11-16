@@ -1,7 +1,7 @@
 # Shell Compatibility Report
 
 **CLI:** Retell AI CLI
-**Version:** 0.1.0
+**Version:** 1.0.0
 **Test Date:** 2025-11-15
 **Tested On:** Linux (CachyOS)
 
@@ -24,7 +24,7 @@ The Retell CLI has been tested across **bash**, **zsh**, and **fish** shells and
 
 **Test Commands:**
 ```bash
-bash -c "./dist/index.js --version"      # ✅ Output: 0.1.0
+bash -c "./dist/index.js --version"      # ✅ Output: 1.0.0
 bash -lc "./dist/index.js --help"        # ✅ Works correctly
 bash -c "./dist/index.js agents --help"   # ✅ Shows agents help
 ```
@@ -44,7 +44,7 @@ bash -c "./dist/index.js agents --help"   # ✅ Shows agents help
 
 **Test Commands:**
 ```zsh
-zsh -c "./dist/index.js --version"       # ✅ Output: 0.1.0
+zsh -c "./dist/index.js --version"       # ✅ Output: 1.0.0
 zsh -lc "./dist/index.js --help"         # ✅ Works correctly
 zsh -c "./dist/index.js prompts --help"   # ✅ Shows prompts help
 ```
@@ -64,7 +64,7 @@ zsh -c "./dist/index.js prompts --help"   # ✅ Shows prompts help
 
 **Test Commands:**
 ```fish
-fish -c "./dist/index.js --version"      # ✅ Output: 0.1.0
+fish -c "./dist/index.js --version"      # ✅ Output: 1.0.0
 fish -c "./dist/index.js --help"         # ✅ Works correctly
 fish -c "./dist/index.js transcripts --help"  # ✅ Shows transcripts help
 ```
@@ -97,7 +97,7 @@ head -1 dist/index.js
 
 chmod +x dist/index.js
 ./dist/index.js --version
-# Output: 0.1.0
+# Output: 1.0.0
 ```
 
 ---

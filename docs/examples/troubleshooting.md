@@ -646,7 +646,7 @@ When reporting a bug, include:
 ```markdown
 ## Bug Report
 
-**CLI Version:** 0.1.0
+**CLI Version:** 1.0.0
 **Node Version:** v18.0.0
 **OS:** Linux 6.17.7-4-cachyos
 **Shell:** /usr/bin/fish
