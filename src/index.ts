@@ -12,6 +12,8 @@ import { loginCommand } from './commands/login';
 import { listTranscriptsCommand } from './commands/transcripts/list';
 import { getTranscriptCommand } from './commands/transcripts/get';
 import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
+import { listAgentsCommand } from './commands/agents/list';
+import { agentInfoCommand } from './commands/agents/info';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -76,17 +78,18 @@ const agents = program
 agents
   .command('list')
   .description('List all agents')
-  .action(() => {
-    console.log('Agents list command - to be implemented in Phase 4');
-    process.exit(0);
+  .option('-l, --limit <number>', 'Maximum number of agents to return', '100')
+  .action(async (options) => {
+    await listAgentsCommand({
+      limit: parseInt(options.limit, 10),
+    });
   });
 
 agents
   .command('info <agent_id>')
   .description('Get agent information')
-  .action((agentId) => {
-    console.log(`Agents info command for ${agentId} - to be implemented in Phase 4`);
-    process.exit(0);
+  .action(async (agentId) => {
+    await agentInfoCommand(agentId);
   });
 
 // Prompts commands (Phase 5)
