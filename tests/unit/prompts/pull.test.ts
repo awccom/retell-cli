@@ -347,6 +347,230 @@ describe('Prompts Pull Command', () => {
     });
   });
 
+  describe('Agent ID Validation', () => {
+    it('should reject agent ID with path traversal (..)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      await pullPromptsCommand('../malicious-agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should reject agent ID with forward slash', async () => {
+      await pullPromptsCommand('path/to/agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should reject agent ID with backslash', async () => {
+      await pullPromptsCommand('path\\to\\agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('Directory Creation Errors', () => {
+    it('should handle permission denied error (EACCES)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const eaccesError = new Error('Permission denied') as any;
+      eaccesError.code = 'EACCES';
+      mkdirSyncSpy.mockImplementationOnce(() => {
+        throw eaccesError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('Permission denied'),
+        'PERMISSION_DENIED'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle no space left error (ENOSPC)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const enospcError = new Error('No space left on device') as any;
+      enospcError.code = 'ENOSPC';
+      mkdirSyncSpy.mockImplementationOnce(() => {
+        throw enospcError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('No space left'),
+        'NO_SPACE'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle generic directory creation error', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const genericError = new Error('Unknown error') as any;
+      mkdirSyncSpy.mockImplementationOnce(() => {
+        throw genericError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to create directory'),
+        'FS_ERROR'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('File Write Errors', () => {
+    it('should handle permission denied when writing files (EACCES)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const eaccesError = new Error('Permission denied') as any;
+      eaccesError.code = 'EACCES';
+      writeFileSyncSpy.mockImplementationOnce(() => {
+        throw eaccesError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('Permission denied writing files'),
+        'PERMISSION_DENIED'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle no space left when writing files (ENOSPC)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const enospcError = new Error('No space left on device') as any;
+      enospcError.code = 'ENOSPC';
+      writeFileSyncSpy.mockImplementationOnce(() => {
+        throw enospcError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('No space left'),
+        'NO_SPACE'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle generic file write error', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      const genericError = new Error('Unknown write error') as any;
+      writeFileSyncSpy.mockImplementationOnce(() => {
+        throw genericError;
+      });
+
+      await pullPromptsCommand('agent-123', {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to write prompt files'),
+        'FS_ERROR'
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
   describe('File Content Verification', () => {
     it('should write metadata with correct structure for retell-llm', async () => {
       const mockPromptSource: promptResolver.PromptSource = {

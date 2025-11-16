@@ -132,6 +132,17 @@ describe('Config Service', () => {
 
       expect(() => getConfig()).toThrow(ConfigError);
     });
+
+    it('should handle generic error when reading config file', () => {
+      delete process.env.RETELL_API_KEY;
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(readFileSync).mockImplementation(() => {
+        throw new Error('Unknown file system error');
+      });
+
+      expect(() => getConfig()).toThrow(Error);
+      expect(() => getConfig()).toThrow('Unknown file system error');
+    });
   });
 
   describe('saveConfig', () => {
@@ -208,6 +219,17 @@ describe('Config Service', () => {
         expect.stringContaining('"defaultFormat": "text"'),
         expect.any(Object)
       );
+    });
+
+    it('should handle generic error during validation', () => {
+      // Create a config that would trigger an unexpected error during validation
+      // This tests the generic error throw in the catch block (lines 135-136)
+      const invalidConfig = {
+        apiKey: 123, // Wrong type - should be string
+        defaultFormat: 'json' as const,
+      };
+
+      expect(() => saveConfig(invalidConfig as any)).toThrow(ConfigError);
     });
   });
 
