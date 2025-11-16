@@ -1,0 +1,37 @@
+# Source files
+src/
+tests/
+scripts/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Configuration
+tsconfig.json
+.gitignore
+.env
+.env.*
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output/
+vitest.config.ts
+
+# Git
+.git/
+.github/
+
+# Misc
+*.log
+.DS_Store
+prd.txt
+.claude/

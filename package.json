@@ -1,0 +1,48 @@
+{
+  "name": "retell-cli",
+  "version": "0.1.0",
+  "description": "Official CLI tool for Retell AI - analyze transcripts and manage agent prompts",
+  "bin": {
+    "retell": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
+    "dev": "npm run build -- --watch",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "keywords": [
+    "retell",
+    "retell-ai",
+    "ai",
+    "voice",
+    "cli",
+    "transcript",
+    "agent",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awccom/retell-cli.git"
+  },
+  "bugs": "https://github.com/awccom/retell-cli/issues",
+  "homepage": "https://github.com/awccom/retell-cli#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "dotenv": "^16.0.0",
+    "retell-sdk": "^4.5.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
