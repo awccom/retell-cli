@@ -12,6 +12,8 @@ import { loginCommand } from './commands/login';
 import { listTranscriptsCommand } from './commands/transcripts/list';
 import { getTranscriptCommand } from './commands/transcripts/get';
 import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
+import { listAgentsCommand } from './commands/agents/list';
+import { agentInfoCommand } from './commands/agents/info';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -49,8 +51,13 @@ transcripts
   .description('List all call transcripts')
   .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
   .action(async (options) => {
+    const limit = parseInt(options.limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      console.error('Error: limit must be a positive number');
+      process.exit(1);
+    }
     await listTranscriptsCommand({
-      limit: parseInt(options.limit, 10),
+      limit,
     });
   });
 
@@ -76,17 +83,23 @@ const agents = program
 agents
   .command('list')
   .description('List all agents')
-  .action(() => {
-    console.log('Agents list command - to be implemented in Phase 4');
-    process.exit(0);
+  .option('-l, --limit <number>', 'Maximum number of agents to return', '100')
+  .action(async (options) => {
+    const limit = parseInt(options.limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      console.error('Error: limit must be a positive number');
+      process.exit(1);
+    }
+    await listAgentsCommand({
+      limit,
+    });
   });
 
 agents
   .command('info <agent_id>')
   .description('Get agent information')
-  .action((agentId) => {
-    console.log(`Agents info command for ${agentId} - to be implemented in Phase 4`);
-    process.exit(0);
+  .action(async (agentId) => {
+    await agentInfoCommand(agentId);
   });
 
 // Prompts commands (Phase 5)
