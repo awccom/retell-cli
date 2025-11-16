@@ -5,6 +5,128 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v1.0.1
+
+### Added - Phase 1: Foundation & Utilities
+
+#### Security
+- Prototype pollution protection in field path handling
+  - Rejects `__proto__`, `constructor`, and `prototype` keys
+  - Prevents object prototype manipulation attacks
+  - Comprehensive test coverage for security scenarios
+
+#### TypeScript Types
+- `DiffResult` and `ChangeDetail` - Types for prompt diffing functionality
+- `HotspotIssue` and `HotspotsResult` - Types for hotspot detection
+- `SearchOptions` and `SearchResult` - Types for search functionality
+- `FieldFilterOptions` and `FilteredResult` - Types for field filtering
+
+#### Utility Functions
+
+**Field Filtering (`src/services/output-formatter.ts`)**
+- `filterFields()` - Filter objects to include only specified fields
+  - Support for dot notation (e.g., `"user.profile.name"`)
+  - Handles nested objects and arrays gracefully
+  - Strict and non-strict modes for error handling
+  - Preserves data types when filtering (including `undefined` and `null`)
+  - Distinguishes between missing fields and `undefined` values
+  - Generic types for improved type inference
+  - Prototype pollution protection
+  - Comprehensive error messages for invalid fields
+
+**Prompt Diffing (`src/services/prompt-diff.ts`)**
+- `generateDiff()` - Compare local and remote prompt versions
+  - Supports retell-llm and conversation-flow agent types
+  - Detects added, removed, and modified fields
+  - Handles deeply nested objects and arrays
+  - Type-safe integration with existing PromptSource types
+  - Uses `microdiff` for reliable, maintained diffing
+  - Preserves primitive types without unnecessary conversion
+- `formatDiffSummary()` - Format diff results as human-readable summary
+
+#### Testing
+- 27 unit tests for `filterFields()` utility
+  - Top-level and nested field selection
+  - Array handling
+  - Invalid field handling (strict and non-strict modes)
+  - Edge cases (null, undefined, empty data)
+  - Real-world scenarios (Retell API objects)
+  - Security: Prototype pollution protection (4 tests)
+  - Undefined vs missing field distinction
+
+- 15 unit tests for `generateDiff()` utility
+  - Retell-LLM prompt changes
+  - Conversation-flow prompt changes
+  - No changes detection
+  - Error handling (type mismatches, custom-llm)
+  - Summary formatting
+
+- 1 helper function test
+  - `hasNestedPath()` with security validation
+
+- **Total: 43 tests passing** ✅
+
+#### Dependencies
+- `microdiff` - For detecting changes in prompt objects
+  - Actively maintained (vs. unmaintained `deep-diff`)
+  - Smaller bundle size
+  - Simpler, more modern API
+  - Better TypeScript support
+
+#### Developer Tools
+- `npm test` - Run all tests once
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Generate coverage report
+
+### Technical Details
+
+**Phase 1** provides foundation utilities that will be used by upcoming features:
+- Field selection (`--fields` flag) - Uses `filterFields()`
+- Raw output mode (`--raw` flag) - Will use field filtering
+- Hotspots detection (`--hotspots-only`) - Will use types and field filtering
+- Search command - Will use SearchOptions types and filtering
+- Diff & dry-run - Uses `generateDiff()` and `formatDiffSummary()`
+
+These utilities are designed to be:
+- **Performant** - Handle large objects efficiently
+- **Type-safe** - Full TypeScript support with generics
+- **Well-tested** - Comprehensive unit test coverage
+- **Documented** - JSDoc comments for all public APIs
+- **Reusable** - Clean, focused functions for multiple use cases
+- **Secure** - Protection against prototype pollution attacks
+
+### Fixed - Phase 1: Code Review Improvements
+
+#### Critical Bug Fixes
+- Fixed index bug in `setNestedValue()` helper function
+  - Was using `keys.indexOf(key)` which returns first occurrence, not current iteration index
+  - Now uses proper loop index variable for correct array/object type detection
+- Fixed undefined value handling in `filterFields()`
+  - Now correctly distinguishes between fields that don't exist vs. fields with `undefined` values
+  - Uses `hasNestedPath()` to check existence before checking value
+  - Preserves `undefined` values in filtered results when field exists
+
+#### Security Fixes
+- Added prototype pollution protection
+  - Validates field paths before processing
+  - Rejects dangerous keys: `__proto__`, `constructor`, `prototype`
+  - Prevents object prototype manipulation attacks
+  - Applies to both `hasNestedPath()` and `setNestedValue()` functions
+
+#### Dependency Updates
+- Replaced `deep-diff` with `microdiff`
+  - `deep-diff` hasn't been updated since 2018 (unmaintained)
+  - `microdiff` is actively maintained with regular updates
+  - Smaller bundle size and simpler API
+  - Better TypeScript support
+  - Preserves primitive types without unnecessary string conversion
+
+#### Type Safety Improvements
+- Added generic types to `filterFields()`
+  - Better type inference for return values
+  - Conditional return type based on input (array vs object)
+  - Maintains type safety while keeping flexibility
+
 ## [1.0.0] - 2025-11-15
 
 ### Added
