@@ -14,6 +14,9 @@ import { getTranscriptCommand } from './commands/transcripts/get';
 import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
 import { listAgentsCommand } from './commands/agents/list';
 import { agentInfoCommand } from './commands/agents/info';
+import { pullPromptsCommand } from './commands/prompts/pull';
+import { updatePromptsCommand } from './commands/prompts/update';
+import { publishAgentCommand } from './commands/agent/publish';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -110,26 +113,25 @@ const prompts = program
 prompts
   .command('pull <agent_id>')
   .description('Pull prompts for an agent')
-  .action((agentId) => {
-    console.log(`Prompts pull command for ${agentId} - to be implemented in Phase 5`);
-    process.exit(0);
+  .option('-o, --output <dir>', 'Output directory', '.retell-prompts')
+  .action(async (agentId, options) => {
+    await pullPromptsCommand(agentId, options);
   });
 
 prompts
   .command('update <agent_id>')
   .description('Update prompts for an agent')
-  .action((agentId) => {
-    console.log(`Prompts update command for ${agentId} - to be implemented in Phase 5`);
-    process.exit(0);
+  .option('-s, --source <dir>', 'Source directory', '.retell-prompts')
+  .action(async (agentId, options) => {
+    await updatePromptsCommand(agentId, options);
   });
 
 // Agent publish command (Phase 5)
 program
   .command('agent-publish <agent_id>')
   .description('Publish an agent')
-  .action((agentId) => {
-    console.log(`Agent publish command for ${agentId} - to be implemented in Phase 5`);
-    process.exit(0);
+  .action(async (agentId) => {
+    await publishAgentCommand(agentId);
   });
 
 // Parse command line arguments
