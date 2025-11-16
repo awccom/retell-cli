@@ -51,8 +51,13 @@ transcripts
   .description('List all call transcripts')
   .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
   .action(async (options) => {
+    const limit = parseInt(options.limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      console.error('Error: limit must be a positive number');
+      process.exit(1);
+    }
     await listTranscriptsCommand({
-      limit: parseInt(options.limit, 10),
+      limit,
     });
   });
 
@@ -80,8 +85,13 @@ agents
   .description('List all agents')
   .option('-l, --limit <number>', 'Maximum number of agents to return', '100')
   .action(async (options) => {
+    const limit = parseInt(options.limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      console.error('Error: limit must be a positive number');
+      process.exit(1);
+    }
     await listAgentsCommand({
-      limit: parseInt(options.limit, 10),
+      limit,
     });
   });
 
