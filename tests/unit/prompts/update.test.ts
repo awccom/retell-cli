@@ -331,6 +331,497 @@ describe('Prompts Update Command', () => {
     });
   });
 
+  describe('Agent ID Validation', () => {
+    it('should reject agent ID with path traversal (..)', async () => {
+      await updatePromptsCommand('../malicious-agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should reject agent ID with forward slash', async () => {
+      await updatePromptsCommand('path/to/agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should reject agent ID with backslash', async () => {
+      await updatePromptsCommand('path\\to\\agent', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid agent ID'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('File Reading Errors', () => {
+    it('should handle missing general_prompt.md for retell-llm', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      // Directory exists, metadata exists, but general_prompt.md doesn't
+      existsSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('agent-123') && !pathStr.includes('.json') && !pathStr.includes('.md')) return true; // Directory
+        if (pathStr.includes('metadata.json')) return true;
+        if (pathStr.includes('general_prompt.md')) return false; // Missing!
+        return false;
+      });
+
+      readFileSyncSpy.mockImplementation((path: any) => {
+        if (String(path).includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        throw new Error('File not found');
+      });
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('general_prompt.md not found'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle read error for general_prompt.md', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        // Directory and metadata exist, general_prompt exists but can't be read
+        if (pathStr.includes('agent-123') && !pathStr.includes('.json') && !pathStr.includes('.md')) return true;
+        if (pathStr.includes('metadata.json')) return true;
+        if (pathStr.includes('general_prompt.md')) return true; // Exists but will throw on read
+        return false;
+      });
+
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        if (pathStr.includes('general_prompt.md')) {
+          throw new Error('Permission denied');
+        }
+        return '';
+      });
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Failed to read general_prompt.md'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle read error for begin_message.txt', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+          begin_message: 'Hello',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        if (pathStr.includes('general_prompt.md')) {
+          return 'Test prompt';
+        }
+        if (pathStr.includes('begin_message.txt')) {
+          throw new Error('Permission denied');
+        }
+        return '';
+      });
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Failed to read begin_message.txt'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle invalid state file format (missing header)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+          states: [{ name: 'greeting', state_prompt: 'Hello' }],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        if (pathStr.includes('general_prompt.md')) {
+          return 'Test prompt';
+        }
+        if (pathStr.includes('greeting.md')) {
+          // Invalid format - missing "# State: greeting" header
+          return 'Just some text without header';
+        }
+        return '';
+      });
+
+      readdirSyncSpy.mockReturnValue(['greeting.md'] as any);
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid state file format'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle read error for state file', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+          states: [{ name: 'greeting', state_prompt: 'Hello' }],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        if (pathStr.includes('general_prompt.md')) {
+          return 'Test prompt';
+        }
+        if (pathStr.includes('greeting.md')) {
+          throw new Error('Permission denied');
+        }
+        return '';
+      });
+
+      readdirSyncSpy.mockReturnValue(['greeting.md'] as any);
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Failed to read state file'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle read error for states directory', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'retell-llm',
+        llmId: 'llm-123',
+        agentName: 'Test Agent',
+        prompts: {
+          llm_id: 'llm-123',
+          version: 1,
+          general_prompt: 'Test.',
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-123', version: 1 });
+        }
+        if (pathStr.includes('general_prompt.md')) {
+          return 'Test prompt';
+        }
+        return '';
+      });
+
+      readdirSyncSpy.mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      await updatePromptsCommand('agent-123', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Failed to read states directory'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle missing global_prompt.md for conversation-flow', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'conversation-flow',
+        flowId: 'flow-123',
+        agentName: 'Flow Agent',
+        prompts: {
+          conversation_flow_id: 'flow-123',
+          version: 1,
+          global_prompt: 'Test.',
+          nodes: [],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      // Directory exists, metadata exists, but global_prompt.md doesn't
+      existsSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('agent-flow') && !pathStr.includes('.json') && !pathStr.includes('.md')) return true; // Directory
+        if (pathStr.includes('metadata.json')) return true;
+        if (pathStr.includes('global_prompt.md')) return false; // Missing!
+        return false;
+      });
+
+      readFileSyncSpy.mockImplementation((path: any) => {
+        if (String(path).includes('metadata.json')) {
+          return JSON.stringify({ type: 'conversation-flow', agent_name: 'Test', conversation_flow_id: 'flow-123', version: 1 });
+        }
+        throw new Error('File not found');
+      });
+
+      await updatePromptsCommand('agent-flow', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('global_prompt.md not found'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle read error for global_prompt.md', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'conversation-flow',
+        flowId: 'flow-123',
+        agentName: 'Flow Agent',
+        prompts: {
+          conversation_flow_id: 'flow-123',
+          version: 1,
+          global_prompt: 'Test.',
+          nodes: [],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'conversation-flow', agent_name: 'Test', conversation_flow_id: 'flow-123', version: 1 });
+        }
+        if (pathStr.includes('global_prompt.md')) {
+          throw new Error('Permission denied');
+        }
+        return '';
+      });
+
+      await updatePromptsCommand('agent-flow', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Failed to read global_prompt.md'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle missing nodes.json for conversation-flow', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'conversation-flow',
+        flowId: 'flow-123',
+        agentName: 'Flow Agent',
+        prompts: {
+          conversation_flow_id: 'flow-123',
+          version: 1,
+          global_prompt: 'Test.',
+          nodes: [],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      // Directory exists, metadata and global_prompt exist, but nodes.json doesn't
+      existsSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('agent-flow') && !pathStr.includes('.json') && !pathStr.includes('.md')) return true; // Directory
+        if (pathStr.includes('metadata.json')) return true;
+        if (pathStr.includes('global_prompt.md')) return true;
+        if (pathStr.includes('nodes.json')) return false; // Missing!
+        return false;
+      });
+
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'conversation-flow', agent_name: 'Test', conversation_flow_id: 'flow-123', version: 1 });
+        }
+        if (pathStr.includes('global_prompt.md')) {
+          return 'Test prompt';
+        }
+        throw new Error('File not found');
+      });
+
+      await updatePromptsCommand('agent-flow', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('nodes.json not found'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle invalid nodes.json (not an array)', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'conversation-flow',
+        flowId: 'flow-123',
+        agentName: 'Flow Agent',
+        prompts: {
+          conversation_flow_id: 'flow-123',
+          version: 1,
+          global_prompt: 'Test.',
+          nodes: [],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'conversation-flow', agent_name: 'Test', conversation_flow_id: 'flow-123', version: 1 });
+        }
+        if (pathStr.includes('global_prompt.md')) {
+          return 'Test prompt';
+        }
+        if (pathStr.includes('nodes.json')) {
+          // Invalid - nodes should be an array, not an object
+          return JSON.stringify({ invalid: 'object' });
+        }
+        return '';
+      });
+
+      await updatePromptsCommand('agent-flow', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('nodes.json must contain an array'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle invalid JSON in nodes.json', async () => {
+      const mockPromptSource: promptResolver.PromptSource = {
+        type: 'conversation-flow',
+        flowId: 'flow-123',
+        agentName: 'Flow Agent',
+        prompts: {
+          conversation_flow_id: 'flow-123',
+          version: 1,
+          global_prompt: 'Test.',
+          nodes: [],
+        },
+      };
+
+      vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
+
+      existsSyncSpy.mockReturnValue(true);
+      readFileSyncSpy.mockImplementation((path: any) => {
+        const pathStr = String(path);
+        if (pathStr.includes('metadata.json')) {
+          return JSON.stringify({ type: 'conversation-flow', agent_name: 'Test', conversation_flow_id: 'flow-123', version: 1 });
+        }
+        if (pathStr.includes('global_prompt.md')) {
+          return 'Test prompt';
+        }
+        if (pathStr.includes('nodes.json')) {
+          return '{invalid json}';
+        }
+        return '';
+      });
+
+      await updatePromptsCommand('agent-flow', {});
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid JSON in nodes.json'),
+        })
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle directory not found', async () => {
       existsSyncSpy.mockReturnValue(false);

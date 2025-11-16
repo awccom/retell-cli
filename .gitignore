@@ -15,6 +15,7 @@ dist/
 # Testing
 coverage/
 .nyc_output/
+.test-prompts/
 
 # IDE
 .vscode/
