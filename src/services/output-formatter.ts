@@ -10,6 +10,62 @@ import Retell from 'retell-sdk';
 // ===== HELPER FUNCTIONS =====
 
 /**
+ * Check if a nested path exists in an object
+ *
+ * @param obj The object to check
+ * @param path Dot-separated path (e.g., "user.profile.name")
+ * @returns True if the path exists, false otherwise
+ *
+ * @example
+ * hasNestedPath({ user: { name: "John" } }, "user.name") // Returns true
+ * hasNestedPath({ user: { age: undefined } }, "user.age") // Returns true
+ * hasNestedPath({ user: {} }, "user.email") // Returns false
+ *
+ * @throws {Error} If path contains dangerous keys (__proto__, constructor, prototype)
+ */
+function hasNestedPath(obj: any, path: string): boolean {
+  if (obj === null || obj === undefined || typeof obj !== 'object') {
+    return false;
+  }
+
+  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+  const keys = path.split('.');
+
+  // Check for dangerous keys in the path
+  for (const key of keys) {
+    if (DANGEROUS_KEYS.includes(key)) {
+      throw new Error(`Dangerous key detected in path: ${key}`);
+    }
+  }
+
+  let current = obj;
+
+  for (const key of keys) {
+    if (current === null || current === undefined) {
+      return false;
+    }
+
+    // Handle array indices
+    if (Array.isArray(current)) {
+      const index = parseInt(key, 10);
+      if (isNaN(index) || index < 0 || index >= current.length) {
+        return false;
+      }
+      current = current[index];
+    } else if (typeof current === 'object') {
+      if (!(key in current)) {
+        return false;
+      }
+      current = current[key];
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Get a nested value from an object using dot notation
  *
  * @param obj The object to traverse
@@ -63,14 +119,28 @@ function getNestedValue(obj: any, path: string): any {
  * // obj is now { user: { name: "John" } }
  */
 function setNestedValue(obj: any, path: string, value: any): void {
+  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
   const keys = path.split('.');
   const lastKey = keys.pop()!;
+
+  // Protect against prototype pollution
+  if (DANGEROUS_KEYS.includes(lastKey)) {
+    throw new Error(`Dangerous key detected in path: ${lastKey}`);
+  }
+
   let current = obj;
 
-  for (const key of keys) {
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+
+    // Protect against prototype pollution
+    if (DANGEROUS_KEYS.includes(key)) {
+      throw new Error(`Dangerous key detected in path: ${key}`);
+    }
+
     if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
       // Determine if next key is an array index
-      const nextKey = keys[keys.indexOf(key) + 1];
+      const nextKey = keys[i + 1];
       const isNextKeyArrayIndex = nextKey && /^\d+$/.test(nextKey);
       current[key] = isNextKeyArrayIndex ? [] : {};
     }
@@ -212,11 +282,11 @@ export function outputSuccess(message: string, data?: Record<string, unknown>): 
  * filterFields([{ id: 1, name: "A" }, { id: 2, name: "B" }], ["name"])
  * // Returns: [{ name: "A" }, { name: "B" }]
  */
-export function filterFields(
-  data: any,
+export function filterFields<T = any>(
+  data: T,
   fields: string[],
   options: { strict?: boolean } = {}
-): any {
+): T extends any[] ? Partial<T[number]>[] : Partial<T> {
   // Handle null/undefined
   if (data === null || data === undefined) {
     return data;
@@ -237,9 +307,8 @@ export function filterFields(
   const warnings: string[] = [];
 
   for (const field of fields) {
-    const value = getNestedValue(data, field);
-
-    if (value === undefined) {
+    // Check if the field path actually exists (not just if value is undefined)
+    if (!hasNestedPath(data, field)) {
       const warning = `Field '${field}' not found in data`;
       warnings.push(warning);
 
@@ -250,6 +319,9 @@ export function filterFields(
       // In non-strict mode, skip this field
       continue;
     }
+
+    // Get the value (which might be undefined, and that's okay)
+    const value = getNestedValue(data, field);
 
     // Set the value in the result object
     setNestedValue(result, field, value);

@@ -273,6 +273,51 @@ describe('filterFields', () => {
       const result = filterFields(data, ['name', 'age']);
       expect(result).toEqual({ name: 'John', age: undefined });
     });
+
+    it('should correctly distinguish between undefined value and missing field', () => {
+      const data = { name: 'John', age: undefined, email: null };
+      const result = filterFields(data, ['name', 'age', 'email']);
+
+      expect(result).toHaveProperty('age');
+      expect(result.age).toBeUndefined();
+      expect(result).toHaveProperty('email');
+      expect(result.email).toBeNull();
+      expect(result.name).toBe('John');
+    });
+  });
+
+  describe('security - prototype pollution protection', () => {
+    it('should reject __proto__ in field path', () => {
+      const data = { user: { name: 'John' } };
+
+      expect(() => {
+        filterFields(data, ['__proto__.polluted'], { strict: true });
+      }).toThrow('Dangerous key detected');
+    });
+
+    it('should reject constructor in field path', () => {
+      const data = { user: { name: 'John' } };
+
+      expect(() => {
+        filterFields(data, ['user.constructor.polluted'], { strict: true });
+      }).toThrow('Dangerous key detected');
+    });
+
+    it('should reject prototype in field path', () => {
+      const data = { user: { name: 'John' } };
+
+      expect(() => {
+        filterFields(data, ['prototype.polluted'], { strict: true });
+      }).toThrow('Dangerous key detected');
+    });
+
+    it('should reject dangerous keys in nested paths', () => {
+      const data = { user: { profile: { name: 'John' } } };
+
+      expect(() => {
+        filterFields(data, ['user.__proto__.polluted'], { strict: true });
+      }).toThrow('Dangerous key detected');
+    });
   });
 
   describe('complex real-world scenarios', () => {

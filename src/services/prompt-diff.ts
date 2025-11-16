@@ -5,23 +5,24 @@
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import { diff } from 'deep-diff';
+import diff from 'microdiff';
 import type { PromptSource } from './prompt-resolver';
 import type { DiffResult, ChangeDetail } from '../types';
 
 // ===== HELPER FUNCTIONS =====
 
 /**
- * Determine the change type based on old and new values
+ * Determine the change type based on the diff type
  */
-function getChangeType(oldValue: any, newValue: any): 'added' | 'removed' | 'modified' {
-  if (oldValue === null || oldValue === undefined) {
-    return 'added';
+function getChangeType(type: 'CREATE' | 'REMOVE' | 'CHANGE'): 'added' | 'removed' | 'modified' {
+  switch (type) {
+    case 'CREATE':
+      return 'added';
+    case 'REMOVE':
+      return 'removed';
+    case 'CHANGE':
+      return 'modified';
   }
-  if (newValue === null || newValue === undefined) {
-    return 'removed';
-  }
-  return 'modified';
 }
 
 /**
@@ -37,8 +38,8 @@ function serializeValue(value: any): string | object | null {
     return value;
   }
 
-  // For primitives, convert to string
-  return String(value);
+  // For primitives, keep their original type for better accuracy
+  return value;
 }
 
 /**
@@ -51,66 +52,43 @@ function serializeValue(value: any): string | object | null {
 function comparePromptObjects(oldPrompts: any, newPrompts: any): Record<string, ChangeDetail> {
   const changes: Record<string, ChangeDetail> = {};
 
-  // Use deep-diff library to detect all differences
+  // Use microdiff library to detect all differences
   const differences = diff(oldPrompts, newPrompts);
 
-  if (!differences) {
+  if (!differences || differences.length === 0) {
     // No changes detected
     return changes;
   }
 
   for (const difference of differences) {
-    let path: string;
+    // Build the path string from the difference path array
+    const path = difference.path.join('.');
+
     let oldValue: any;
     let newValue: any;
 
-    // Build the path string from the difference path array
-    if (difference.path) {
-      path = difference.path.join('.');
-    } else {
-      path = 'root';
-    }
-
-    // Determine old and new values based on difference kind
-    switch (difference.kind) {
-      case 'N': // New property added
+    // Determine old and new values based on difference type
+    switch (difference.type) {
+      case 'CREATE':
         oldValue = null;
-        newValue = (difference as any).rhs;
+        newValue = difference.value;
         break;
 
-      case 'D': // Property deleted
-        oldValue = (difference as any).lhs;
+      case 'REMOVE':
+        oldValue = difference.oldValue;
         newValue = null;
         break;
 
-      case 'E': // Property edited
-        oldValue = (difference as any).lhs;
-        newValue = (difference as any).rhs;
+      case 'CHANGE':
+        oldValue = difference.oldValue;
+        newValue = difference.value;
         break;
-
-      case 'A': // Array change
-        const arrayDiff = difference as any;
-        path = `${path}.${arrayDiff.index}`;
-        if (arrayDiff.item.kind === 'N') {
-          oldValue = null;
-          newValue = arrayDiff.item.rhs;
-        } else if (arrayDiff.item.kind === 'D') {
-          oldValue = arrayDiff.item.lhs;
-          newValue = null;
-        } else {
-          oldValue = arrayDiff.item.lhs;
-          newValue = arrayDiff.item.rhs;
-        }
-        break;
-
-      default:
-        continue;
     }
 
     changes[path] = {
       old: serializeValue(oldValue),
       new: serializeValue(newValue),
-      change_type: getChangeType(oldValue, newValue),
+      change_type: getChangeType(difference.type),
     };
   }
 
