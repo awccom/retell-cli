@@ -9,6 +9,9 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { loginCommand } from './commands/login';
+import { listTranscriptsCommand } from './commands/transcripts/list';
+import { getTranscriptCommand } from './commands/transcripts/get';
+import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -44,25 +47,25 @@ const transcripts = program
 transcripts
   .command('list')
   .description('List all call transcripts')
-  .action(() => {
-    console.log('Transcripts list command - to be implemented in Phase 3');
-    process.exit(0);
+  .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
+  .action(async (options) => {
+    await listTranscriptsCommand({
+      limit: parseInt(options.limit, 10),
+    });
   });
 
 transcripts
   .command('get <call_id>')
   .description('Get a specific call transcript')
-  .action((callId) => {
-    console.log(`Transcripts get command for ${callId} - to be implemented in Phase 3`);
-    process.exit(0);
+  .action(async (callId) => {
+    await getTranscriptCommand(callId);
   });
 
 transcripts
   .command('analyze <call_id>')
   .description('Analyze a call transcript')
-  .action((callId) => {
-    console.log(`Transcripts analyze command for ${callId} - to be implemented in Phase 3`);
-    process.exit(0);
+  .action(async (callId) => {
+    await analyzeTranscriptCommand(callId);
   });
 
 // Agents commands (Phase 4)
