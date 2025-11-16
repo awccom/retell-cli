@@ -8,6 +8,7 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { loginCommand } from './commands/login';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -31,9 +32,8 @@ program
 program
   .command('login')
   .description('Authenticate with Retell AI')
-  .action(() => {
-    console.log('Login command - to be implemented in Phase 2');
-    process.exit(0);
+  .action(async () => {
+    await loginCommand();
   });
 
 // Transcripts commands (Phase 3)

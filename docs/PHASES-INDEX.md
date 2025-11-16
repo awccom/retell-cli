@@ -10,8 +10,8 @@
 
 | Phase | Status | Time | File |
 |-------|--------|------|------|
-| **Phase 1: Foundation** | ⬜ Not Started | 2.5-3.5h | [phase-1-foundation.md](./phase-1-foundation.md) |
-| **Phase 2: Authentication** | ⬜ Not Started | 25-35min | [phase-2-authentication.md](./phase-2-authentication.md) |
+| **Phase 1: Foundation** | ✅ Complete | 2.5-3.5h | [phase-1-foundation.md](./phase-1-foundation.md) |
+| **Phase 2: Authentication** | ✅ Complete | 25-35min | [phase-2-authentication.md](./phase-2-authentication.md) |
 | **Phase 3: Transcripts** | ⬜ Not Started | 2-2.5h | [phase-3-transcripts.md](./phase-3-transcripts.md) |
 | **Phase 4: Agents** | ⬜ Not Started | 1-1.5h | [phase-4-agents.md](./phase-4-agents.md) |
 | **Phase 5: Prompts** | ⬜ Not Started | 3.5-5h | [phase-5-prompts.md](./phase-5-prompts.md) |
@@ -116,7 +116,7 @@ Phase 8 (Optional)
 - [ ] Task 1.6: Output Formatting Service
 
 ### Phase 2: Authentication
-- [ ] Task 2.1: Login Command
+- [x] Task 2.1: Login Command
 
 ### Phase 3: Transcript Commands
 - [ ] Task 3.1: List Calls Command
@@ -153,9 +153,9 @@ Phase 8 (Optional)
 
 ## Progress Summary
 
-**Completion:** 0/24 tasks (0%)
-**Current Sprint:** Phase 1 - Foundation
-**Next Milestone:** Complete Task 1.2 (SDK Investigation)
+**Completion:** 7/24 tasks (29%)
+**Current Sprint:** Phase 3 - Transcript Commands
+**Next Milestone:** Implement transcript listing and retrieval
 
 ---
 
