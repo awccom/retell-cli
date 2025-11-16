@@ -1,0 +1,312 @@
+Retell AI CLI Tool — Planning & Architecture Document
+Overview
+
+The purpose of this project is to build a cross-shell, AI-agent-friendly command-line tool that replaces the current MCP system used to interact with Retell AI.
+The main use case is to allow AI coding assistants (Claude Code, Cursor, CodeX, KiloCode, your custom GPTs, etc.) to:
+
+Fetch and parse Retell AI call transcripts
+
+Diagnose where conversations fell off track
+
+Suggest fixes to prompts (single-prompt, multiprompt, or conversation-flow mode)
+
+Apply updated prompts to Retell AI agents
+
+Output results as structured JSON, not natural language
+
+The tool does not initiate calls, create agents, or manage telephony.
+Its scope is strictly transcripts → analysis → prompt refinement → prompt update.
+
+The CLI will be published globally via NPM.
+
+Goals & Requirements
+Primary Goals
+
+Provide a stable alternative to MCP for Retell AI interactions
+
+Enable AI agents to programmatically review and troubleshoot agent behavior
+
+Provide machine-friendly structured JSON output
+
+Store API keys on a per-directory basis
+
+Be cross-shell compatible (bash preferred, fish-compatible)
+
+Run flawlessly on CachyOS + fish shell
+
+Simple, minimal dependencies; reliable even when invoked by LLMs
+
+Non-Goals
+
+No real-time audio
+
+No call initiation
+
+No agent creation
+
+No UI / GUI
+
+Example CLI Commands
+
+These are not final, but represent the expected interface.
+
+retell login
+retell transcripts list
+retell transcripts get <id>
+retell transcripts analyze <id>
+retell prompts pull <agent-id>
+retell prompts update <agent-id> --file prompt.json
+retell agent-info <agent-id>
+
+
+Every command must support a --json flag:
+
+retell transcripts list --json
+
+
+When invoked by an AI agent, ALL output must be JSON unless the user specifies otherwise.
+
+Tech Stack
+Language
+
+Node.js (LTS)
+
+Published on npm as retell-cli (or @voicebridge/retell-cli if you want namespacing)
+
+Libraries
+
+commander or yargs for CLI parsing
+
+node-fetch or Axios for HTTP
+
+fs/promises for config storage
+
+chalk for colors (optional)
+
+ora for spinner (optional)
+
+Config Storage
+
+Per-working-directory config file:
+
+.retellrc.json
+
+stored in the directory where the CLI is executed for the first time
+
+Schema:
+
+{
+  "apiKey": "RETELL_API_KEY_HERE"
+}
+
+Architecture
+Project Structure
+/src
+  /commands
+    login.js
+    transcripts-list.js
+    transcripts-get.js
+    transcripts-analyze.js
+    prompts-pull.js
+    prompts-update.js
+  /services
+    retell-api.js
+    config.js
+    analysis.js
+  index.js
+package.json
+README.md
+
+Command Flow Example
+retell transcripts analyze 92c1-38kk-123
+
+↓ CLI fetches transcript JSON
+↓ passes transcript to local analysis module
+↓ analysis module returns structured JSON:
+   {
+     "issues": [...],
+     "summary": "...",
+     "promptFixes": { ... }
+   }
+↓ printed to console for AI agents to interpret
+
+JSON Output Requirements
+Absolutely Required
+
+Every CLI command must have a --json flag
+
+If invoked by an AI agent, output must default to JSON
+
+JSON must be stable and predictable (no mixed formatting)
+
+Example Output
+
+Transcript List
+
+{
+  "transcripts": [
+    {
+      "id": "abc123",
+      "start_time": "2025-01-01T12:00:00Z",
+      "duration": 42,
+      "agent_id": "agent_55",
+      "call_status": "completed"
+    }
+  ]
+}
+
+
+Analysis Output
+
+{
+  "analysis": {
+    "issues_detected": [
+      {
+        "timestamp": "00:42",
+        "type": "misunderstanding",
+        "description": "AI misinterpreted the equipment model",
+        "suggested_prompt_change": "Add clarification instructions..."
+      }
+    ],
+    "summary": "Conversation mostly successful except model confusion.",
+    "recommended_updates": {
+      "single_prompt": "New optimized version…",
+      "multi_prompt": {
+        "greeting": "...",
+        "troubleshooting": "..."
+      }
+    }
+  }
+}
+
+Prompt Editing Support
+
+The CLI must support all Retell AI modes:
+
+Single Prompt Mode
+
+prompts-pull returns a single text block
+
+prompts-update overwrites it
+
+Multi-Prompt Mode
+
+Returns structured JSON with multiple sections (“intros”, “fallbacks”, “departments”, etc.)
+
+Conversation Flow Mode
+
+Must pull/push entire flow graph as JSON
+
+The CLI should never silently modify formatting.
+
+Config & Authentication
+First-Time Use
+
+User (or AI agent) runs:
+
+retell login
+
+
+CLI prompts:
+
+Enter your Retell API key:
+
+
+Stores in local .retellrc.json.
+
+Directory Scoping
+
+Each directory gets its own .retellrc.json
+
+Moving to a new directory → CLI prompts again
+
+Environment Variable Override
+
+Support:
+
+RETELL_API_KEY=xxxxx retell transcripts list
+
+
+This overrides stored config for automation.
+
+Shell Compatibility
+Native Requirements
+
+Must run under bash by default
+
+Must be fully compatible with fish shell on CachyOS
+
+Shebang for universal execution:
+
+#!/usr/bin/env node
+
+AI-Agent Invocation
+
+AI agents often wrap commands like:
+
+bash -lc "retell transcripts list --json"
+
+
+CLI must behave identically in both shells.
+
+Deployment
+NPM Publishing Steps
+
+npm init
+
+Add executable entry in package.json:
+
+"bin": {
+  "retell": "index.js"
+}
+
+
+Build commands under src
+
+Run tests
+
+Publish:
+
+npm publish --access public
+
+Global Install
+npm install -g retell-cli
+
+Testing Strategy
+Automated Tests
+
+Use Jest or Vitest
+
+Mock Retell AI API calls
+
+Ensure JSON output never breaks
+
+Manual Tests
+
+Run in CachyOS fish shell
+
+Run in Ubuntu bash
+
+Run inside Claude Code environment
+
+Test AI agent invocation
+
+Stress Tests
+
+Large transcript handling
+
+Bad API keys
+
+Missing configs
+
+Future Features (Optional)
+
+retell compare-prompts old.json new.json
+
+retell summarize <id>
+
+Automatic root cause detection via embedded LLM (optional)
+
+Config encryption (if needed)
+
+Project-level global config in $HOME/.retell (optional)
