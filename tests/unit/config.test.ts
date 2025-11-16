@@ -143,6 +143,40 @@ describe('Config Service', () => {
       expect(() => getConfig()).toThrow(Error);
       expect(() => getConfig()).toThrow('Unknown file system error');
     });
+
+    it('should handle EACCES (permission denied) when reading config file', () => {
+      delete process.env.RETELL_API_KEY;
+      vi.mocked(existsSync).mockReturnValue(true);
+      const permissionError = new Error('EACCES: permission denied');
+      (permissionError as any).code = 'EACCES';
+      vi.mocked(readFileSync).mockImplementation(() => {
+        throw permissionError;
+      });
+
+      expect(() => getConfig()).toThrow('EACCES');
+    });
+
+    it('should handle corrupted config file with only brackets', () => {
+      delete process.env.RETELL_API_KEY;
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(readFileSync).mockReturnValue('{}');
+
+      expect(() => getConfig()).toThrow(ConfigError);
+      expect(() => getConfig()).toThrow('Invalid config file format');
+    });
+
+    it('should handle config file with null values', () => {
+      delete process.env.RETELL_API_KEY;
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(readFileSync).mockReturnValue(
+        JSON.stringify({
+          apiKey: null,
+          defaultFormat: 'json',
+        })
+      );
+
+      expect(() => getConfig()).toThrow(ConfigError);
+    });
   });
 
   describe('saveConfig', () => {
@@ -191,6 +225,38 @@ describe('Config Service', () => {
     it('should throw ConfigError on write failure', () => {
       vi.mocked(writeFileSync).mockImplementation(() => {
         throw new Error('Permission denied');
+      });
+
+      const config = {
+        apiKey: 'new-key-123',
+        defaultFormat: 'json' as const,
+      };
+
+      expect(() => saveConfig(config)).toThrow(ConfigError);
+      expect(() => saveConfig(config)).toThrow('Failed to save config');
+    });
+
+    it('should handle ENOSPC (no space left) when writing config file', () => {
+      const noSpaceError = new Error('ENOSPC: no space left on device');
+      (noSpaceError as any).code = 'ENOSPC';
+      vi.mocked(writeFileSync).mockImplementation(() => {
+        throw noSpaceError;
+      });
+
+      const config = {
+        apiKey: 'new-key-123',
+        defaultFormat: 'json' as const,
+      };
+
+      expect(() => saveConfig(config)).toThrow(ConfigError);
+      expect(() => saveConfig(config)).toThrow('Failed to save config');
+    });
+
+    it('should handle EACCES (permission denied) when writing config file', () => {
+      const permissionError = new Error('EACCES: permission denied');
+      (permissionError as any).code = 'EACCES';
+      vi.mocked(writeFileSync).mockImplementation(() => {
+        throw permissionError;
       });
 
       const config = {

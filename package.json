@@ -9,7 +9,8 @@
     "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
     "dev": "npm run build -- --watch",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:shell": "npm run build && ./tests/shell-compat.sh"
   },
   "keywords": [
     "retell",

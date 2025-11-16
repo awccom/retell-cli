@@ -5,9 +5,10 @@
  * involving multiple commands and services working together.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'fs';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, writeFileSync, existsSync, rmSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { pullPromptsCommand } from '../../src/commands/prompts/pull';
 import { updatePromptsCommand } from '../../src/commands/prompts/update';
 import { publishAgentCommand } from '../../src/commands/agent/publish';
@@ -23,12 +24,15 @@ vi.mock('../../src/services/output-formatter');
 
 describe('Integration Tests: Prompt Management Workflow', () => {
   const TEST_AGENT_ID = 'test-agent-123';
-  const TEST_DIR = '.test-prompts';
+  let TEST_DIR: string;
   let mockClient: any;
   let exitSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Create unique temporary directory for each test
+    TEST_DIR = mkdtempSync(join(tmpdir(), 'retell-test-'));
 
     // Setup mock client
     mockClient = {
@@ -58,20 +62,20 @@ describe('Integration Tests: Prompt Management Workflow', () => {
 
     // Mock process.exit
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-
-    // Cleanup test directory if it exists
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true });
-    }
   });
 
   afterEach(() => {
-    exitSpy.mockRestore();
+    exitSpy?.mockRestore();
 
     // Cleanup test directory
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true });
     }
+  });
+
+  afterAll(() => {
+    // Global cleanup to ensure process.exit mock is always restored
+    exitSpy?.mockRestore();
   });
 
   describe('Full Retell LLM Workflow', () => {
@@ -333,6 +337,11 @@ describe('Integration Tests: Prompt Management Workflow', () => {
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(notFoundError);
       expect(exitSpy).toHaveBeenCalledWith(1);
 
+      // Verify error has correct properties
+      const calledError = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(calledError.message).toContain('Agent not found');
+      expect(calledError.message).toContain('"status":404');
+
       // Verify no files were created
       expect(existsSync(join(TEST_DIR, 'invalid-agent-id'))).toBe(false);
     });
@@ -349,6 +358,11 @@ describe('Integration Tests: Prompt Management Workflow', () => {
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(authError);
       expect(exitSpy).toHaveBeenCalledWith(1);
+
+      // Verify error has correct properties
+      const calledError = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(calledError.message).toContain('Invalid API key');
+      expect(calledError.message).toContain('"status":401');
     });
 
     it('should handle validation error in update step', async () => {
@@ -385,6 +399,11 @@ describe('Integration Tests: Prompt Management Workflow', () => {
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(validationError);
       expect(exitSpy).toHaveBeenCalledWith(1);
+
+      // Verify error has correct properties
+      const calledError = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(calledError.message).toContain('Prompt cannot be empty');
+      expect(calledError.message).toContain('"status":400');
     });
 
     it('should handle rate limit error across workflow', async () => {
@@ -399,6 +418,11 @@ describe('Integration Tests: Prompt Management Workflow', () => {
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(rateLimitError);
       expect(exitSpy).toHaveBeenCalledWith(1);
+
+      // Verify error has correct properties
+      const calledError = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(calledError.message).toContain('Too many requests');
+      expect(calledError.message).toContain('"status":429');
     });
 
     it('should handle network connection error', async () => {
@@ -413,6 +437,10 @@ describe('Integration Tests: Prompt Management Workflow', () => {
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(connectionError);
       expect(exitSpy).toHaveBeenCalledWith(1);
+
+      // Verify error has correct properties
+      const calledError = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(calledError.message).toBe('Network error');
     });
   });
 
