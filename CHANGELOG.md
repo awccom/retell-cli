@@ -5,6 +5,76 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v1.0.1
+
+### Added - Phase 1: Foundation & Utilities
+
+#### TypeScript Types
+- `DiffResult` and `ChangeDetail` - Types for prompt diffing functionality
+- `HotspotIssue` and `HotspotsResult` - Types for hotspot detection
+- `SearchOptions` and `SearchResult` - Types for search functionality
+- `FieldFilterOptions` and `FilteredResult` - Types for field filtering
+
+#### Utility Functions
+
+**Field Filtering (`src/services/output-formatter.ts`)**
+- `filterFields()` - Filter objects to include only specified fields
+  - Support for dot notation (e.g., `"user.profile.name"`)
+  - Handles nested objects and arrays gracefully
+  - Strict and non-strict modes for error handling
+  - Preserves data types when filtering
+  - Comprehensive error messages for invalid fields
+
+**Prompt Diffing (`src/services/prompt-diff.ts`)**
+- `generateDiff()` - Compare local and remote prompt versions
+  - Supports retell-llm and conversation-flow agent types
+  - Detects added, removed, and modified fields
+  - Handles deeply nested objects and arrays
+  - Type-safe integration with existing PromptSource types
+- `formatDiffSummary()` - Format diff results as human-readable summary
+
+#### Testing
+- 23 unit tests for `filterFields()` utility
+  - Top-level and nested field selection
+  - Array handling
+  - Invalid field handling (strict and non-strict modes)
+  - Edge cases (null, undefined, empty data)
+  - Real-world scenarios (Retell API objects)
+
+- 15 unit tests for `generateDiff()` utility
+  - Retell-LLM prompt changes
+  - Conversation-flow prompt changes
+  - No changes detection
+  - Error handling (type mismatches, custom-llm)
+  - Summary formatting
+
+- **Total: 38 tests passing** ✅
+
+#### Dependencies
+- `deep-diff@^1.0.2` - For detecting changes in prompt objects
+- `@types/deep-diff@^1.0.5` - TypeScript types for deep-diff
+
+#### Developer Tools
+- `npm test` - Run all tests once
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Generate coverage report
+
+### Technical Details
+
+**Phase 1** provides foundation utilities that will be used by upcoming features:
+- Field selection (`--fields` flag) - Uses `filterFields()`
+- Raw output mode (`--raw` flag) - Will use field filtering
+- Hotspots detection (`--hotspots-only`) - Will use types and field filtering
+- Search command - Will use SearchOptions types and filtering
+- Diff & dry-run - Uses `generateDiff()` and `formatDiffSummary()`
+
+These utilities are designed to be:
+- **Performant** - Handle large objects efficiently
+- **Type-safe** - Full TypeScript support
+- **Well-tested** - Comprehensive unit test coverage
+- **Documented** - JSDoc comments for all public APIs
+- **Reusable** - Clean, focused functions for multiple use cases
+
 ## [1.0.0] - 2025-11-15
 
 ### Added
