@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - Phase 1: Foundation & Utilities
 
+#### Security
+- Prototype pollution protection in field path handling
+  - Rejects `__proto__`, `constructor`, and `prototype` keys
+  - Prevents object prototype manipulation attacks
+  - Comprehensive test coverage for security scenarios
+
 #### TypeScript Types
 - `DiffResult` and `ChangeDetail` - Types for prompt diffing functionality
 - `HotspotIssue` and `HotspotsResult` - Types for hotspot detection
@@ -22,7 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for dot notation (e.g., `"user.profile.name"`)
   - Handles nested objects and arrays gracefully
   - Strict and non-strict modes for error handling
-  - Preserves data types when filtering
+  - Preserves data types when filtering (including `undefined` and `null`)
+  - Distinguishes between missing fields and `undefined` values
+  - Generic types for improved type inference
+  - Prototype pollution protection
   - Comprehensive error messages for invalid fields
 
 **Prompt Diffing (`src/services/prompt-diff.ts`)**
@@ -31,15 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detects added, removed, and modified fields
   - Handles deeply nested objects and arrays
   - Type-safe integration with existing PromptSource types
+  - Uses `microdiff` for reliable, maintained diffing
+  - Preserves primitive types without unnecessary conversion
 - `formatDiffSummary()` - Format diff results as human-readable summary
 
 #### Testing
-- 23 unit tests for `filterFields()` utility
+- 27 unit tests for `filterFields()` utility
   - Top-level and nested field selection
   - Array handling
   - Invalid field handling (strict and non-strict modes)
   - Edge cases (null, undefined, empty data)
   - Real-world scenarios (Retell API objects)
+  - Security: Prototype pollution protection (4 tests)
+  - Undefined vs missing field distinction
 
 - 15 unit tests for `generateDiff()` utility
   - Retell-LLM prompt changes
@@ -48,11 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Error handling (type mismatches, custom-llm)
   - Summary formatting
 
-- **Total: 38 tests passing** ✅
+- 1 helper function test
+  - `hasNestedPath()` with security validation
+
+- **Total: 43 tests passing** ✅
 
 #### Dependencies
-- `deep-diff@^1.0.2` - For detecting changes in prompt objects
-- `@types/deep-diff@^1.0.5` - TypeScript types for deep-diff
+- `microdiff` - For detecting changes in prompt objects
+  - Actively maintained (vs. unmaintained `deep-diff`)
+  - Smaller bundle size
+  - Simpler, more modern API
+  - Better TypeScript support
 
 #### Developer Tools
 - `npm test` - Run all tests once
@@ -70,10 +89,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 These utilities are designed to be:
 - **Performant** - Handle large objects efficiently
-- **Type-safe** - Full TypeScript support
+- **Type-safe** - Full TypeScript support with generics
 - **Well-tested** - Comprehensive unit test coverage
 - **Documented** - JSDoc comments for all public APIs
 - **Reusable** - Clean, focused functions for multiple use cases
+- **Secure** - Protection against prototype pollution attacks
+
+### Fixed - Phase 1: Code Review Improvements
+
+#### Critical Bug Fixes
+- Fixed index bug in `setNestedValue()` helper function
+  - Was using `keys.indexOf(key)` which returns first occurrence, not current iteration index
+  - Now uses proper loop index variable for correct array/object type detection
+- Fixed undefined value handling in `filterFields()`
+  - Now correctly distinguishes between fields that don't exist vs. fields with `undefined` values
+  - Uses `hasNestedPath()` to check existence before checking value
+  - Preserves `undefined` values in filtered results when field exists
+
+#### Security Fixes
+- Added prototype pollution protection
+  - Validates field paths before processing
+  - Rejects dangerous keys: `__proto__`, `constructor`, `prototype`
+  - Prevents object prototype manipulation attacks
+  - Applies to both `hasNestedPath()` and `setNestedValue()` functions
+
+#### Dependency Updates
+- Replaced `deep-diff` with `microdiff`
+  - `deep-diff` hasn't been updated since 2018 (unmaintained)
+  - `microdiff` is actively maintained with regular updates
+  - Smaller bundle size and simpler API
+  - Better TypeScript support
+  - Preserves primitive types without unnecessary string conversion
+
+#### Type Safety Improvements
+- Added generic types to `filterFields()`
+  - Better type inference for return values
+  - Conditional return type based on input (array vs object)
+  - Maintains type safety while keeping flexibility
 
 ## [1.0.0] - 2025-11-15
 
