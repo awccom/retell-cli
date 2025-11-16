@@ -32,6 +32,18 @@ interface LocalMetadata {
 }
 
 /**
+ * Validate agentId to prevent path traversal attacks
+ *
+ * @param agentId The agent ID to validate
+ * @throws Error if agentId contains invalid characters
+ */
+function validateAgentId(agentId: string): void {
+  if (agentId.includes('..') || agentId.includes('/') || agentId.includes('\\')) {
+    throw new Error('Invalid agent ID: cannot contain path separators or traversal sequences');
+  }
+}
+
+/**
  * Update prompts for an agent from local files
  *
  * @param agentId The unique agent ID to update prompts for
@@ -39,6 +51,9 @@ interface LocalMetadata {
  */
 export async function updatePromptsCommand(agentId: string, options: UpdateOptions): Promise<void> {
   try {
+    // Validate agent ID to prevent path traversal
+    validateAgentId(agentId);
+
     // Determine source directory
     const baseDir = options.source || '.retell-prompts';
     const agentDir = join(baseDir, agentId);
@@ -95,7 +110,7 @@ export async function updatePromptsCommand(agentId: string, options: UpdateOptio
         agent_name: promptSource.agentName,
         type: 'retell-llm',
         llm_id: promptSource.llmId,
-        note: 'Run `retell agent-publish ' + agentId + '` to publish changes to production',
+        note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
       });
     } else if (promptSource.type === 'conversation-flow') {
       const prompts = loadConversationFlowPrompts(agentDir);
@@ -107,13 +122,13 @@ export async function updatePromptsCommand(agentId: string, options: UpdateOptio
         agent_name: promptSource.agentName,
         type: 'conversation-flow',
         conversation_flow_id: promptSource.flowId,
-        note: 'Run `retell agent-publish ' + agentId + '` to publish changes to production',
+        note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
       });
     }
   } catch (error) {
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
-      outputError('Invalid JSON in file: ' + error.message, 'INVALID_JSON');
+      outputError(`Invalid JSON in file: ${error.message}`, 'INVALID_JSON');
       return;
     }
 
@@ -133,37 +148,62 @@ function loadRetellLlmPrompts(agentDir: string): any {
   if (!existsSync(generalPromptPath)) {
     throw new Error('general_prompt.md not found');
   }
-  prompts.general_prompt = readFileSync(generalPromptPath, 'utf-8');
+
+  try {
+    prompts.general_prompt = readFileSync(generalPromptPath, 'utf-8');
+  } catch (error: any) {
+    throw new Error(`Failed to read general_prompt.md: ${error.message}`);
+  }
 
   // Load begin_message (optional) - only add if file exists
   const beginMessagePath = join(agentDir, 'begin_message.txt');
   if (existsSync(beginMessagePath)) {
-    const beginMessage = readFileSync(beginMessagePath, 'utf-8');
-    if (beginMessage) {
-      prompts.begin_message = beginMessage;
+    try {
+      const beginMessage = readFileSync(beginMessagePath, 'utf-8');
+      if (beginMessage) {
+        prompts.begin_message = beginMessage;
+      }
+    } catch (error: any) {
+      throw new Error(`Failed to read begin_message.txt: ${error.message}`);
     }
   }
 
   // Load states (optional)
   const statesDir = join(agentDir, 'states');
   if (existsSync(statesDir)) {
-    const stateFiles = readdirSync(statesDir).filter((f) => f.endsWith('.md'));
-    if (stateFiles.length > 0) {
-      prompts.states = stateFiles.map((file) => {
-        const stateName = file.replace('.md', '');
-        const content = readFileSync(join(statesDir, file), 'utf-8');
+    try {
+      const stateFiles = readdirSync(statesDir).filter((f) => f.endsWith('.md'));
+      if (stateFiles.length > 0) {
+        prompts.states = stateFiles.map((file) => {
+          const stateName = file.replace('.md', '');
+          let content: string;
 
-        // Extract state_prompt from markdown content
-        // Format: "# State: name\n\nprompt content"
-        const lines = content.split('\n');
-        const promptStartIndex = lines.findIndex((line) => line.trim() === '') + 1;
-        const statePrompt = lines.slice(promptStartIndex).join('\n').trim();
+          try {
+            content = readFileSync(join(statesDir, file), 'utf-8');
+          } catch (error: any) {
+            throw new Error(`Failed to read state file ${file}: ${error.message}`);
+          }
 
-        return {
-          name: stateName,
-          state_prompt: statePrompt,
-        };
-      });
+          // Extract state_prompt from markdown content using regex
+          // Format: "# State: name\n\nprompt content"
+          const STATE_HEADER_REGEX = /^#\s+State:\s+(.+)$/m;
+          const match = content.match(STATE_HEADER_REGEX);
+          if (!match) {
+            throw new Error(`Invalid state file format in ${file}: missing "# State:" header`);
+          }
+          const statePrompt = content.replace(STATE_HEADER_REGEX, '').trim();
+
+          return {
+            name: stateName,
+            state_prompt: statePrompt,
+          };
+        });
+      }
+    } catch (error: any) {
+      if (error.message.includes('Invalid state file format') || error.message.includes('Failed to read state file')) {
+        throw error; // Re-throw our custom errors
+      }
+      throw new Error(`Failed to read states directory: ${error.message}`);
     }
   }
 
@@ -181,14 +221,34 @@ function loadConversationFlowPrompts(agentDir: string): any {
   if (!existsSync(globalPromptPath)) {
     throw new Error('global_prompt.md not found');
   }
-  prompts.global_prompt = readFileSync(globalPromptPath, 'utf-8');
+
+  try {
+    prompts.global_prompt = readFileSync(globalPromptPath, 'utf-8');
+  } catch (error: any) {
+    throw new Error(`Failed to read global_prompt.md: ${error.message}`);
+  }
 
   // Load nodes (required)
   const nodesPath = join(agentDir, 'nodes.json');
   if (!existsSync(nodesPath)) {
     throw new Error('nodes.json not found');
   }
-  prompts.nodes = JSON.parse(readFileSync(nodesPath, 'utf-8'));
+
+  try {
+    const nodesContent = JSON.parse(readFileSync(nodesPath, 'utf-8'));
+
+    // Validate that nodes is an array
+    if (!Array.isArray(nodesContent)) {
+      throw new Error('nodes.json must contain an array');
+    }
+
+    prompts.nodes = nodesContent;
+  } catch (error: any) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON in nodes.json: ${error.message}`);
+    }
+    throw error; // Re-throw if it's our custom error or other errors
+  }
 
   return prompts;
 }

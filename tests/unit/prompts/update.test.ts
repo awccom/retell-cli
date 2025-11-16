@@ -444,7 +444,11 @@ describe('Prompts Update Command', () => {
 
       vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue(mockPromptSource);
 
-      existsSyncSpy.mockReturnValue(true);
+      existsSyncSpy.mockImplementation((path: any) => {
+        // Only return true for the files we need, not the states directory
+        const pathStr = String(path);
+        return pathStr.includes('metadata.json') || pathStr.includes('general_prompt.md') || !pathStr.includes('states');
+      });
       readFileSyncSpy.mockImplementation((path: any) => {
         if (String(path).includes('metadata.json')) {
           return JSON.stringify({ type: 'retell-llm', agent_name: 'Test', llm_id: 'llm-error', version: 1 });
@@ -452,6 +456,7 @@ describe('Prompts Update Command', () => {
         if (String(path).includes('general_prompt.md')) return 'Test.';
         return '';
       });
+      readdirSyncSpy.mockReturnValue([] as any); // No state files
 
       const badRequestError = new Retell.BadRequestError(
         'Invalid prompt format',

@@ -20,6 +20,18 @@ interface PullOptions {
 }
 
 /**
+ * Validate agentId to prevent path traversal attacks
+ *
+ * @param agentId The agent ID to validate
+ * @throws Error if agentId contains invalid characters
+ */
+function validateAgentId(agentId: string): void {
+  if (agentId.includes('..') || agentId.includes('/') || agentId.includes('\\')) {
+    throw new Error('Invalid agent ID: cannot contain path separators or traversal sequences');
+  }
+}
+
+/**
  * Pull prompts for an agent and save to local files
  *
  * @param agentId The unique agent ID to pull prompts for
@@ -27,6 +39,9 @@ interface PullOptions {
  */
 export async function pullPromptsCommand(agentId: string, options: PullOptions): Promise<void> {
   try {
+    // Validate agent ID to prevent path traversal
+    validateAgentId(agentId);
+
     // Resolve the prompt source
     const promptSource = await resolvePromptSource(agentId);
 
@@ -40,14 +55,36 @@ export async function pullPromptsCommand(agentId: string, options: PullOptions):
     const baseDir = options.output || '.retell-prompts';
     const agentDir = join(baseDir, agentId);
 
-    // Create agent directory
-    mkdirSync(agentDir, { recursive: true });
+    // Create agent directory with error handling
+    try {
+      mkdirSync(agentDir, { recursive: true });
+    } catch (error: any) {
+      if (error.code === 'EACCES') {
+        outputError(`Permission denied creating directory: ${agentDir}`, 'PERMISSION_DENIED');
+      } else if (error.code === 'ENOSPC') {
+        outputError(`No space left on device: ${agentDir}`, 'NO_SPACE');
+      } else {
+        outputError(`Failed to create directory: ${error.message}`, 'FS_ERROR');
+      }
+      return;
+    }
 
     // Save prompts based on type
-    if (promptSource.type === 'retell-llm') {
-      saveRetellLlmPrompts(agentDir, promptSource);
-    } else if (promptSource.type === 'conversation-flow') {
-      saveConversationFlowPrompts(agentDir, promptSource);
+    try {
+      if (promptSource.type === 'retell-llm') {
+        saveRetellLlmPrompts(agentDir, promptSource);
+      } else if (promptSource.type === 'conversation-flow') {
+        saveConversationFlowPrompts(agentDir, promptSource);
+      }
+    } catch (error: any) {
+      if (error.code === 'EACCES') {
+        outputError(`Permission denied writing files to: ${agentDir}`, 'PERMISSION_DENIED');
+      } else if (error.code === 'ENOSPC') {
+        outputError(`No space left on device: ${agentDir}`, 'NO_SPACE');
+      } else {
+        outputError(`Failed to write prompt files: ${error.message}`, 'FS_ERROR');
+      }
+      return;
     }
 
     // Output success message
