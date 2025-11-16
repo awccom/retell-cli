@@ -13,7 +13,7 @@
 | **Phase 1: Foundation** | ✅ Complete | 2.5-3.5h | [phase-1-foundation.md](./phase-1-foundation.md) |
 | **Phase 2: Authentication** | ✅ Complete | 25-35min | [phase-2-authentication.md](./phase-2-authentication.md) |
 | **Phase 3: Transcripts** | ✅ Complete | 2-2.5h | [phase-3-transcripts.md](./phase-3-transcripts.md) |
-| **Phase 4: Agents** | ⬜ Not Started | 1-1.5h | [phase-4-agents.md](./phase-4-agents.md) |
+| **Phase 4: Agents** | ✅ Complete | 1-1.5h | [phase-4-agents.md](./phase-4-agents.md) |
 | **Phase 5: Prompts** | ⬜ Not Started | 3.5-5h | [phase-5-prompts.md](./phase-5-prompts.md) |
 | **Phase 6: Testing** | ⬜ Not Started | 2.5-3.5h | [phase-6-testing.md](./phase-6-testing.md) |
 | **Phase 7: Documentation** | ⬜ Not Started | 2-2.5h | [phase-7-documentation.md](./phase-7-documentation.md) |
@@ -124,8 +124,8 @@ Phase 8 (Optional)
 - [x] Task 3.3: Analyze Transcript Command
 
 ### Phase 4: Agent Commands
-- [ ] Task 4.1: List Agents Command
-- [ ] Task 4.2: Agent Info Command
+- [x] Task 4.1: List Agents Command
+- [x] Task 4.2: Agent Info Command
 
 ### Phase 5: Prompt Management
 - [ ] Task 5.1: Prompt Type Resolution Service ⚠️ **Complex**
@@ -153,9 +153,9 @@ Phase 8 (Optional)
 
 ## Progress Summary
 
-**Completion:** 10/24 tasks (42%)
-**Current Sprint:** Phase 4 - Agent Commands
-**Next Milestone:** Implement agent listing and information retrieval
+**Completion:** 12/24 tasks (50%)
+**Current Sprint:** Phase 5 - Prompt Management
+**Next Milestone:** Implement prompt resolution and update commands
 
 ---
 
