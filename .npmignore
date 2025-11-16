@@ -1,0 +1,40 @@
+# Source files
+src/
+docs/
+
+# Config files
+tsconfig.json
+vitest.config.ts
+
+# Development files
+.retellrc.json
+*.log
+
+# Git files
+.git
+.github
+.gitignore
+
+# IDE files
+.vscode
+.claude
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Misc
+node_modules/
+*.tgz
+.env
+.env.*
+
+# Documentation (keep README and CHANGELOG in package)
+CONTRIBUTING.md
+
+# Build artifacts (keep only dist/)
+*.map
