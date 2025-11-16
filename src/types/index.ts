@@ -15,9 +15,9 @@
  */
 export interface ChangeDetail {
   /** Previous value (null if added) */
-  old: string | object | null;
+  old: string | number | boolean | object | null;
   /** New value (null if removed) */
-  new: string | object | null;
+  new: string | number | boolean | object | null;
   /** Type of change */
   change_type: 'added' | 'removed' | 'modified';
 }

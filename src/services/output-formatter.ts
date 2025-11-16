@@ -7,7 +7,27 @@
 
 import Retell from 'retell-sdk';
 
+// ===== CONSTANTS =====
+
+/** Keys that could be used for prototype pollution attacks */
+const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+/** Pattern to match array index strings */
+const ARRAY_INDEX_PATTERN = /^\d+$/;
+
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Validate that a key is safe to use (not a dangerous prototype pollution key)
+ *
+ * @param key The key to validate
+ * @throws {Error} If the key is dangerous
+ */
+function validateSafeKey(key: string): void {
+  if (DANGEROUS_KEYS.includes(key)) {
+    throw new Error(`Dangerous key detected in path: ${key}`);
+  }
+}
 
 /**
  * Check if a nested path exists in an object
@@ -28,14 +48,11 @@ function hasNestedPath(obj: any, path: string): boolean {
     return false;
   }
 
-  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
   const keys = path.split('.');
 
   // Check for dangerous keys in the path
   for (const key of keys) {
-    if (DANGEROUS_KEYS.includes(key)) {
-      throw new Error(`Dangerous key detected in path: ${key}`);
-    }
+    validateSafeKey(key);
   }
 
   let current = obj;
@@ -119,14 +136,11 @@ function getNestedValue(obj: any, path: string): any {
  * // obj is now { user: { name: "John" } }
  */
 function setNestedValue(obj: any, path: string, value: any): void {
-  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
   const keys = path.split('.');
   const lastKey = keys.pop()!;
 
   // Protect against prototype pollution
-  if (DANGEROUS_KEYS.includes(lastKey)) {
-    throw new Error(`Dangerous key detected in path: ${lastKey}`);
-  }
+  validateSafeKey(lastKey);
 
   let current = obj;
 
@@ -134,14 +148,12 @@ function setNestedValue(obj: any, path: string, value: any): void {
     const key = keys[i];
 
     // Protect against prototype pollution
-    if (DANGEROUS_KEYS.includes(key)) {
-      throw new Error(`Dangerous key detected in path: ${key}`);
-    }
+    validateSafeKey(key);
 
     if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
       // Determine if next key is an array index
       const nextKey = keys[i + 1];
-      const isNextKeyArrayIndex = nextKey && /^\d+$/.test(nextKey);
+      const isNextKeyArrayIndex = nextKey && ARRAY_INDEX_PATTERN.test(nextKey);
       current[key] = isNextKeyArrayIndex ? [] : {};
     }
     current = current[key];
@@ -309,7 +321,12 @@ export function filterFields<T = any>(
   for (const field of fields) {
     // Check if the field path actually exists (not just if value is undefined)
     if (!hasNestedPath(data, field)) {
-      const warning = `Field '${field}' not found in data`;
+      // Build helpful error message with available fields
+      const availableFields = Object.keys(data);
+      const fieldList = availableFields.length > 0
+        ? `Available fields: ${availableFields.join(', ')}`
+        : 'No fields available';
+      const warning = `Field '${field}' not found in data. ${fieldList}`;
       warnings.push(warning);
 
       if (options.strict) {
@@ -329,7 +346,12 @@ export function filterFields<T = any>(
 
   // Log warnings to stderr if any (but don't fail)
   if (warnings.length > 0 && !options.strict) {
-    console.warn(JSON.stringify({ warnings }, null, 2));
+    // Use JSON format if DEBUG is set, otherwise human-readable
+    if (process.env.DEBUG) {
+      console.warn(JSON.stringify({ warnings }, null, 2));
+    } else {
+      warnings.forEach(warning => console.warn(`Warning: ${warning}`));
+    }
   }
 
   return result;

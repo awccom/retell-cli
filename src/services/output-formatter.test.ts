@@ -320,6 +320,56 @@ describe('filterFields', () => {
     });
   });
 
+  describe('advanced edge cases', () => {
+    it('should handle circular references gracefully', () => {
+      const obj: any = { name: 'test', id: 123 };
+      obj.self = obj; // circular reference
+
+      // Should not throw, and should filter the non-circular fields
+      expect(() => filterFields(obj, ['name', 'id'])).not.toThrow();
+      const result = filterFields(obj, ['name', 'id']);
+      expect(result.name).toBe('test');
+      expect(result.id).toBe(123);
+    });
+
+    it('should handle very deep nesting', () => {
+      // Create a deeply nested object (50 levels)
+      let deep: any = { value: 'end' };
+      for (let i = 0; i < 50; i++) {
+        deep = { level: deep };
+      }
+
+      // Build the path string for 50 levels
+      const path = Array(50).fill('level').join('.') + '.value';
+
+      const result = filterFields(deep, [path]);
+
+      // Should successfully filter the deep path
+      let current = result;
+      for (let i = 0; i < 50; i++) {
+        expect(current).toHaveProperty('level');
+        current = current.level;
+      }
+      expect(current.value).toBe('end');
+    });
+
+    it('should handle unicode and special characters in keys', () => {
+      const data = {
+        '名前': 'John',
+        'email@domain': 'test@example.com',
+        'field-with-dash': 'value1',
+        'field_with_underscore': 'value2',
+      };
+
+      const result = filterFields(data, ['名前', 'field-with-dash']);
+
+      expect(result).toEqual({
+        '名前': 'John',
+        'field-with-dash': 'value1',
+      });
+    });
+  });
+
   describe('complex real-world scenarios', () => {
     it('should filter Retell API call object', () => {
       const callData = {

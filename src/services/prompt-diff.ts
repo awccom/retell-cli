@@ -28,7 +28,7 @@ function getChangeType(type: 'CREATE' | 'REMOVE' | 'CHANGE'): 'added' | 'removed
 /**
  * Convert a value to a serializable format for diff output
  */
-function serializeValue(value: any): string | object | null {
+function serializeValue(value: any): string | number | boolean | object | null {
   if (value === null || value === undefined) {
     return null;
   }
