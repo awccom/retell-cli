@@ -2,36 +2,46 @@
 src/
 tests/
 scripts/
-
-# Documentation
 docs/
-*.md
-!README.md
 
-# Configuration
+# Config files
 tsconfig.json
+vitest.config.ts
+.eslintrc.js
+.prettierrc
+
+# Development files
+*.test.ts
+*.spec.ts
+.retellrc.json
+*.log
+
+# Git files
+.git
+.github
 .gitignore
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Misc
+coverage/
+node_modules/
+*.tgz
 .env
 .env.*
 
-# Development
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Documentation (keep only README in package)
+CONTRIBUTING.md
+PHASE-*.md
 
-# Testing
-coverage/
-.nyc_output/
-vitest.config.ts
-
-# Git
-.git/
-.github/
-
-# Misc
-*.log
-.DS_Store
-prd.txt
-.claude/
+# Build artifacts (keep only dist/)
+*.map

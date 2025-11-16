@@ -40,6 +40,12 @@ program
 program
   .command('login')
   .description('Authenticate with Retell AI')
+  .addHelpText('after', `
+Examples:
+  $ retell login
+  # Enter your API key when prompted
+  # Creates .retellrc.json in current directory
+  `)
   .action(async () => {
     await loginCommand();
   });
@@ -53,6 +59,12 @@ transcripts
   .command('list')
   .description('List all call transcripts')
   .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
+  .addHelpText('after', `
+Examples:
+  $ retell transcripts list
+  $ retell transcripts list --limit 100
+  $ retell transcripts list | jq '.[] | select(.call_status == "error")'
+  `)
   .action(async (options) => {
     const limit = parseInt(options.limit, 10);
     if (isNaN(limit) || limit < 1) {
@@ -67,13 +79,23 @@ transcripts
 transcripts
   .command('get <call_id>')
   .description('Get a specific call transcript')
+  .addHelpText('after', `
+Examples:
+  $ retell transcripts get call_abc123
+  $ retell transcripts get call_abc123 | jq '.transcript_object'
+  `)
   .action(async (callId) => {
     await getTranscriptCommand(callId);
   });
 
 transcripts
   .command('analyze <call_id>')
-  .description('Analyze a call transcript')
+  .description('Analyze a call transcript with performance metrics and insights')
+  .addHelpText('after', `
+Examples:
+  $ retell transcripts analyze call_abc123
+  $ retell transcripts analyze call_abc123 | jq '.performance.latency_p50_ms'
+  `)
   .action(async (callId) => {
     await analyzeTranscriptCommand(callId);
   });
@@ -86,7 +108,13 @@ const agents = program
 agents
   .command('list')
   .description('List all agents')
-  .option('-l, --limit <number>', 'Maximum number of agents to return', '100')
+  .option('-l, --limit <number>', 'Maximum number of agents to return (default: 100)', '100')
+  .addHelpText('after', `
+Examples:
+  $ retell agents list
+  $ retell agents list --limit 10
+  $ retell agents list | jq '.[] | select(.response_engine.type == "retell-llm")'
+  `)
   .action(async (options) => {
     const limit = parseInt(options.limit, 10);
     if (isNaN(limit) || limit < 1) {
@@ -100,7 +128,12 @@ agents
 
 agents
   .command('info <agent_id>')
-  .description('Get agent information')
+  .description('Get detailed agent information')
+  .addHelpText('after', `
+Examples:
+  $ retell agents info agent_123abc
+  $ retell agents info agent_123abc | jq '.response_engine.type'
+  `)
   .action(async (agentId) => {
     await agentInfoCommand(agentId);
   });
@@ -112,16 +145,28 @@ const prompts = program
 
 prompts
   .command('pull <agent_id>')
-  .description('Pull prompts for an agent')
-  .option('-o, --output <dir>', 'Output directory', '.retell-prompts')
+  .description('Download agent prompts to a local file')
+  .option('-o, --output <path>', 'Output file path (default: .retell-prompts/<agent_id>.json)', '.retell-prompts')
+  .addHelpText('after', `
+Examples:
+  $ retell prompts pull agent_123abc
+  $ retell prompts pull agent_123abc --output my-prompts.json
+  `)
   .action(async (agentId, options) => {
     await pullPromptsCommand(agentId, options);
   });
 
 prompts
   .command('update <agent_id>')
-  .description('Update prompts for an agent')
-  .option('-s, --source <dir>', 'Source directory', '.retell-prompts')
+  .description('Update agent prompts from a local file')
+  .option('-s, --source <path>', 'Source file path (default: .retell-prompts/<agent_id>.json)', '.retell-prompts')
+  .option('--dry-run', 'Preview changes without applying them', false)
+  .addHelpText('after', `
+Examples:
+  $ retell prompts update agent_123abc --source my-prompts.json --dry-run
+  $ retell prompts update agent_123abc --source my-prompts.json
+  # Remember to publish: retell agent-publish agent_123abc
+  `)
   .action(async (agentId, options) => {
     await updatePromptsCommand(agentId, options);
   });
@@ -129,7 +174,12 @@ prompts
 // Agent publish command (Phase 5)
 program
   .command('agent-publish <agent_id>')
-  .description('Publish an agent')
+  .description('Publish a draft agent to make changes live')
+  .addHelpText('after', `
+Examples:
+  $ retell agent-publish agent_123abc
+  # Run this after updating prompts to make changes live
+  `)
   .action(async (agentId) => {
     await publishAgentCommand(agentId);
   });

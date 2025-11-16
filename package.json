@@ -1,34 +1,48 @@
 {
   "name": "retell-cli",
-  "version": "0.1.0",
-  "description": "Official CLI tool for Retell AI - analyze transcripts and manage agent prompts",
+  "version": "1.0.0",
+  "description": "Official command-line tool for Retell AI - analyze call transcripts, manage agents, and update prompts with ease",
+  "main": "dist/index.js",
   "bin": {
     "retell": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
     "dev": "npm run build -- --watch",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:shell": "npm run build && ./tests/shell-compat.sh"
+    "test:shell": "npm run build && ./tests/shell-compat.sh",
+    "prepublishOnly": "npm run build && npm run test:run"
   },
   "keywords": [
     "retell",
     "retell-ai",
     "ai",
-    "voice",
+    "voice-ai",
     "cli",
     "transcript",
     "agent",
-    "llm"
+    "llm",
+    "prompt-engineering",
+    "conversation-flow",
+    "voice-assistant",
+    "call-analysis",
+    "retell-sdk"
   ],
-  "author": "",
+  "author": "Retell AI Community",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/awccom/retell-cli.git"
   },
-  "bugs": "https://github.com/awccom/retell-cli/issues",
+  "bugs": {
+    "url": "https://github.com/awccom/retell-cli/issues"
+  },
   "homepage": "https://github.com/awccom/retell-cli#readme",
   "engines": {
     "node": ">=18.0.0"
