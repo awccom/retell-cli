@@ -12,7 +12,7 @@
 |-------|--------|------|------|
 | **Phase 1: Foundation** | ✅ Complete | 2.5-3.5h | [phase-1-foundation.md](./phase-1-foundation.md) |
 | **Phase 2: Authentication** | ✅ Complete | 25-35min | [phase-2-authentication.md](./phase-2-authentication.md) |
-| **Phase 3: Transcripts** | ⬜ Not Started | 2-2.5h | [phase-3-transcripts.md](./phase-3-transcripts.md) |
+| **Phase 3: Transcripts** | ✅ Complete | 2-2.5h | [phase-3-transcripts.md](./phase-3-transcripts.md) |
 | **Phase 4: Agents** | ⬜ Not Started | 1-1.5h | [phase-4-agents.md](./phase-4-agents.md) |
 | **Phase 5: Prompts** | ⬜ Not Started | 3.5-5h | [phase-5-prompts.md](./phase-5-prompts.md) |
 | **Phase 6: Testing** | ⬜ Not Started | 2.5-3.5h | [phase-6-testing.md](./phase-6-testing.md) |
@@ -119,9 +119,9 @@ Phase 8 (Optional)
 - [x] Task 2.1: Login Command
 
 ### Phase 3: Transcript Commands
-- [ ] Task 3.1: List Calls Command
-- [ ] Task 3.2: Get Call Command
-- [ ] Task 3.3: Analyze Transcript Command
+- [x] Task 3.1: List Calls Command
+- [x] Task 3.2: Get Call Command
+- [x] Task 3.3: Analyze Transcript Command
 
 ### Phase 4: Agent Commands
 - [ ] Task 4.1: List Agents Command
@@ -153,9 +153,9 @@ Phase 8 (Optional)
 
 ## Progress Summary
 
-**Completion:** 7/24 tasks (29%)
-**Current Sprint:** Phase 3 - Transcript Commands
-**Next Milestone:** Implement transcript listing and retrieval
+**Completion:** 10/24 tasks (42%)
+**Current Sprint:** Phase 4 - Agent Commands
+**Next Milestone:** Implement agent listing and information retrieval
 
 ---
 
