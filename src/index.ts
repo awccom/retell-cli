@@ -148,7 +148,7 @@ Examples:
       agentId: options.agentId,
       since: options.since,
       until: options.until,
-      limit: options.limit ? parseInt(options.limit) : undefined,
+      limit: options.limit ? Number(options.limit) : undefined,
       fields: options.fields,
     });
   });

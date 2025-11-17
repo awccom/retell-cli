@@ -18,6 +18,16 @@ const DEFAULT_LIMIT = 50;
 
 // ===== TYPES =====
 
+/**
+ * Options for searching transcripts
+ *
+ * @property status - Filter by call status (error, ended, ongoing)
+ * @property agentId - Filter by specific agent ID
+ * @property since - Start date for filtering calls (YYYY-MM-DD or ISO 8601 format)
+ * @property until - End date for filtering calls (YYYY-MM-DD or ISO 8601 format)
+ * @property limit - Maximum number of results to return (default: 50, max: 1000)
+ * @property fields - Comma-separated list of fields to include in output
+ */
 interface SearchOptions {
   status?: string;
   agentId?: string;
@@ -70,15 +80,23 @@ class ValidationError extends Error {
 /**
  * Parse date string into Date object
  * Supports ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
+ * Uses strict regex validation to prevent unexpected date parsing
  */
 function parseDate(dateStr: string): Date {
   if (!dateStr) {
     throw new ValidationError('Date string cannot be empty');
   }
 
-  // Try parsing as ISO date
+  // Strict validation: only accept YYYY-MM-DD or ISO 8601 format
+  const iso8601Pattern = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z)?$/;
+  if (!iso8601Pattern.test(dateStr)) {
+    throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
+  }
+
+  // Parse as ISO date
   const date = new Date(dateStr);
 
+  // Double-check the parsed date is valid
   if (isNaN(date.getTime())) {
     throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
   }
@@ -114,18 +132,18 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; unti
   if (parsedDates.sinceDate && parsedDates.untilDate) {
     if (parsedDates.sinceDate > parsedDates.untilDate) {
       throw new ValidationError(
-        `Invalid date range: --since (${options.since}) is after --until (${options.until})`
+        `Invalid date range: --since ("${options.since}") is after --until ("${options.until}")`
       );
     }
   }
 
   // Validate limit
   if (options.limit !== undefined && (options.limit < 1 || !Number.isInteger(options.limit))) {
-    throw new ValidationError(`Limit must be a positive integer (got: ${options.limit})`);
+    throw new ValidationError(`Limit must be a positive integer (got: "${options.limit}")`);
   }
 
   if (options.limit !== undefined && options.limit > MAX_LIMIT) {
-    throw new ValidationError(`Limit cannot exceed ${MAX_LIMIT} (got: ${options.limit})`);
+    throw new ValidationError(`Limit cannot exceed ${MAX_LIMIT} (got: "${options.limit}")`);
   }
 
   return parsedDates;

@@ -23,6 +23,13 @@ vi.mock('../../services/output-formatter', async () => {
     ...actual,
     outputJson: vi.fn(),
     handleSdkError: vi.fn(),
+    filterFields: vi.fn((data, fields) => {
+      // Simple mock implementation that returns filtered data
+      if (Array.isArray(data)) {
+        return data.map(item => ({}));
+      }
+      return {};
+    }),
   };
 });
 
@@ -401,6 +408,27 @@ describe('searchTranscriptsCommand', () => {
       expect(output).toHaveProperty('results');
       expect(output).toHaveProperty('total_count');
       expect(output).toHaveProperty('filters_applied');
+    });
+
+    it('should correctly filter fields in result objects', async () => {
+      mockClient.call.list.mockResolvedValue(mockCalls);
+
+      await searchTranscriptsCommand({
+        fields: 'call_id,call_status',
+      });
+
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+
+      // Verify filterFields was called with correct parameters
+      expect(outputFormatter.filterFields).toHaveBeenCalled();
+
+      // Verify results array exists and has items
+      expect(output.results).toBeDefined();
+      expect(Array.isArray(output.results)).toBe(true);
+
+      // Verify metadata is still present
+      expect(output.total_count).toBe(4);
+      expect(output.filters_applied).toBeDefined();
     });
   });
 
