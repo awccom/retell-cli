@@ -139,6 +139,41 @@ retell agents list --limit 10 --fields agent_id,agent_name
 - Backward compatibility verified
 - Manual testing completed for all edge cases
 
+### Added - Phase 3: Raw Output Mode
+
+#### Raw Output Flag (`--raw`)
+- Added `--raw` option to `transcripts analyze` command:
+  - `retell transcripts analyze <call_id> --raw`
+
+**Features:**
+- Returns unmodified API response from Retell (bypasses enrichment)
+- Works seamlessly with `--fields` for combined filtering: `--raw --fields call_id,transcript`
+- Useful for debugging, API schema alignment, and accessing new fields
+- Fully backward compatible (no `--raw` = enriched analysis output)
+
+**Examples:**
+```bash
+# Get raw API response
+retell transcripts analyze abc123 --raw
+
+# Raw response with field filtering
+retell transcripts analyze abc123 --raw --fields call_id,transcript_object
+
+# Compare raw vs enriched
+diff <(retell transcripts analyze abc123 --raw) <(retell transcripts analyze abc123)
+```
+
+**Use Cases:**
+- Debugging: Compare raw API response to enriched output
+- API Schema Alignment: Tools expecting official Retell schema
+- Future-proofing: Access new API fields before CLI enriches them
+- Token Efficiency: Combine with `--fields` for precise extraction
+
+#### Testing
+- All existing tests still passing (46/46) ✅
+- Backward compatibility verified (no `--raw` = enriched output)
+- Manual testing completed for all use cases
+
 ### Fixed - Phase 1: Code Review Improvements
 
 #### Critical Bug Fixes

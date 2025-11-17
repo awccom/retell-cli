@@ -52,6 +52,7 @@ interface AnalysisOutput {
 
 export interface AnalyzeTranscriptOptions {
   fields?: string;
+  raw?: boolean;
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -85,6 +86,15 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
 
     // Retrieve the call from the API
     const call = await client.call.retrieve(callId);
+
+    // If --raw flag is set, return unmodified API response
+    if (options.raw) {
+      const output = options.fields
+        ? filterFields(call, options.fields.split(',').map(f => f.trim()))
+        : call;
+      outputJson(output);
+      return;
+    }
 
     // Build structured analysis output
     const analysis: AnalysisOutput = {

@@ -290,6 +290,34 @@ retell agents list --limit 10 --fields agent_id,agent_name
 - Reduces token usage by 50-90% for AI workflows
 - Backward compatible (no --fields = full output)
 
+### Raw Output Mode
+
+Get the unmodified API response instead of enriched analysis:
+
+```bash
+# Raw API response (useful for debugging)
+retell transcripts analyze abc123 --raw
+
+# Combine with field selection for minimal output
+retell transcripts analyze abc123 --raw --fields call_id,transcript_object
+
+# Compare raw vs enriched
+retell transcripts analyze abc123 --raw > raw.json
+retell transcripts analyze abc123 > enriched.json
+diff raw.json enriched.json
+```
+
+**When to use:**
+- Debugging issues with API responses
+- When tools expect the official Retell API schema
+- Accessing new API fields before CLI enrichment support
+- Comparing raw data to enriched output for validation
+
+**Supported commands:**
+- `transcripts analyze` (returns raw call object from Retell API)
+
+**Note:** The `--raw` flag works seamlessly with `--fields` for precise data extraction.
+
 ## Common Workflows
 
 ### Analyzing Failed Calls
