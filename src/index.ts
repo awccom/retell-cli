@@ -59,10 +59,12 @@ transcripts
   .command('list')
   .description('List all call transcripts')
   .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,call_status,metadata.duration)')
   .addHelpText('after', `
 Examples:
   $ retell transcripts list
   $ retell transcripts list --limit 100
+  $ retell transcripts list --fields call_id,call_status
   $ retell transcripts list | jq '.[] | select(.call_status == "error")'
   `)
   .action(async (options) => {
@@ -73,31 +75,40 @@ Examples:
     }
     await listTranscriptsCommand({
       limit,
+      fields: options.fields,
     });
   });
 
 transcripts
   .command('get <call_id>')
   .description('Get a specific call transcript')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,metadata.duration,analysis)')
   .addHelpText('after', `
 Examples:
   $ retell transcripts get call_abc123
+  $ retell transcripts get call_abc123 --fields call_id,metadata.duration
   $ retell transcripts get call_abc123 | jq '.transcript_object'
   `)
-  .action(async (callId) => {
-    await getTranscriptCommand(callId);
+  .action(async (callId, options) => {
+    await getTranscriptCommand(callId, {
+      fields: options.fields,
+    });
   });
 
 transcripts
   .command('analyze <call_id>')
   .description('Analyze a call transcript with performance metrics and insights')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,performance,analysis.summary)')
   .addHelpText('after', `
 Examples:
   $ retell transcripts analyze call_abc123
+  $ retell transcripts analyze call_abc123 --fields call_id,performance
   $ retell transcripts analyze call_abc123 | jq '.performance.latency_p50_ms'
   `)
-  .action(async (callId) => {
-    await analyzeTranscriptCommand(callId);
+  .action(async (callId, options) => {
+    await analyzeTranscriptCommand(callId, {
+      fields: options.fields,
+    });
   });
 
 // Agents commands (Phase 4)
@@ -109,10 +120,12 @@ agents
   .command('list')
   .description('List all agents')
   .option('-l, --limit <number>', 'Maximum number of agents to return (default: 100)', '100')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., agent_id,agent_name,response_engine_type)')
   .addHelpText('after', `
 Examples:
   $ retell agents list
   $ retell agents list --limit 10
+  $ retell agents list --fields agent_id,agent_name
   $ retell agents list | jq '.[] | select(.response_engine.type == "retell-llm")'
   `)
   .action(async (options) => {
@@ -123,19 +136,24 @@ Examples:
     }
     await listAgentsCommand({
       limit,
+      fields: options.fields,
     });
   });
 
 agents
   .command('info <agent_id>')
   .description('Get detailed agent information')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., agent_name,response_engine.type,voice_config)')
   .addHelpText('after', `
 Examples:
   $ retell agents info agent_123abc
+  $ retell agents info agent_123abc --fields agent_name,response_engine.type
   $ retell agents info agent_123abc | jq '.response_engine.type'
   `)
-  .action(async (agentId) => {
-    await agentInfoCommand(agentId);
+  .action(async (agentId, options) => {
+    await agentInfoCommand(agentId, {
+      fields: options.fields,
+    });
   });
 
 // Prompts commands (Phase 5)
