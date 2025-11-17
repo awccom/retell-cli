@@ -181,16 +181,52 @@ function generateConversationFlowDiff(
     };
   }
 
-  // Compare nodes (using JSON stringification for deep comparison)
-  const localNodesStr = JSON.stringify(localPrompts.prompts.nodes);
-  const remoteNodesStr = JSON.stringify(remotePrompts.prompts.nodes);
+  // Compare nodes individually for better granularity
+  const localNodes = localPrompts.prompts.nodes || [];
+  const remoteNodes = remotePrompts.prompts.nodes || [];
 
-  if (localNodesStr !== remoteNodesStr) {
-    changes.nodes = {
-      old: remotePrompts.prompts.nodes,
-      new: localPrompts.prompts.nodes,
-      change_type: 'modified',
-    };
+  // Create maps for easier comparison (using node id as key)
+  const localNodesMap = new Map(localNodes.map((n) => [(n as any).id, n]));
+  const remoteNodesMap = new Map(remoteNodes.map((n) => [(n as any).id, n]));
+
+  // Find added and modified nodes
+  for (const [nodeId, localNode] of localNodesMap) {
+    const remoteNode = remoteNodesMap.get(nodeId);
+    const fieldKey = `nodes.${nodeId}`;
+
+    if (remoteNode === undefined) {
+      // Node added locally
+      changes[fieldKey] = {
+        old: null,
+        new: localNode,
+        change_type: 'added',
+      };
+    } else {
+      // Compare nodes deeply
+      const localNodeStr = JSON.stringify(localNode);
+      const remoteNodeStr = JSON.stringify(remoteNode);
+
+      if (localNodeStr !== remoteNodeStr) {
+        // Node modified locally
+        changes[fieldKey] = {
+          old: remoteNode,
+          new: localNode,
+          change_type: 'modified',
+        };
+      }
+    }
+  }
+
+  // Find removed nodes
+  for (const [nodeId, remoteNode] of remoteNodesMap) {
+    if (!localNodesMap.has(nodeId)) {
+      const fieldKey = `nodes.${nodeId}`;
+      changes[fieldKey] = {
+        old: remoteNode,
+        new: null,
+        change_type: 'removed',
+      };
+    }
   }
 
   return {

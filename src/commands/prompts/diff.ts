@@ -46,13 +46,8 @@ export async function diffPromptsCommand(agentId: string, options: DiffOptions):
     const baseDir = options.source || '.retell-prompts';
     const agentDir = join(baseDir, agentId);
 
-    // Load local prompts
-    let localPrompts;
-    try {
-      localPrompts = loadLocalPrompts(agentId, agentDir);
-    } catch (error: any) {
-      outputError(error.message, 'LOCAL_PROMPTS_ERROR');
-    }
+    // Load local prompts (will throw with descriptive error if fails)
+    const localPrompts = loadLocalPrompts(agentId, agentDir);
 
     // Fetch remote prompts
     const remotePrompts = await resolvePromptSource(agentId);
@@ -71,15 +66,10 @@ export async function diffPromptsCommand(agentId: string, options: DiffOptions):
     }
 
     // Generate diff
-    let diff;
-    try {
-      diff = generateDiff(agentId, localPrompts, remotePrompts);
-    } catch (error: any) {
-      outputError(error.message, 'DIFF_GENERATION_ERROR');
-    }
+    const diff = generateDiff(agentId, localPrompts, remotePrompts);
 
     // Apply field filtering if requested
-    let output: any = diff;
+    let output: Record<string, any> = diff;
     if (options.fields) {
       const fieldList = options.fields.split(',').map((f) => f.trim());
       output = filterFields(diff, fieldList);

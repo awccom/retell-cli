@@ -82,7 +82,7 @@ export function loadLocalPrompts(agentId: string, agentDir: string): LocalPrompt
  * Load Retell LLM prompts from local files
  */
 function loadRetellLlmPrompts(agentDir: string): Omit<RetellLlmPrompts, 'llm_id' | 'version'> {
-  const prompts: any = {};
+  const prompts: Partial<Omit<RetellLlmPrompts, 'llm_id' | 'version'>> = {};
 
   // Load general_prompt (required)
   const generalPromptPath = join(agentDir, 'general_prompt.md');
@@ -148,14 +148,14 @@ function loadRetellLlmPrompts(agentDir: string): Omit<RetellLlmPrompts, 'llm_id'
     }
   }
 
-  return prompts;
+  return prompts as Omit<RetellLlmPrompts, 'llm_id' | 'version'>;
 }
 
 /**
  * Load Conversation Flow prompts from local files
  */
 function loadConversationFlowPrompts(agentDir: string): Omit<FlowPrompts, 'conversation_flow_id' | 'version'> {
-  const prompts: any = {};
+  const prompts: Partial<Omit<FlowPrompts, 'conversation_flow_id' | 'version'>> = {};
 
   // Load global_prompt (required)
   const globalPromptPath = join(agentDir, 'global_prompt.md');
@@ -191,5 +191,5 @@ function loadConversationFlowPrompts(agentDir: string): Omit<FlowPrompts, 'conve
     throw error; // Re-throw if it's our custom error or other errors
   }
 
-  return prompts;
+  return prompts as Omit<FlowPrompts, 'conversation_flow_id' | 'version'>;
 }
