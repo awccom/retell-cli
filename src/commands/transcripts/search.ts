@@ -8,6 +8,14 @@
 import { getRetellClient } from '../../services/retell-client';
 import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
 
+// ===== CONSTANTS =====
+
+/** Maximum number of results allowed by the API */
+const MAX_LIMIT = 1000;
+
+/** Default number of results if not specified */
+const DEFAULT_LIMIT = 50;
+
 // ===== TYPES =====
 
 interface SearchOptions {
@@ -31,6 +39,32 @@ interface SearchResult {
   };
 }
 
+interface ApiFilterCriteria {
+  call_status?: string[];
+  agent_id?: string[];
+  start_timestamp?: {
+    lower_threshold?: number;
+    upper_threshold?: number;
+  };
+}
+
+interface ApiListParams {
+  limit: number;
+  sort_order: 'ascending' | 'descending';
+  filter_criteria?: ApiFilterCriteria;
+}
+
+/**
+ * Custom error class for validation errors
+ * Allows us to distinguish validation errors from API errors
+ */
+class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -39,47 +73,47 @@ interface SearchResult {
  */
 function parseDate(dateStr: string): Date {
   if (!dateStr) {
-    throw new Error('Date string cannot be empty');
+    throw new ValidationError('Date string cannot be empty');
   }
 
   // Try parsing as ISO date
   const date = new Date(dateStr);
 
   if (isNaN(date.getTime())) {
-    throw new Error(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
+    throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
   }
 
   return date;
 }
 
 /**
- * Validate search options
+ * Validate search options and return parsed dates
+ * Returns cached parsed dates to avoid redundant parsing
  */
-function validateSearchOptions(options: SearchOptions): void {
+function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; untilDate?: Date } {
   // Validate status
   const validStatuses = ['error', 'ended', 'ongoing'];
   if (options.status && !validStatuses.includes(options.status)) {
-    throw new Error(
+    throw new ValidationError(
       `Invalid status: "${options.status}". Valid options: ${validStatuses.join(', ')}`
     );
   }
 
-  // Validate individual dates (this will catch empty strings and invalid formats)
+  // Parse and cache dates (avoids redundant parsing)
+  const parsedDates: { sinceDate?: Date; untilDate?: Date } = {};
+
   if (options.since !== undefined) {
-    parseDate(options.since); // Will throw if invalid
+    parsedDates.sinceDate = parseDate(options.since); // Will throw ValidationError if invalid
   }
 
   if (options.until !== undefined) {
-    parseDate(options.until); // Will throw if invalid
+    parsedDates.untilDate = parseDate(options.until); // Will throw ValidationError if invalid
   }
 
   // Validate date range (only if both are provided and valid)
-  if (options.since && options.until) {
-    const sinceDate = parseDate(options.since);
-    const untilDate = parseDate(options.until);
-
-    if (sinceDate > untilDate) {
-      throw new Error(
+  if (parsedDates.sinceDate && parsedDates.untilDate) {
+    if (parsedDates.sinceDate > parsedDates.untilDate) {
+      throw new ValidationError(
         `Invalid date range: --since (${options.since}) is after --until (${options.until})`
       );
     }
@@ -87,12 +121,14 @@ function validateSearchOptions(options: SearchOptions): void {
 
   // Validate limit
   if (options.limit !== undefined && (options.limit < 1 || !Number.isInteger(options.limit))) {
-    throw new Error(`Limit must be a positive integer (got: ${options.limit})`);
+    throw new ValidationError(`Limit must be a positive integer (got: ${options.limit})`);
   }
 
-  if (options.limit !== undefined && options.limit > 1000) {
-    throw new Error(`Limit cannot exceed 1000 (got: ${options.limit})`);
+  if (options.limit !== undefined && options.limit > MAX_LIMIT) {
+    throw new ValidationError(`Limit cannot exceed ${MAX_LIMIT} (got: ${options.limit})`);
   }
+
+  return parsedDates;
 }
 
 /**
@@ -100,18 +136,24 @@ function validateSearchOptions(options: SearchOptions): void {
  *
  * Note: Thanks to Retell API's comprehensive filtering capabilities,
  * all filtering is done server-side. See localdocs/retell-api-search-capabilities.md
+ *
+ * @param options Search options
+ * @param parsedDates Pre-parsed and validated date objects (to avoid redundant parsing)
  */
-async function searchTranscripts(options: SearchOptions): Promise<SearchResult> {
+async function searchTranscripts(
+  options: SearchOptions,
+  parsedDates: { sinceDate?: Date; untilDate?: Date }
+): Promise<SearchResult> {
   const client = getRetellClient();
 
-  // Build API parameters
-  const apiParams: any = {
-    limit: options.limit || 50,
-    sort_order: 'descending' as const, // Most recent first
+  // Build API parameters with proper typing
+  const apiParams: ApiListParams = {
+    limit: options.limit || DEFAULT_LIMIT,
+    sort_order: 'descending', // Most recent first
   };
 
   // Build filter_criteria object
-  const filterCriteria: any = {};
+  const filterCriteria: ApiFilterCriteria = {};
 
   // Status filter (API accepts array, we convert single value)
   if (options.status) {
@@ -124,17 +166,16 @@ async function searchTranscripts(options: SearchOptions): Promise<SearchResult> 
   }
 
   // Date range filter (API accepts Unix timestamps in milliseconds)
-  if (options.since || options.until) {
+  // Use pre-parsed dates from validation to avoid redundant parsing
+  if (parsedDates.sinceDate || parsedDates.untilDate) {
     filterCriteria.start_timestamp = {};
 
-    if (options.since) {
-      const sinceDate = parseDate(options.since);
-      filterCriteria.start_timestamp.lower_threshold = sinceDate.getTime();
+    if (parsedDates.sinceDate) {
+      filterCriteria.start_timestamp.lower_threshold = parsedDates.sinceDate.getTime();
     }
 
-    if (options.until) {
-      const untilDate = parseDate(options.until);
-      filterCriteria.start_timestamp.upper_threshold = untilDate.getTime();
+    if (parsedDates.untilDate) {
+      filterCriteria.start_timestamp.upper_threshold = parsedDates.untilDate.getTime();
     }
   }
 
@@ -158,7 +199,7 @@ async function searchTranscripts(options: SearchOptions): Promise<SearchResult> 
       ...(options.agentId && { agent_id: options.agentId }),
       ...(options.since && { since: options.since }),
       ...(options.until && { until: options.until }),
-      limit: options.limit || 50,
+      limit: options.limit || DEFAULT_LIMIT,
     },
   };
 }
@@ -172,11 +213,11 @@ async function searchTranscripts(options: SearchOptions): Promise<SearchResult> 
  */
 export async function searchTranscriptsCommand(options: SearchOptions = {}): Promise<void> {
   try {
-    // Validate options
-    validateSearchOptions(options);
+    // Validate options and get cached parsed dates
+    const parsedDates = validateSearchOptions(options);
 
-    // Execute search
-    const searchResult = await searchTranscripts(options);
+    // Execute search with cached dates
+    const searchResult = await searchTranscripts(options, parsedDates);
 
     // Apply field filtering if requested
     const output = options.fields
@@ -192,6 +233,12 @@ export async function searchTranscriptsCommand(options: SearchOptions = {}): Pro
     // Output results
     outputJson(output);
   } catch (error) {
-    handleSdkError(error);
+    // Handle validation errors separately from SDK errors
+    if (error instanceof ValidationError) {
+      handleSdkError(error);
+    } else {
+      // API or network errors
+      handleSdkError(error);
+    }
   }
 }

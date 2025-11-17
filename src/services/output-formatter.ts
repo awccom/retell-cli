@@ -241,8 +241,12 @@ export function handleSdkError(error: unknown): never {
     outputError(message, 'API_ERROR');
   }
 
-  // Non-SDK error
+  // Non-SDK errors
   if (error instanceof Error) {
+    // Check if it's a ValidationError (by name, to avoid circular dependencies)
+    if (error.name === 'ValidationError') {
+      outputError(error.message, 'VALIDATION_ERROR');
+    }
     outputError(error.message, 'UNKNOWN_ERROR');
   }
 
