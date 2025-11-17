@@ -5,7 +5,7 @@
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import type { PromptSource } from './prompt-resolver';
+import type { PromptSource, ConversationFlowNode } from './prompt-resolver';
 import type { LocalPrompts } from './prompt-loader';
 
 /**
@@ -30,6 +30,35 @@ export interface DiffResult {
   agent_type: 'retell-llm' | 'conversation-flow';
   has_changes: boolean;
   changes: Record<string, ChangeDetail>;
+}
+
+/**
+ * Deep equality check for objects with deterministic JSON comparison
+ * Sorts keys before stringifying to ensure consistent comparison
+ *
+ * @param obj1 First object to compare
+ * @param obj2 Second object to compare
+ * @returns true if objects are deeply equal
+ */
+function deepEqual(obj1: unknown, obj2: unknown): boolean {
+  // Handle primitive types and null
+  if (obj1 === obj2) return true;
+  if (obj1 === null || obj2 === null) return false;
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
+
+  // Use sorted JSON for deterministic comparison
+  const sortedStringify = (obj: any): string => {
+    if (obj === null) return 'null';
+    if (typeof obj !== 'object') return JSON.stringify(obj);
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(sortedStringify).join(',') + ']';
+    }
+    const keys = Object.keys(obj).sort();
+    const pairs = keys.map((k) => JSON.stringify(k) + ':' + sortedStringify(obj[k]));
+    return '{' + pairs.join(',') + '}';
+  };
+
+  return sortedStringify(obj1) === sortedStringify(obj2);
 }
 
 /**
@@ -186,8 +215,8 @@ function generateConversationFlowDiff(
   const remoteNodes = remotePrompts.prompts.nodes || [];
 
   // Create maps for easier comparison (using node id as key)
-  const localNodesMap = new Map(localNodes.map((n) => [(n as any).id, n]));
-  const remoteNodesMap = new Map(remoteNodes.map((n) => [(n as any).id, n]));
+  const localNodesMap = new Map(localNodes.map((n) => [n.id, n]));
+  const remoteNodesMap = new Map(remoteNodes.map((n) => [n.id, n]));
 
   // Find added and modified nodes
   for (const [nodeId, localNode] of localNodesMap) {
@@ -202,11 +231,8 @@ function generateConversationFlowDiff(
         change_type: 'added',
       };
     } else {
-      // Compare nodes deeply
-      const localNodeStr = JSON.stringify(localNode);
-      const remoteNodeStr = JSON.stringify(remoteNode);
-
-      if (localNodeStr !== remoteNodeStr) {
+      // Compare nodes using deterministic deep equality
+      if (!deepEqual(localNode, remoteNode)) {
         // Node modified locally
         changes[fieldKey] = {
           old: remoteNode,
