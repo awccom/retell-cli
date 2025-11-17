@@ -8,7 +8,60 @@
 import { getRetellClient } from '../../services/retell-client';
 import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
 
+// ===== CONSTANTS =====
+
+/**
+ * Default threshold values for hotspot detection
+ */
+export const DEFAULT_LATENCY_THRESHOLD = 2000;  // ms
+export const DEFAULT_SILENCE_THRESHOLD = 5000;  // ms
+
 // ===== TYPES =====
+
+/**
+ * Retell API Call Response structure (subset of fields used for hotspot detection)
+ */
+interface CallResponse {
+  call_id?: string;
+  call_status?: string;
+  duration_ms?: number;
+  start_timestamp?: number;
+  end_timestamp?: number;
+  agent_name?: string;
+  transcript_object?: Array<{
+    role: 'agent' | 'user';
+    content: string;
+    words?: Array<{
+      start: number;  // seconds
+      end: number;    // seconds
+      word: string;
+    }>;
+  }>;
+  call_analysis?: {
+    call_summary?: string;
+    user_sentiment?: string;
+    call_successful?: boolean;
+    in_voicemail?: boolean;
+  };
+  latency?: {
+    e2e?: {
+      p50?: number;
+      p90?: number;
+    };
+    llm?: {
+      p50?: number;
+      p90?: number;
+    };
+    tts?: {
+      p50?: number;
+      p90?: number;
+    };
+  };
+  call_cost?: {
+    combined_cost?: number;
+    product_costs?: Array<{ product: string; cost: number }>;
+  };
+}
 
 interface TranscriptTurn {
   role: 'agent' | 'user';
@@ -81,6 +134,16 @@ export interface AnalyzeTranscriptOptions {
 // ===== HELPER FUNCTIONS =====
 
 /**
+ * Validates threshold values
+ * @throws Error if threshold is not a positive integer
+ */
+function validateThreshold(threshold: number, name: string): void {
+  if (!Number.isInteger(threshold) || threshold <= 0) {
+    throw new Error(`${name} must be a positive integer (got: ${threshold})`);
+  }
+}
+
+/**
  * Extract transcript turns from transcript_object
  */
 function extractTranscriptTurns(transcriptObject: any[]): TranscriptTurn[] {
@@ -117,7 +180,7 @@ function formatTimestamp(seconds: number): string {
 /**
  * Detect latency spikes in call performance
  */
-function detectLatencySpikes(call: any, config: HotspotConfig): HotspotIssue[] {
+function detectLatencySpikes(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
 
   // Check overall p90 latency metrics
@@ -140,7 +203,7 @@ function detectLatencySpikes(call: any, config: HotspotConfig): HotspotIssue[] {
 /**
  * Detect long silences between conversation turns
  */
-function detectLongSilences(call: any, config: HotspotConfig): HotspotIssue[] {
+function detectLongSilences(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
   const transcript = call.transcript_object || [];
 
@@ -154,8 +217,13 @@ function detectLongSilences(call: any, config: HotspotConfig): HotspotIssue[] {
 
     if (prevWords.length === 0 || currWords.length === 0) continue;
 
-    const prevEnd = prevWords[prevWords.length - 1].end;  // in seconds
-    const currStart = currWords[0].start;  // in seconds
+    // Add null safety checks for word timing data
+    const prevEnd = prevWords[prevWords.length - 1]?.end;
+    const currStart = currWords[0]?.start;
+
+    // Skip if timing data is missing
+    if (prevEnd === undefined || currStart === undefined) continue;
+
     const gapMs = (currStart - prevEnd) * 1000;  // convert to ms
 
     if (gapMs > config.silenceThreshold) {
@@ -178,7 +246,7 @@ function detectLongSilences(call: any, config: HotspotConfig): HotspotIssue[] {
 /**
  * Detect sentiment issues in the conversation
  */
-function detectSentimentIssues(call: any): HotspotIssue[] {
+function detectSentimentIssues(call: CallResponse): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
 
   // Check overall sentiment
@@ -199,7 +267,7 @@ function detectSentimentIssues(call: any): HotspotIssue[] {
 /**
  * Detect all hotspots in a call
  */
-function detectAllHotspots(call: any, config: HotspotConfig): HotspotIssue[] {
+function detectAllHotspots(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
   const hotspots = [
     ...detectLatencySpikes(call, config),
     ...detectLongSilences(call, config),
@@ -223,6 +291,16 @@ function detectAllHotspots(call: any, config: HotspotConfig): HotspotIssue[] {
  * @param options Command options (fields)
  */
 export async function analyzeTranscriptCommand(callId: string, options: AnalyzeTranscriptOptions = {}): Promise<void> {
+  // Validate threshold values before any async operations (outside try-catch)
+  if (options.hotspotsOnly) {
+    const latencyThreshold = options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD;
+    const silenceThreshold = options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD;
+
+    // Validate threshold values
+    validateThreshold(latencyThreshold, 'Latency threshold');
+    validateThreshold(silenceThreshold, 'Silence threshold');
+  }
+
   try {
     const client = getRetellClient();
 
@@ -241,8 +319,8 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
     // If --hotspots-only flag is set, detect and return conversation issues
     if (options.hotspotsOnly) {
       const config: HotspotConfig = {
-        latencyThreshold: options.latencyThreshold || 2000,
-        silenceThreshold: options.silenceThreshold || 5000
+        latencyThreshold: options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD,
+        silenceThreshold: options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD
       };
 
       const hotspots = detectAllHotspots(call, config);

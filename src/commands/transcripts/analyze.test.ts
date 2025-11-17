@@ -9,7 +9,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeTranscriptCommand } from './analyze';
+import {
+  analyzeTranscriptCommand,
+  DEFAULT_LATENCY_THRESHOLD,
+  DEFAULT_SILENCE_THRESHOLD
+} from './analyze';
 import * as retellClient from '../../services/retell-client';
 import * as outputFormatter from '../../services/output-formatter';
 
@@ -251,6 +255,353 @@ describe('analyzeTranscriptCommand', () => {
       expect(outputCall.transcript).toBeDefined();
       expect(outputCall.transcript[0]).toHaveProperty('word_count');
       expect(outputCall.transcript[0].word_count).toBeGreaterThan(0);
+    });
+  });
+
+  describe('hotspot detection functionality', () => {
+    describe('latency spike detection', () => {
+      it('should detect latency spikes when p90 exceeds threshold', async () => {
+        const highLatencyData = {
+          ...mockCallData,
+          latency: {
+            e2e: { p50: 1000, p90: 3000 }, // Above default threshold of 2000ms
+            llm: { p50: 500, p90: 1500 },
+            tts: { p50: 200, p90: 800 },
+          },
+        };
+        mockClient.call.retrieve.mockResolvedValue(highLatencyData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        expect(outputCall).toHaveProperty('hotspots');
+        expect(outputCall.hotspots).toBeInstanceOf(Array);
+        expect(outputCall.hotspots.length).toBeGreaterThan(0);
+
+        const latencyHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'latency_spike');
+        expect(latencyHotspot).toBeDefined();
+        expect(latencyHotspot.turn_index).toBe(-1); // Overall metric
+        expect(latencyHotspot.metrics.latency_p90_e2e).toBe(3000);
+      });
+
+      it('should not detect latency spikes when below threshold', async () => {
+        const lowLatencyData = {
+          ...mockCallData,
+          latency: {
+            e2e: { p50: 250, p90: 400 }, // Below default threshold
+            llm: { p50: 150, p90: 250 },
+            tts: { p50: 100, p90: 150 },
+          },
+        };
+        mockClient.call.retrieve.mockResolvedValue(lowLatencyData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const latencyHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'latency_spike');
+        expect(latencyHotspot).toBeUndefined();
+      });
+
+      it('should respect custom latency threshold', async () => {
+        const customThresholdData = {
+          ...mockCallData,
+          latency: {
+            e2e: { p50: 500, p90: 1200 }, // Below default 2000ms, but above custom 1000ms
+            llm: { p50: 300, p90: 600 },
+            tts: { p50: 200, p90: 300 },
+          },
+        };
+        mockClient.call.retrieve.mockResolvedValue(customThresholdData);
+
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          latencyThreshold: 1000,
+        });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const latencyHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'latency_spike');
+        expect(latencyHotspot).toBeDefined();
+        expect(latencyHotspot.metrics.latency_p90_e2e).toBe(1200);
+      });
+    });
+
+    describe('long silence detection', () => {
+      it('should detect long silences between turns', async () => {
+        const silenceData = {
+          ...mockCallData,
+          transcript_object: [
+            {
+              role: 'agent',
+              content: 'Hello',
+              words: [
+                { word: 'Hello', start: 0, end: 0.5 },
+              ],
+            },
+            {
+              role: 'user',
+              content: 'Hi there',
+              words: [
+                { word: 'Hi', start: 7.5, end: 7.8 }, // 7 second gap
+                { word: 'there', start: 7.8, end: 8.2 },
+              ],
+            },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(silenceData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        expect(silenceHotspot).toBeDefined();
+        expect(silenceHotspot.metrics.silence_duration_ms).toBe(7000);
+      });
+
+      it('should not detect silences below threshold', async () => {
+        const normalData = {
+          ...mockCallData,
+          transcript_object: [
+            {
+              role: 'agent',
+              content: 'Hello',
+              words: [{ word: 'Hello', start: 0, end: 0.5 }],
+            },
+            {
+              role: 'user',
+              content: 'Hi',
+              words: [{ word: 'Hi', start: 1.0, end: 1.3 }], // Only 0.5 second gap
+            },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(normalData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        expect(silenceHotspot).toBeUndefined();
+      });
+
+      it('should handle missing word timing data gracefully', async () => {
+        const noTimingData = {
+          ...mockCallData,
+          transcript_object: [
+            { role: 'agent', content: 'Hello', words: [] },
+            { role: 'user', content: 'Hi', words: [] },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(noTimingData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        // Should not throw error
+        expect(outputFormatter.outputJson).toHaveBeenCalled();
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        expect(silenceHotspot).toBeUndefined();
+      });
+
+      it('should handle undefined timing values in words array', async () => {
+        const undefinedTimingData = {
+          ...mockCallData,
+          transcript_object: [
+            {
+              role: 'agent',
+              content: 'Hello',
+              words: [{ word: 'Hello', start: 0, end: undefined }],
+            },
+            {
+              role: 'user',
+              content: 'Hi',
+              words: [{ word: 'Hi', start: undefined, end: 1.3 }],
+            },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(undefinedTimingData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        // Should not throw error
+        expect(outputFormatter.outputJson).toHaveBeenCalled();
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        expect(silenceHotspot).toBeUndefined();
+      });
+
+      it('should respect custom silence threshold', async () => {
+        const customSilenceData = {
+          ...mockCallData,
+          transcript_object: [
+            {
+              role: 'agent',
+              content: 'Hello',
+              words: [{ word: 'Hello', start: 0, end: 0.5 }],
+            },
+            {
+              role: 'user',
+              content: 'Hi',
+              words: [{ word: 'Hi', start: 3.5, end: 3.8 }], // 3 second gap
+            },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(customSilenceData);
+
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          silenceThreshold: 2000, // 2 seconds
+        });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        expect(silenceHotspot).toBeDefined();
+        expect(silenceHotspot.metrics.silence_duration_ms).toBe(3000);
+      });
+    });
+
+    describe('sentiment detection', () => {
+      it('should detect negative sentiment', async () => {
+        const negativeSentimentData = {
+          ...mockCallData,
+          call_analysis: {
+            ...mockCallData.call_analysis,
+            user_sentiment: 'Negative',
+          },
+        };
+        mockClient.call.retrieve.mockResolvedValue(negativeSentimentData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const sentimentHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'sentiment');
+        expect(sentimentHotspot).toBeDefined();
+        expect(sentimentHotspot.metrics.sentiment).toBe('Negative');
+      });
+
+      it('should not detect positive or neutral sentiment', async () => {
+        const positiveSentimentData = {
+          ...mockCallData,
+          call_analysis: {
+            ...mockCallData.call_analysis,
+            user_sentiment: 'Positive',
+          },
+        };
+        mockClient.call.retrieve.mockResolvedValue(positiveSentimentData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        const sentimentHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'sentiment');
+        expect(sentimentHotspot).toBeUndefined();
+      });
+    });
+
+    describe('combined hotspot detection', () => {
+      it('should detect multiple hotspot types simultaneously', async () => {
+        const multipleIssuesData = {
+          ...mockCallData,
+          latency: {
+            e2e: { p50: 1500, p90: 3000 }, // High latency
+            llm: { p50: 800, p90: 1500 },
+            tts: { p50: 300, p90: 600 },
+          },
+          call_analysis: {
+            ...mockCallData.call_analysis,
+            user_sentiment: 'Negative', // Negative sentiment
+          },
+          transcript_object: [
+            {
+              role: 'agent',
+              content: 'Hello',
+              words: [{ word: 'Hello', start: 0, end: 0.5 }],
+            },
+            {
+              role: 'user',
+              content: 'Finally!',
+              words: [{ word: 'Finally', start: 8.5, end: 9.0 }], // Long silence
+            },
+          ],
+        };
+        mockClient.call.retrieve.mockResolvedValue(multipleIssuesData);
+
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        expect(outputCall.hotspots.length).toBeGreaterThanOrEqual(3);
+
+        const latencyHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'latency_spike');
+        const silenceHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'long_silence');
+        const sentimentHotspot = outputCall.hotspots.find((h: any) => h.issue_type === 'sentiment');
+
+        expect(latencyHotspot).toBeDefined();
+        expect(silenceHotspot).toBeDefined();
+        expect(sentimentHotspot).toBeDefined();
+      });
+
+      it('should return empty hotspots array when no issues detected', async () => {
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        expect(outputCall.hotspots).toEqual([]);
+      });
+    });
+
+    describe('hotspots-only with field filtering', () => {
+      it('should work with --fields to return only hotspots', async () => {
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          fields: 'hotspots',
+        });
+
+        const outputCall = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+        expect(outputCall).toHaveProperty('hotspots');
+        expect(outputCall).not.toHaveProperty('call_id');
+      });
+    });
+
+    describe('threshold validation', () => {
+      it('should reject negative threshold values', async () => {
+        await expect(
+          analyzeTranscriptCommand('call_abc123', {
+            hotspotsOnly: true,
+            latencyThreshold: -100,
+          })
+        ).rejects.toThrow('Latency threshold must be a positive integer');
+      });
+
+      it('should reject zero threshold values', async () => {
+        await expect(
+          analyzeTranscriptCommand('call_abc123', {
+            hotspotsOnly: true,
+            silenceThreshold: 0,
+          })
+        ).rejects.toThrow('Silence threshold must be a positive integer');
+      });
+
+      it('should reject non-integer threshold values', async () => {
+        await expect(
+          analyzeTranscriptCommand('call_abc123', {
+            hotspotsOnly: true,
+            latencyThreshold: 1500.5,
+          })
+        ).rejects.toThrow('Latency threshold must be a positive integer');
+      });
+
+      it('should use default thresholds when not specified', async () => {
+        await analyzeTranscriptCommand('call_abc123', { hotspotsOnly: true });
+
+        // Should not throw and should complete successfully
+        expect(outputFormatter.outputJson).toHaveBeenCalled();
+      });
+    });
+
+    describe('constants', () => {
+      it('should export DEFAULT_LATENCY_THRESHOLD', () => {
+        expect(DEFAULT_LATENCY_THRESHOLD).toBe(2000);
+      });
+
+      it('should export DEFAULT_SILENCE_THRESHOLD', () => {
+        expect(DEFAULT_SILENCE_THRESHOLD).toBe(5000);
+      });
     });
   });
 });
