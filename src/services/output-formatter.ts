@@ -108,3 +108,57 @@ export function outputSuccess(message: string, data?: Record<string, unknown>): 
   };
   outputJson(output);
 }
+
+/**
+ * Filter fields from an object using dot notation paths
+ *
+ * Supports nested field selection like 'metadata.duration' or 'changes.general_prompt'
+ *
+ * @param data The data object to filter
+ * @param fields Array of field paths to keep
+ * @returns Filtered object containing only specified fields
+ *
+ * @example
+ * const data = { name: 'John', age: 30, metadata: { city: 'NYC' } };
+ * filterFields(data, ['name', 'metadata.city']);
+ * // Returns: { name: 'John', metadata: { city: 'NYC' } }
+ */
+export function filterFields(data: any, fields: string[]): any {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const result: any = Array.isArray(data) ? [] : {};
+
+  fields.forEach((field) => {
+    const parts = field.split('.');
+    let source = data;
+    let target = result;
+
+    // Navigate through the path
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+
+      if (source === undefined || source === null) {
+        break;
+      }
+
+      if (isLast) {
+        // Set the final value
+        if (source.hasOwnProperty(part)) {
+          target[part] = source[part];
+        }
+      } else {
+        // Create intermediate objects if needed
+        if (!target.hasOwnProperty(part)) {
+          target[part] = Array.isArray(source[part]) ? [] : {};
+        }
+        target = target[part];
+        source = source[part];
+      }
+    }
+  });
+
+  return result;
+}

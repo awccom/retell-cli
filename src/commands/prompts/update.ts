@@ -11,12 +11,15 @@ import { join } from 'path';
 import { resolvePromptSource } from '../../services/prompt-resolver';
 import { getRetellClient } from '../../services/retell-client';
 import { outputJson, outputError, handleSdkError } from '../../services/output-formatter';
+import { loadLocalPrompts } from '../../services/prompt-loader';
+import { generateDiff } from '../../services/prompt-diff';
 
 /**
  * Options for the update command
  */
 interface UpdateOptions {
   source?: string; // Source directory (default: .retell-prompts)
+  dryRun?: boolean; // Preview changes without applying them
 }
 
 /**
@@ -94,6 +97,34 @@ export async function updatePromptsCommand(agentId: string, options: UpdateOptio
         `Type mismatch: local files are ${metadata.type}, but agent uses ${promptSource.type}. Pull prompts again to sync.`,
         'TYPE_MISMATCH'
       );
+      return;
+    }
+
+    // Handle dry-run mode
+    if (options.dryRun) {
+      // Load local prompts
+      let localPrompts;
+      try {
+        localPrompts = loadLocalPrompts(agentId, agentDir);
+      } catch (error: any) {
+        outputError(error.message, 'LOCAL_PROMPTS_ERROR');
+        return;
+      }
+
+      // Generate diff
+      let diff;
+      try {
+        diff = generateDiff(agentId, localPrompts, promptSource);
+      } catch (error: any) {
+        outputError(error.message, 'DIFF_GENERATION_ERROR');
+        return;
+      }
+
+      // Output diff with dry-run message
+      outputJson({
+        message: 'Dry run - no changes applied',
+        ...diff,
+      });
       return;
     }
 

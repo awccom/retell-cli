@@ -1,6 +1,6 @@
 {
   "name": "retell-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official command-line tool for Retell AI - analyze call transcripts, manage agents, and update prompts with ease",
   "main": "dist/index.js",
   "bin": {
