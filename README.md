@@ -314,9 +314,9 @@ diff raw.json enriched.json
 - Comparing raw data to enriched output for validation
 
 **Supported commands:**
-- `transcripts analyze` (returns raw call object from Retell API)
+- `transcripts analyze` - returns the raw [Call Object](https://docs.retellai.com/api-references/retrieve-call) exactly as documented in the Retell API reference
 
-**Note:** The `--raw` flag works seamlessly with `--fields` for precise data extraction.
+**Note:** The `--raw` flag works seamlessly with `--fields` for precise data extraction. Raw output returns the official Retell API schema, allowing you to access all fields documented in the [API reference](https://docs.retellai.com/api-references/list-calls).
 
 ## Common Workflows
 
