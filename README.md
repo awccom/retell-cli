@@ -347,6 +347,52 @@ retell transcripts analyze abc123 --hotspots-only --silence-threshold 3000
 
 **Note:** The `--hotspots-only` flag works seamlessly with `--fields` for token efficiency.
 
+### Search Transcripts
+
+Find calls with advanced filtering - no need for jq or grep:
+
+```bash
+# Find all error calls
+retell transcripts search --status error
+
+# Find calls for specific agent in date range
+retell transcripts search \
+  --agent-id agent_123 \
+  --since 2025-11-01 \
+  --until 2025-11-15
+
+# Combine multiple filters
+retell transcripts search \
+  --status error \
+  --agent-id agent_123 \
+  --since 2025-11-01 \
+  --limit 20
+
+# Use field selection for minimal output
+retell transcripts search \
+  --status error \
+  --fields call_id,call_status,agent_id
+```
+
+**Available filters:**
+- `--status` - Call status (error, ended, ongoing)
+- `--agent-id` - Filter by agent
+- `--since` - Calls after date (YYYY-MM-DD or ISO format)
+- `--until` - Calls before date (YYYY-MM-DD or ISO format)
+- `--limit` - Max results (default: 50)
+- `--fields` - Select specific fields (from Phase 2)
+
+**AI Agent Workflow Example:**
+```bash
+# 1. Find all recent error calls
+retell transcripts search --status error --since 2025-11-08 --fields call_id
+
+# 2. For each call, get hotspots
+retell transcripts analyze <call_id> --hotspots-only
+
+# 3. No jq or grep needed - direct JSON parsing!
+```
+
 ## Common Workflows
 
 ### Analyzing Failed Calls
