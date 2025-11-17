@@ -175,6 +175,53 @@ diff <(retell transcripts analyze abc123 --raw) <(retell transcripts analyze abc
 - Backward compatibility verified (no `--raw` = enriched output)
 - Manual testing completed for all use cases
 
+### Added - Phase 4: Hotspot Detection
+
+#### Hotspot Detection Flag (`--hotspots-only`)
+- Added `--hotspots-only` option to `transcripts analyze` command:
+  - `retell transcripts analyze <call_id> --hotspots-only`
+
+**Features:**
+- Detects conversation issues using Retell API metrics
+- Returns structured array of hotspots with turn indices and timestamps
+- Configurable thresholds for latency and silence detection
+- Works seamlessly with `--fields` for token efficiency
+- Fully backward compatible
+
+**Detected Issues:**
+- Latency spikes (p90 > configurable threshold, default 2000ms)
+- Long silences (gaps > configurable threshold, default 5000ms)
+- Sentiment issues (negative sentiment indicators)
+
+**Examples:**
+```bash
+# Detect all hotspots
+retell transcripts analyze abc123 --hotspots-only
+
+# Custom thresholds
+retell transcripts analyze abc123 --hotspots-only --latency-threshold 1500
+
+# Minimal output
+retell transcripts analyze abc123 --hotspots-only --fields hotspots
+```
+
+**Use Cases:**
+- Rapid troubleshooting: Identify problem areas in failed calls
+- Prompt iteration: See exactly where agent responses failed
+- Performance monitoring: Track latency issues across calls
+- AI workflows: Feed hotspots into prompt refinement pipelines
+
+#### Documentation
+- Added `localdocs/retell-api-metrics-reference.md` - API research findings
+- Updated README.md with "Hotspot Detection" section
+- Updated CLI help text with examples
+
+#### Testing
+- All existing tests still passing (59/59) ✅
+- Manual testing completed for all hotspot types
+- Edge cases verified (empty transcripts, missing metrics)
+- Backward compatibility verified
+
 ### Fixed - Phase 1: Code Review Improvements
 
 #### Critical Bug Fixes

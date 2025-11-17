@@ -11,7 +11,7 @@ import { join } from 'path';
 import { loginCommand } from './commands/login';
 import { listTranscriptsCommand } from './commands/transcripts/list';
 import { getTranscriptCommand } from './commands/transcripts/get';
-import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
+import { analyzeTranscriptCommand, DEFAULT_LATENCY_THRESHOLD, DEFAULT_SILENCE_THRESHOLD } from './commands/transcripts/analyze';
 import { listAgentsCommand } from './commands/agents/list';
 import { agentInfoCommand } from './commands/agents/info';
 import { pullPromptsCommand } from './commands/prompts/pull';
@@ -100,18 +100,27 @@ transcripts
   .description('Analyze a call transcript with performance metrics and insights')
   .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,performance,analysis.summary)')
   .option('--raw', 'Return unmodified API response instead of enriched analysis')
+  .option('--hotspots-only', 'Return only conversation hotspots/issues for troubleshooting')
+  .option('--latency-threshold <ms>', `Latency threshold in ms for hotspot detection (default: ${DEFAULT_LATENCY_THRESHOLD})`, String(DEFAULT_LATENCY_THRESHOLD))
+  .option('--silence-threshold <ms>', `Silence threshold in ms for hotspot detection (default: ${DEFAULT_SILENCE_THRESHOLD})`, String(DEFAULT_SILENCE_THRESHOLD))
   .addHelpText('after', `
 Examples:
   $ retell transcripts analyze call_abc123
   $ retell transcripts analyze call_abc123 --fields call_id,performance
   $ retell transcripts analyze call_abc123 --raw
   $ retell transcripts analyze call_abc123 --raw --fields call_id,transcript_object
+  $ retell transcripts analyze call_abc123 --hotspots-only
+  $ retell transcripts analyze call_abc123 --hotspots-only --latency-threshold 1500
+  $ retell transcripts analyze call_abc123 --hotspots-only --fields hotspots
   $ retell transcripts analyze call_abc123 | jq '.performance.latency_p50_ms'
   `)
   .action(async (callId, options) => {
     await analyzeTranscriptCommand(callId, {
       fields: options.fields,
       raw: options.raw,
+      hotspotsOnly: options.hotspotsOnly,
+      latencyThreshold: options.latencyThreshold ? parseInt(options.latencyThreshold) : undefined,
+      silenceThreshold: options.silenceThreshold ? parseInt(options.silenceThreshold) : undefined,
     });
   });
 
