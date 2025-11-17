@@ -17,6 +17,7 @@ import { listAgentsCommand } from './commands/agents/list';
 import { agentInfoCommand } from './commands/agents/info';
 import { pullPromptsCommand } from './commands/prompts/pull';
 import { updatePromptsCommand } from './commands/prompts/update';
+import { diffPromptsCommand } from './commands/prompts/diff';
 import { publishAgentCommand } from './commands/agent/publish';
 
 // Read package.json for version
@@ -214,6 +215,21 @@ Examples:
   `)
   .action(async (agentId, options) => {
     await pullPromptsCommand(agentId, options);
+  });
+
+prompts
+  .command('diff <agent_id>')
+  .description('Show differences between local and remote prompts')
+  .option('-s, --source <path>', 'Source directory path (default: .retell-prompts)', '.retell-prompts')
+  .option('-f, --fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell prompts diff agent_123abc
+  $ retell prompts diff agent_123abc --source ./custom-prompts
+  $ retell prompts diff agent_123abc --fields has_changes,changes.general_prompt
+  `)
+  .action(async (agentId, options) => {
+    await diffPromptsCommand(agentId, options);
   });
 
 prompts

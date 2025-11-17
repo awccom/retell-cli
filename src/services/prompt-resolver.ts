@@ -28,13 +28,21 @@ export type RetellLlmPrompts = {
 };
 
 /**
+ * Individual node in a Conversation Flow
+ */
+export interface ConversationFlowNode {
+  id: string;
+  [key: string]: unknown; // Allow additional properties from API
+}
+
+/**
  * Prompt structure for Conversation Flow agents
  */
 export type FlowPrompts = {
   conversation_flow_id: string;
   version: number;
   global_prompt: string;
-  nodes: unknown[];
+  nodes: ConversationFlowNode[];
 };
 
 /**

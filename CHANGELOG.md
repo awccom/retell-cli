@@ -305,6 +305,68 @@ retell transcripts search --status error --fields call_id,call_status
   - Conditional return type based on input (array vs object)
   - Maintains type safety while keeping flexibility
 
+
+### Added - Phase 6: Diff Command & Dry Run
+
+#### Prompt Diff & Dry Run
+- **`retell prompts diff <agent_id>`** - New command to show differences between local and remote prompts
+  - Compare prompts before applying updates
+  - Structured diff output with old/new values and change types
+  - Supports both retell-llm and conversation-flow agent types
+  - `--source` option for custom prompt directories
+  - `--fields` option for filtering diff output
+- **`--dry-run` flag for `retell prompts update`** - Preview changes without applying them
+  - Shows same structured diff as `prompts diff` command
+  - Prevents accidental prompt updates
+  - Useful for validating changes before publishing
+
+#### Shared Prompt Loading
+- **`loadLocalPrompts()` utility** - Centralized prompt loading from local files
+  - Eliminates code duplication between diff and update commands (112 lines removed)
+  - Validates prompt directory structure
+  - Handles both retell-llm and conversation-flow formats
+
+#### Enhanced Prompt Update Command
+- Added dry-run capability to preview changes
+- Improved error messages for type mismatches
+- Better validation of local prompt files
+
+#### AI Agent Workflows Documentation
+- **`docs/ai-agent-workflows.md`** - Comprehensive best practices guide
+  - Safe prompt update workflows
+  - Token efficiency strategies
+  - Call analysis patterns
+  - Iterative refinement workflows
+  - Error handling guidelines
+  - Common automation patterns
+
+**Use Cases:**
+- **Prevent Accidental Updates** - See exactly what will change before pushing
+- **AI Justification** - AI agents can explain changes by showing diffs
+- **Code Review for Prompts** - Review prompt changes like code PRs
+- **Debugging Support** - Compare local vs remote when troubleshooting
+- **Audit Trail** - Document what changed and when
+
+**Examples:**
+```bash
+# Compare local and remote prompts
+retell prompts diff agent_123
+
+# Preview changes before applying
+retell prompts update agent_123 --dry-run
+
+# Apply changes after review
+retell prompts update agent_123
+```
+
+**Technical Details:**
+- New services: `prompt-diff.ts`, `prompt-loader.ts`
+- New command: `prompts/diff.ts`
+- Enhanced: `prompts/update.ts` with dry-run support
+- Code deduplication: Removed 112 duplicate lines
+- No breaking changes - all new features are opt-in
+
+
 ## [1.0.0] - 2025-11-15
 
 ### Added

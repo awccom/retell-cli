@@ -1,192 +1,264 @@
 /**
- * Prompt Diffing Service
+ * Prompt Diff Service
  *
- * Compares local prompt files with remote API versions to detect changes.
+ * Generates structured diffs between local and remote prompts.
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import diff from 'microdiff';
-import type { PromptSource } from './prompt-resolver';
-import type { DiffResult, ChangeDetail } from '../types';
-
-// ===== HELPER FUNCTIONS =====
+import type { PromptSource, ConversationFlowNode } from './prompt-resolver';
+import type { LocalPrompts } from './prompt-loader';
 
 /**
- * Determine the change type based on the diff type
+ * Change type enumeration
  */
-function getChangeType(type: 'CREATE' | 'REMOVE' | 'CHANGE'): 'added' | 'removed' | 'modified' {
-  switch (type) {
-    case 'CREATE':
-      return 'added';
-    case 'REMOVE':
-      return 'removed';
-    case 'CHANGE':
-      return 'modified';
-  }
+export type ChangeType = 'added' | 'modified' | 'removed';
+
+/**
+ * Details about a specific field change
+ */
+export interface ChangeDetail {
+  old: any;
+  new: any;
+  change_type: ChangeType;
 }
 
 /**
- * Convert a value to a serializable format for diff output
+ * Diff result structure
  */
-function serializeValue(value: any): string | number | boolean | object | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  // For objects and arrays, return as-is (they're already serializable)
-  if (typeof value === 'object') {
-    return value;
-  }
-
-  // For primitives, keep their original type for better accuracy
-  return value;
+export interface DiffResult {
+  agent_id: string;
+  agent_type: 'retell-llm' | 'conversation-flow';
+  has_changes: boolean;
+  changes: Record<string, ChangeDetail>;
 }
 
 /**
- * Compare two prompt objects and generate a structured diff
+ * Deep equality check for objects with deterministic JSON comparison
+ * Sorts keys before stringifying to ensure consistent comparison
  *
- * @param oldPrompts The original prompts (from API)
- * @param newPrompts The updated prompts (from local file)
- * @returns Record of changed fields with their old/new values
+ * @param obj1 First object to compare
+ * @param obj2 Second object to compare
+ * @returns true if objects are deeply equal
  */
-function comparePromptObjects(oldPrompts: any, newPrompts: any): Record<string, ChangeDetail> {
-  const changes: Record<string, ChangeDetail> = {};
+function deepEqual(obj1: unknown, obj2: unknown): boolean {
+  // Handle primitive types and null
+  if (obj1 === obj2) return true;
+  if (obj1 === null || obj2 === null) return false;
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
 
-  // Use microdiff library to detect all differences
-  const differences = diff(oldPrompts, newPrompts);
-
-  if (!differences || differences.length === 0) {
-    // No changes detected
-    return changes;
-  }
-
-  for (const difference of differences) {
-    // Build the path string from the difference path array
-    const path = difference.path.join('.');
-
-    let oldValue: any;
-    let newValue: any;
-
-    // Determine old and new values based on difference type
-    switch (difference.type) {
-      case 'CREATE':
-        oldValue = null;
-        newValue = difference.value;
-        break;
-
-      case 'REMOVE':
-        oldValue = difference.oldValue;
-        newValue = null;
-        break;
-
-      case 'CHANGE':
-        oldValue = difference.oldValue;
-        newValue = difference.value;
-        break;
+  // Use sorted JSON for deterministic comparison
+  const sortedStringify = (obj: any): string => {
+    if (obj === null) return 'null';
+    if (typeof obj !== 'object') return JSON.stringify(obj);
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(sortedStringify).join(',') + ']';
     }
+    const keys = Object.keys(obj).sort();
+    const pairs = keys.map((k) => JSON.stringify(k) + ':' + sortedStringify(obj[k]));
+    return '{' + pairs.join(',') + '}';
+  };
 
-    changes[path] = {
-      old: serializeValue(oldValue),
-      new: serializeValue(newValue),
-      change_type: getChangeType(difference.type),
-    };
-  }
-
-  return changes;
+  return sortedStringify(obj1) === sortedStringify(obj2);
 }
-
-// ===== PUBLIC API =====
 
 /**
  * Generate a diff between local and remote prompts
  *
- * Compares prompt configurations and returns a structured diff showing
- * all changes between the local version and the remote API version.
- *
- * @param local Local prompt source (from file or user input)
- * @param remote Remote prompt source (from Retell API)
- * @returns DiffResult with agent info and detailed changes
- *
- * @example
- * // Compare retell-llm prompts
- * const diff = generateDiff(localPrompts, remotePrompts);
- * if (diff.has_changes) {
- *   console.log(`Found ${Object.keys(diff.changes).length} changes`);
- *   console.log(diff.changes);
- * }
- *
- * @throws {Error} If local and remote types don't match
+ * @param agentId The agent ID
+ * @param localPrompts The local prompts loaded from files
+ * @param remotePrompts The remote prompts from the API
+ * @returns DiffResult object with structured changes
  */
-export function generateDiff(local: PromptSource, remote: PromptSource): DiffResult {
-  // Validate that both sources are the same type
-  if (local.type !== remote.type) {
+export function generateDiff(
+  agentId: string,
+  localPrompts: LocalPrompts,
+  remotePrompts: PromptSource
+): DiffResult {
+  // Handle custom LLM case
+  if (remotePrompts.type === 'custom-llm') {
+    throw new Error('Cannot diff custom LLM agents');
+  }
+
+  // Validate type match
+  if (localPrompts.type !== remotePrompts.type) {
     throw new Error(
-      `Cannot diff different agent types: local is '${local.type}', remote is '${remote.type}'`
+      `Type mismatch: local files are ${localPrompts.type}, but agent uses ${remotePrompts.type}`
     );
   }
 
-  // Handle custom-llm type (not supported)
-  if (local.type === 'custom-llm' || remote.type === 'custom-llm') {
-    throw new Error('Cannot diff custom-llm agents (not supported for prompt management)');
+  // Generate diff based on type
+  if (localPrompts.type === 'retell-llm' && remotePrompts.type === 'retell-llm') {
+    return generateRetellLlmDiff(agentId, localPrompts, remotePrompts);
+  } else if (localPrompts.type === 'conversation-flow' && remotePrompts.type === 'conversation-flow') {
+    return generateConversationFlowDiff(agentId, localPrompts, remotePrompts);
   }
 
-  // Extract agent ID and type
-  let agentId: string;
-  const agentType = local.type;
-
-  if (local.type === 'retell-llm') {
-    agentId = local.llmId;
-  } else {
-    // conversation-flow
-    agentId = local.flowId;
-  }
-
-  // Compare the prompt objects
-  const changes = comparePromptObjects(remote.prompts, local.prompts);
-
-  // Build the result
-  const result: DiffResult = {
-    agent_id: agentId,
-    agent_type: agentType,
-    has_changes: Object.keys(changes).length > 0,
-    changes,
-  };
-
-  return result;
+  throw new Error(`Unsupported agent type: ${localPrompts.type}`);
 }
 
 /**
- * Format a diff result as a human-readable summary
- *
- * Converts a DiffResult into a formatted string showing what changed.
- * Useful for CLI output and dry-run previews.
- *
- * @param diffResult The diff result to format
- * @returns Formatted string describing the changes
- *
- * @example
- * const summary = formatDiffSummary(diff);
- * console.log(summary);
- * // Output:
- * // Changes detected for agent_123abc (retell-llm):
- * // - general_prompt: modified
- * // - states.0.state_prompt: modified
- * // - begin_message: added
+ * Generate diff for Retell LLM prompts
  */
-export function formatDiffSummary(diffResult: DiffResult): string {
-  if (!diffResult.has_changes) {
-    return `No changes detected for ${diffResult.agent_id} (${diffResult.agent_type})`;
+function generateRetellLlmDiff(
+  agentId: string,
+  localPrompts: Extract<LocalPrompts, { type: 'retell-llm' }>,
+  remotePrompts: Extract<PromptSource, { type: 'retell-llm' }>
+): DiffResult {
+  const changes: Record<string, ChangeDetail> = {};
+
+  // Compare general_prompt
+  if (localPrompts.prompts.general_prompt !== remotePrompts.prompts.general_prompt) {
+    changes.general_prompt = {
+      old: remotePrompts.prompts.general_prompt,
+      new: localPrompts.prompts.general_prompt,
+      change_type: 'modified',
+    };
   }
 
-  const lines: string[] = [
-    `Changes detected for ${diffResult.agent_id} (${diffResult.agent_type}):`,
-  ];
+  // Compare begin_message
+  const localBeginMessage = localPrompts.prompts.begin_message || null;
+  const remoteBeginMessage = remotePrompts.prompts.begin_message || null;
 
-  for (const [path, change] of Object.entries(diffResult.changes)) {
-    lines.push(`  - ${path}: ${change.change_type}`);
+  if (localBeginMessage !== remoteBeginMessage) {
+    if (localBeginMessage && !remoteBeginMessage) {
+      changes.begin_message = {
+        old: null,
+        new: localBeginMessage,
+        change_type: 'added',
+      };
+    } else if (!localBeginMessage && remoteBeginMessage) {
+      changes.begin_message = {
+        old: remoteBeginMessage,
+        new: null,
+        change_type: 'removed',
+      };
+    } else {
+      changes.begin_message = {
+        old: remoteBeginMessage,
+        new: localBeginMessage,
+        change_type: 'modified',
+      };
+    }
   }
 
-  lines.push(`\nTotal changes: ${Object.keys(diffResult.changes).length}`);
+  // Compare states
+  const localStates = localPrompts.prompts.states || [];
+  const remoteStates = remotePrompts.prompts.states || [];
 
-  return lines.join('\n');
+  // Create maps for easier comparison
+  const localStatesMap = new Map(localStates.map((s) => [s.name, s.state_prompt]));
+  const remoteStatesMap = new Map(remoteStates.map((s) => [s.name, s.state_prompt]));
+
+  // Find added and modified states
+  for (const [stateName, localPrompt] of localStatesMap) {
+    const remotePrompt = remoteStatesMap.get(stateName);
+    const fieldKey = `states.${stateName}`;
+
+    if (remotePrompt === undefined) {
+      // State added locally
+      changes[fieldKey] = {
+        old: null,
+        new: localPrompt,
+        change_type: 'added',
+      };
+    } else if (localPrompt !== remotePrompt) {
+      // State modified locally
+      changes[fieldKey] = {
+        old: remotePrompt,
+        new: localPrompt,
+        change_type: 'modified',
+      };
+    }
+  }
+
+  // Find removed states
+  for (const [stateName, remotePrompt] of remoteStatesMap) {
+    if (!localStatesMap.has(stateName)) {
+      const fieldKey = `states.${stateName}`;
+      changes[fieldKey] = {
+        old: remotePrompt,
+        new: null,
+        change_type: 'removed',
+      };
+    }
+  }
+
+  return {
+    agent_id: agentId,
+    agent_type: 'retell-llm',
+    has_changes: Object.keys(changes).length > 0,
+    changes,
+  };
+}
+
+/**
+ * Generate diff for Conversation Flow prompts
+ */
+function generateConversationFlowDiff(
+  agentId: string,
+  localPrompts: Extract<LocalPrompts, { type: 'conversation-flow' }>,
+  remotePrompts: Extract<PromptSource, { type: 'conversation-flow' }>
+): DiffResult {
+  const changes: Record<string, ChangeDetail> = {};
+
+  // Compare global_prompt
+  if (localPrompts.prompts.global_prompt !== remotePrompts.prompts.global_prompt) {
+    changes.global_prompt = {
+      old: remotePrompts.prompts.global_prompt,
+      new: localPrompts.prompts.global_prompt,
+      change_type: 'modified',
+    };
+  }
+
+  // Compare nodes individually for better granularity
+  const localNodes = localPrompts.prompts.nodes || [];
+  const remoteNodes = remotePrompts.prompts.nodes || [];
+
+  // Create maps for easier comparison (using node id as key)
+  const localNodesMap = new Map(localNodes.map((n) => [n.id, n]));
+  const remoteNodesMap = new Map(remoteNodes.map((n) => [n.id, n]));
+
+  // Find added and modified nodes
+  for (const [nodeId, localNode] of localNodesMap) {
+    const remoteNode = remoteNodesMap.get(nodeId);
+    const fieldKey = `nodes.${nodeId}`;
+
+    if (remoteNode === undefined) {
+      // Node added locally
+      changes[fieldKey] = {
+        old: null,
+        new: localNode,
+        change_type: 'added',
+      };
+    } else {
+      // Compare nodes using deterministic deep equality
+      if (!deepEqual(localNode, remoteNode)) {
+        // Node modified locally
+        changes[fieldKey] = {
+          old: remoteNode,
+          new: localNode,
+          change_type: 'modified',
+        };
+      }
+    }
+  }
+
+  // Find removed nodes
+  for (const [nodeId, remoteNode] of remoteNodesMap) {
+    if (!localNodesMap.has(nodeId)) {
+      const fieldKey = `nodes.${nodeId}`;
+      changes[fieldKey] = {
+        old: remoteNode,
+        new: null,
+        change_type: 'removed',
+      };
+    }
+  }
+
+  return {
+    agent_id: agentId,
+    agent_type: 'conversation-flow',
+    has_changes: Object.keys(changes).length > 0,
+    changes,
+  };
 }

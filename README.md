@@ -94,15 +94,18 @@ retell transcripts analyze call_abc123
 
 ```bash
 # Pull current prompts
-retell prompts pull agent_123abc --output prompts.json
+retell prompts pull agent_123abc
 
-# Edit prompts.json with your changes
+# Edit .retell-prompts/agent_123abc/general_prompt.md with your changes
 
-# Update agent with new prompts (dry run first)
-retell prompts update agent_123abc --source prompts.json --dry-run
+# Check what changed
+retell prompts diff agent_123abc
+
+# Dry run to preview changes
+retell prompts update agent_123abc --dry-run
 
 # Apply changes
-retell prompts update agent_123abc --source prompts.json
+retell prompts update agent_123abc
 
 # Publish the updated agent
 retell agent-publish agent_123abc
@@ -232,6 +235,42 @@ retell prompts pull agent_123abc
 
 # Pull to specific file
 retell prompts pull agent_123abc --output my-prompts.json
+```
+
+#### `retell prompts diff <agent_id> [options]`
+
+Show differences between local and remote prompts before applying updates.
+
+**Options:**
+- `-s, --source <path>` - Source directory path (default: `.retell-prompts`)
+- `-f, --fields <fields>` - Comma-separated list of fields to return
+
+**Examples:**
+```bash
+# Compare local and remote prompts
+retell prompts diff agent_123abc
+
+# Use custom source directory
+retell prompts diff agent_123abc --source ./custom-prompts
+
+# Show only specific fields
+retell prompts diff agent_123abc --fields has_changes,changes.general_prompt
+```
+
+**Output:**
+```json
+{
+  "agent_id": "agent_123abc",
+  "agent_type": "retell-llm",
+  "has_changes": true,
+  "changes": {
+    "general_prompt": {
+      "old": "You are a helpful assistant...",
+      "new": "You are a helpful assistant specializing in...",
+      "change_type": "modified"
+    }
+  }
+}
 ```
 
 #### `retell prompts update <agent_id> [options]`
@@ -459,12 +498,19 @@ retell transcripts list | jq '.[] | select(.call_status == "error")'
 retell transcripts analyze call_123
 
 # AI pulls current prompts
-retell prompts pull agent_456 --output current-prompts.json
+retell prompts pull agent_456
 
 # AI reads and suggests improvements to prompts
-# Then updates with improved version
-retell prompts update agent_456 --source improved-prompts.json --dry-run
-retell prompts update agent_456 --source improved-prompts.json
+# (Edits .retell-prompts/agent_456/general_prompt.md)
+
+# AI shows what changed
+retell prompts diff agent_456
+
+# AI explains the changes and uses dry-run to verify
+retell prompts update agent_456 --dry-run
+
+# Apply changes
+retell prompts update agent_456
 retell agent-publish agent_456
 ```
 
