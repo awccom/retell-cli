@@ -79,16 +79,24 @@ class ValidationError extends Error {
 
 /**
  * Parse date string into Date object
- * Supports ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
+ * Supports ISO format (YYYY-MM-DD, offsets, or full ISO 8601)
  * Uses strict regex validation to prevent unexpected date parsing
  */
-function parseDate(dateStr: string): Date {
+interface ParsedDate {
+  date: Date;
+  isDateOnly: boolean;
+}
+
+function parseDate(dateStr: string): ParsedDate {
   if (!dateStr) {
     throw new ValidationError('Date string cannot be empty');
   }
 
-  // Strict validation: only accept YYYY-MM-DD or ISO 8601 format
-  const iso8601Pattern = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z)?$/;
+  // Strict validation: accept YYYY-MM-DD, or ISO 8601 with timezone/offset
+  const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+  const iso8601Pattern =
+    /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+
   if (!iso8601Pattern.test(dateStr)) {
     throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
   }
@@ -101,14 +109,14 @@ function parseDate(dateStr: string): Date {
     throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
   }
 
-  return date;
+  return { date, isDateOnly: dateOnlyPattern.test(dateStr) };
 }
 
 /**
  * Validate search options and return parsed dates
  * Returns cached parsed dates to avoid redundant parsing
  */
-function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; untilDate?: Date } {
+function validateSearchOptions(options: SearchOptions): { sinceDate?: ParsedDate; untilDate?: ParsedDate } {
   // Validate status
   const validStatuses = ['error', 'ended', 'ongoing'];
   if (options.status && !validStatuses.includes(options.status)) {
@@ -118,7 +126,7 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; unti
   }
 
   // Parse and cache dates (avoids redundant parsing)
-  const parsedDates: { sinceDate?: Date; untilDate?: Date } = {};
+  const parsedDates: { sinceDate?: ParsedDate; untilDate?: ParsedDate } = {};
 
   if (options.since !== undefined) {
     parsedDates.sinceDate = parseDate(options.since); // Will throw ValidationError if invalid
@@ -126,11 +134,18 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; unti
 
   if (options.until !== undefined) {
     parsedDates.untilDate = parseDate(options.until); // Will throw ValidationError if invalid
+
+    // If user provided date-only string, make it inclusive through end of day (23:59:59.999 UTC)
+    if (parsedDates.untilDate.isDateOnly) {
+      const date = new Date(parsedDates.untilDate.date.getTime());
+      date.setUTCHours(23, 59, 59, 999);
+      parsedDates.untilDate.date = date;
+    }
   }
 
   // Validate date range (only if both are provided and valid)
   if (parsedDates.sinceDate && parsedDates.untilDate) {
-    if (parsedDates.sinceDate > parsedDates.untilDate) {
+    if (parsedDates.sinceDate.date > parsedDates.untilDate.date) {
       throw new ValidationError(
         `Invalid date range: --since ("${options.since}") is after --until ("${options.until}")`
       );
@@ -160,7 +175,7 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: Date; unti
  */
 async function searchTranscripts(
   options: SearchOptions,
-  parsedDates: { sinceDate?: Date; untilDate?: Date }
+  parsedDates: { sinceDate?: ParsedDate; untilDate?: ParsedDate }
 ): Promise<SearchResult> {
   const client = getRetellClient();
 
@@ -189,11 +204,11 @@ async function searchTranscripts(
     filterCriteria.start_timestamp = {};
 
     if (parsedDates.sinceDate) {
-      filterCriteria.start_timestamp.lower_threshold = parsedDates.sinceDate.getTime();
+      filterCriteria.start_timestamp.lower_threshold = parsedDates.sinceDate.date.getTime();
     }
 
     if (parsedDates.untilDate) {
-      filterCriteria.start_timestamp.upper_threshold = parsedDates.untilDate.getTime();
+      filterCriteria.start_timestamp.upper_threshold = parsedDates.untilDate.date.getTime();
     }
   }
 

@@ -291,17 +291,16 @@ function detectAllHotspots(call: CallResponse, config: HotspotConfig): HotspotIs
  * @param options Command options (fields)
  */
 export async function analyzeTranscriptCommand(callId: string, options: AnalyzeTranscriptOptions = {}): Promise<void> {
-  // Validate threshold values before any async operations (outside try-catch)
-  if (options.hotspotsOnly) {
-    const latencyThreshold = options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD;
-    const silenceThreshold = options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD;
-
-    // Validate threshold values
-    validateThreshold(latencyThreshold, 'Latency threshold');
-    validateThreshold(silenceThreshold, 'Silence threshold');
-  }
-
   try {
+    // Validate threshold values inside try/catch so errors are formatted consistently
+    if (options.hotspotsOnly) {
+      const latencyThreshold = options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD;
+      const silenceThreshold = options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD;
+
+      validateThreshold(latencyThreshold, 'Latency threshold');
+      validateThreshold(silenceThreshold, 'Silence threshold');
+    }
+
     const client = getRetellClient();
 
     // Retrieve the call from the API

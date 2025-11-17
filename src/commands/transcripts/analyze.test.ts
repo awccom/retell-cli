@@ -559,31 +559,37 @@ describe('analyzeTranscriptCommand', () => {
     });
 
     describe('threshold validation', () => {
-      it('should reject negative threshold values', async () => {
-        await expect(
-          analyzeTranscriptCommand('call_abc123', {
-            hotspotsOnly: true,
-            latencyThreshold: -100,
-          })
-        ).rejects.toThrow('Latency threshold must be a positive integer');
+      it('should surface negative threshold values via error handler', async () => {
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          latencyThreshold: -100,
+        });
+
+        expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+          expect.objectContaining({ message: expect.stringContaining('Latency threshold') })
+        );
       });
 
-      it('should reject zero threshold values', async () => {
-        await expect(
-          analyzeTranscriptCommand('call_abc123', {
-            hotspotsOnly: true,
-            silenceThreshold: 0,
-          })
-        ).rejects.toThrow('Silence threshold must be a positive integer');
+      it('should surface zero threshold values via error handler', async () => {
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          silenceThreshold: 0,
+        });
+
+        expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+          expect.objectContaining({ message: expect.stringContaining('Silence threshold') })
+        );
       });
 
-      it('should reject non-integer threshold values', async () => {
-        await expect(
-          analyzeTranscriptCommand('call_abc123', {
-            hotspotsOnly: true,
-            latencyThreshold: 1500.5,
-          })
-        ).rejects.toThrow('Latency threshold must be a positive integer');
+      it('should surface non-integer threshold values via error handler', async () => {
+        await analyzeTranscriptCommand('call_abc123', {
+          hotspotsOnly: true,
+          latencyThreshold: 1500.5,
+        });
+
+        expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+          expect.objectContaining({ message: expect.stringContaining('Latency threshold') })
+        );
       });
 
       it('should use default thresholds when not specified', async () => {

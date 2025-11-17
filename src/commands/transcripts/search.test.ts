@@ -260,7 +260,7 @@ describe('searchTranscriptsCommand', () => {
         new Date('2025-11-01').getTime()
       );
       expect(callArgs.filter_criteria.start_timestamp.upper_threshold).toBe(
-        new Date('2025-11-15').getTime()
+        new Date('2025-11-15T23:59:59.999Z').getTime()
       );
     });
 
@@ -286,7 +286,7 @@ describe('searchTranscriptsCommand', () => {
       expect(callArgs.filter_criteria.start_timestamp).toBeDefined();
       expect(callArgs.filter_criteria.start_timestamp.lower_threshold).toBeUndefined();
       expect(callArgs.filter_criteria.start_timestamp.upper_threshold).toBe(
-        new Date('2025-11-15').getTime()
+        new Date('2025-11-15T23:59:59.999Z').getTime()
       );
     });
 
@@ -500,6 +500,29 @@ describe('searchTranscriptsCommand', () => {
       // Verify the timestamp matches the input date
       expect(timestamp).toBe(new Date(dateString).getTime());
       expect(timestamp).toBeGreaterThan(0);
+    });
+
+    it('should accept ISO format with timezone offset', async () => {
+      mockClient.call.list.mockResolvedValue([]);
+
+      const dateString = '2025-11-01T10:30:00-05:00';
+      await searchTranscriptsCommand({ since: dateString });
+
+      const callArgs = mockClient.call.list.mock.calls[0][0];
+      const timestamp = callArgs.filter_criteria.start_timestamp.lower_threshold;
+
+      expect(timestamp).toBe(new Date(dateString).getTime());
+    });
+
+    it('should make until date inclusive through end of day when time is omitted', async () => {
+      mockClient.call.list.mockResolvedValue([]);
+
+      await searchTranscriptsCommand({ until: '2025-11-15' });
+
+      const callArgs = mockClient.call.list.mock.calls[0][0];
+      const timestamp = callArgs.filter_criteria.start_timestamp.upper_threshold;
+
+      expect(timestamp).toBe(new Date('2025-11-15T23:59:59.999Z').getTime());
     });
   });
 
