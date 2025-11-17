@@ -1,18 +1,16 @@
 /**
- * Prompt Loader Service
+ * Prompt Loading Service
  *
- * Shared utilities for loading local prompts from the file system.
- * Used by both diff and update commands to avoid code duplication.
+ * Shared utilities for loading prompts from local files.
+ * Used by both diff and update commands to ensure consistency.
  */
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { PromptSource, RetellLlmPrompts, FlowPrompts } from './prompt-resolver';
-
-// ===== TYPE DEFINITIONS =====
+import type { RetellLlmPrompts, FlowPrompts } from './prompt-resolver';
 
 /**
- * Metadata structure from local files
+ * Local metadata structure
  */
 interface LocalMetadata {
   type: 'retell-llm' | 'conversation-flow';
@@ -23,39 +21,31 @@ interface LocalMetadata {
   pulled_at: string;
 }
 
-// ===== PUBLIC API =====
+/**
+ * Result of loading local prompts
+ */
+export type LocalPrompts =
+  | { type: 'retell-llm'; metadata: LocalMetadata; prompts: Omit<RetellLlmPrompts, 'llm_id' | 'version'> }
+  | { type: 'conversation-flow'; metadata: LocalMetadata; prompts: Omit<FlowPrompts, 'conversation_flow_id' | 'version'> };
 
 /**
- * Load local prompts from directory
+ * Load local prompts from a directory
  *
- * Reads prompts from .retell-prompts/<agent-id>/ (or custom path)
- * and returns them in the same structure as remote prompts for comparison.
- *
- * @param agentId The agent ID
- * @param agentDir Path to the agent's local prompts directory
- * @returns PromptSource structure matching remote format
- * @throws Error if directory doesn't exist, metadata missing, or files corrupt
- *
- * @example
- * const localPrompts = loadLocalPrompts('agent_123', '.retell-prompts/agent_123');
- * if (localPrompts.type === 'retell-llm') {
- *   console.log(localPrompts.prompts.general_prompt);
- * }
+ * @param agentId The agent ID (for error messages)
+ * @param agentDir The directory containing the prompts
+ * @returns LocalPrompts object with type, metadata, and prompts
+ * @throws Error if directory structure is invalid
  */
-export function loadLocalPrompts(agentId: string, agentDir: string): PromptSource {
-  // Validate directory exists
+export function loadLocalPrompts(agentId: string, agentDir: string): LocalPrompts {
+  // Check if directory exists
   if (!existsSync(agentDir)) {
-    throw new Error(
-      `Prompts directory not found: ${agentDir}. Run 'retell prompts pull ${agentId}' first.`
-    );
+    throw new Error(`Prompts directory not found: ${agentDir}. Run 'retell prompts pull ${agentId}' first.`);
   }
 
   // Load and validate metadata
   const metadataPath = join(agentDir, 'metadata.json');
   if (!existsSync(metadataPath)) {
-    throw new Error(
-      `metadata.json not found in ${agentDir}. Directory may be corrupted.`
-    );
+    throw new Error(`metadata.json not found in ${agentDir}. Directory may be corrupted.`);
   }
 
   let metadata: LocalMetadata;
@@ -65,47 +55,33 @@ export function loadLocalPrompts(agentId: string, agentDir: string): PromptSourc
     if (error instanceof SyntaxError) {
       throw new Error(`Invalid JSON in metadata.json: ${error.message}`);
     }
-    throw error;
+    throw new Error(`Failed to read metadata.json: ${error.message}`);
   }
 
   // Load prompts based on type
   if (metadata.type === 'retell-llm') {
-    const prompts = loadRetellLlmPromptsFromFiles(agentDir);
-
+    const prompts = loadRetellLlmPrompts(agentDir);
     return {
       type: 'retell-llm',
-      llmId: metadata.llm_id || '',
-      agentName: metadata.agent_name,
-      prompts: {
-        llm_id: metadata.llm_id || '',
-        version: metadata.version,
-        ...prompts,
-      },
+      metadata,
+      prompts,
     };
   } else if (metadata.type === 'conversation-flow') {
-    const prompts = loadConversationFlowPromptsFromFiles(agentDir);
-
+    const prompts = loadConversationFlowPrompts(agentDir);
     return {
       type: 'conversation-flow',
-      flowId: metadata.conversation_flow_id || '',
-      agentName: metadata.agent_name,
-      prompts: {
-        conversation_flow_id: metadata.conversation_flow_id || '',
-        version: metadata.version,
-        ...prompts,
-      },
+      metadata,
+      prompts,
     };
+  } else {
+    throw new Error(`Unknown agent type in metadata: ${(metadata as any).type}`);
   }
-
-  throw new Error(`Unknown agent type in metadata: ${(metadata as any).type}`);
 }
-
-// ===== PRIVATE HELPERS =====
 
 /**
  * Load Retell LLM prompts from local files
  */
-function loadRetellLlmPromptsFromFiles(agentDir: string): Omit<RetellLlmPrompts, 'llm_id' | 'version'> {
+function loadRetellLlmPrompts(agentDir: string): Omit<RetellLlmPrompts, 'llm_id' | 'version'> {
   const prompts: any = {};
 
   // Load general_prompt (required)
@@ -178,7 +154,7 @@ function loadRetellLlmPromptsFromFiles(agentDir: string): Omit<RetellLlmPrompts,
 /**
  * Load Conversation Flow prompts from local files
  */
-function loadConversationFlowPromptsFromFiles(agentDir: string): Omit<FlowPrompts, 'conversation_flow_id' | 'version'> {
+function loadConversationFlowPrompts(agentDir: string): Omit<FlowPrompts, 'conversation_flow_id' | 'version'> {
   const prompts: any = {};
 
   // Load global_prompt (required)

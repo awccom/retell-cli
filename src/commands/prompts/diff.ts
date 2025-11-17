@@ -2,21 +2,20 @@
  * Prompts Diff Command
  *
  * Shows differences between local and remote prompts.
- * Useful for reviewing changes before applying updates.
+ * Useful for previewing changes before applying updates.
  */
 
 import { join } from 'path';
 import { resolvePromptSource } from '../../services/prompt-resolver';
 import { loadLocalPrompts } from '../../services/prompt-loader';
 import { generateDiff } from '../../services/prompt-diff';
-import { outputJson, outputError, handleSdkError } from '../../services/output-formatter';
-import { filterFields } from '../../services/output-formatter';
+import { outputJson, outputError, handleSdkError, filterFields } from '../../services/output-formatter';
 
 /**
  * Options for the diff command
  */
 interface DiffOptions {
-  source?: string; // Custom path to local prompts directory
+  source?: string; // Source directory (default: .retell-prompts)
   fields?: string; // Comma-separated list of fields to return
 }
 
@@ -35,7 +34,7 @@ function validateAgentId(agentId: string): void {
 /**
  * Show differences between local and remote prompts
  *
- * @param agentId The unique agent ID to compare prompts for
+ * @param agentId The unique agent ID to diff prompts for
  * @param options Command options
  */
 export async function diffPromptsCommand(agentId: string, options: DiffOptions): Promise<void> {
@@ -43,52 +42,50 @@ export async function diffPromptsCommand(agentId: string, options: DiffOptions):
     // Validate agent ID to prevent path traversal
     validateAgentId(agentId);
 
-    // 1. Fetch remote prompts
-    const remotePrompts = await resolvePromptSource(agentId);
-
-    // Handle custom LLM (error case)
-    if (remotePrompts.type === 'custom-llm') {
-      outputError(remotePrompts.error, 'CUSTOM_LLM_NOT_SUPPORTED');
-      return;
-    }
-
-    // 2. Load local prompts
+    // Determine source directory
     const baseDir = options.source || '.retell-prompts';
     const agentDir = join(baseDir, agentId);
 
+    // Load local prompts
     let localPrompts;
     try {
       localPrompts = loadLocalPrompts(agentId, agentDir);
     } catch (error: any) {
-      // Provide helpful error messages
       outputError(error.message, 'LOCAL_PROMPTS_ERROR');
-      return;
     }
 
-    // 3. Validate types match
+    // Fetch remote prompts
+    const remotePrompts = await resolvePromptSource(agentId);
+
+    // Handle custom LLM (not supported)
+    if (remotePrompts.type === 'custom-llm') {
+      outputError(remotePrompts.error, 'CUSTOM_LLM_NOT_SUPPORTED');
+    }
+
+    // Validate type match
     if (localPrompts.type !== remotePrompts.type) {
       outputError(
         `Type mismatch: local files are ${localPrompts.type}, but agent uses ${remotePrompts.type}. Pull prompts again to sync.`,
         'TYPE_MISMATCH'
       );
-      return;
     }
 
-    // 4. Generate diff
+    // Generate diff
     let diff;
     try {
       diff = generateDiff(agentId, localPrompts, remotePrompts);
     } catch (error: any) {
       outputError(error.message, 'DIFF_GENERATION_ERROR');
-      return;
     }
 
-    // 5. Apply field filtering if requested
-    const output = options.fields
-      ? filterFields(diff, options.fields.split(',').map(f => f.trim()))
-      : diff;
+    // Apply field filtering if requested
+    let output: any = diff;
+    if (options.fields) {
+      const fieldList = options.fields.split(',').map((f) => f.trim());
+      output = filterFields(diff, fieldList);
+    }
 
-    // 6. Output result
+    // Output the diff
     outputJson(output);
   } catch (error) {
     handleSdkError(error);

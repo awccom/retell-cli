@@ -5,97 +5,90 @@
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import { PromptSource, RetellLlmPrompts, FlowPrompts } from './prompt-resolver';
-
-// ===== TYPE DEFINITIONS =====
+import type { PromptSource } from './prompt-resolver';
+import type { LocalPrompts } from './prompt-loader';
 
 /**
- * Structure for individual field changes
+ * Change type enumeration
+ */
+export type ChangeType = 'added' | 'modified' | 'removed';
+
+/**
+ * Details about a specific field change
  */
 export interface ChangeDetail {
-  old: string | object | null;
-  new: string | object | null;
-  change_type: 'added' | 'removed' | 'modified';
+  old: any;
+  new: any;
+  change_type: ChangeType;
 }
 
 /**
- * Complete diff result structure
+ * Diff result structure
  */
 export interface DiffResult {
   agent_id: string;
   agent_type: 'retell-llm' | 'conversation-flow';
   has_changes: boolean;
-  changes: {
-    [key: string]: ChangeDetail;
-  };
+  changes: Record<string, ChangeDetail>;
 }
 
-// ===== PUBLIC API =====
-
 /**
- * Generate diff between local and remote prompts
+ * Generate a diff between local and remote prompts
  *
- * @param agentId The agent ID being compared
- * @param local Local prompt structure (from files)
- * @param remote Remote prompt structure (from API)
- * @returns DiffResult with structured changes
- *
- * @example
- * const diff = generateDiff('agent_123', localPrompts, remotePrompts);
- * if (diff.has_changes) {
- *   console.log('Changes detected:', diff.changes);
- * }
+ * @param agentId The agent ID
+ * @param localPrompts The local prompts loaded from files
+ * @param remotePrompts The remote prompts from the API
+ * @returns DiffResult object with structured changes
  */
 export function generateDiff(
   agentId: string,
-  local: PromptSource,
-  remote: PromptSource
+  localPrompts: LocalPrompts,
+  remotePrompts: PromptSource
 ): DiffResult {
-  // Handle custom-llm error case
-  if (local.type === 'custom-llm' || remote.type === 'custom-llm') {
-    throw new Error('Cannot generate diff for custom-llm agents');
+  // Handle custom LLM case
+  if (remotePrompts.type === 'custom-llm') {
+    throw new Error('Cannot diff custom LLM agents');
   }
 
-  // Type mismatch check
-  if (local.type !== remote.type) {
+  // Validate type match
+  if (localPrompts.type !== remotePrompts.type) {
     throw new Error(
-      `Type mismatch: local is ${local.type}, remote is ${remote.type}`
+      `Type mismatch: local files are ${localPrompts.type}, but agent uses ${remotePrompts.type}`
     );
   }
 
   // Generate diff based on type
-  if (local.type === 'retell-llm' && remote.type === 'retell-llm') {
-    return generateRetellLlmDiff(agentId, local.prompts, remote.prompts);
-  } else {
-    // conversation-flow
-    return generateConversationFlowDiff(agentId, local.prompts, remote.prompts);
+  if (localPrompts.type === 'retell-llm' && remotePrompts.type === 'retell-llm') {
+    return generateRetellLlmDiff(agentId, localPrompts, remotePrompts);
+  } else if (localPrompts.type === 'conversation-flow' && remotePrompts.type === 'conversation-flow') {
+    return generateConversationFlowDiff(agentId, localPrompts, remotePrompts);
   }
+
+  throw new Error(`Unsupported agent type: ${localPrompts.type}`);
 }
 
-// ===== PRIVATE HELPERS =====
-
 /**
- * Generate diff for retell-llm agents
+ * Generate diff for Retell LLM prompts
  */
 function generateRetellLlmDiff(
   agentId: string,
-  local: RetellLlmPrompts,
-  remote: RetellLlmPrompts
+  localPrompts: Extract<LocalPrompts, { type: 'retell-llm' }>,
+  remotePrompts: Extract<PromptSource, { type: 'retell-llm' }>
 ): DiffResult {
-  const changes: { [key: string]: ChangeDetail } = {};
+  const changes: Record<string, ChangeDetail> = {};
 
   // Compare general_prompt
-  if (local.general_prompt !== remote.general_prompt) {
+  if (localPrompts.prompts.general_prompt !== remotePrompts.prompts.general_prompt) {
     changes.general_prompt = {
-      old: remote.general_prompt,
-      new: local.general_prompt,
+      old: remotePrompts.prompts.general_prompt,
+      new: localPrompts.prompts.general_prompt,
       change_type: 'modified',
     };
   }
 
   // Compare begin_message
-  const localBeginMessage = local.begin_message || null;
-  const remoteBeginMessage = remote.begin_message || null;
+  const localBeginMessage = localPrompts.prompts.begin_message || null;
+  const remoteBeginMessage = remotePrompts.prompts.begin_message || null;
 
   if (localBeginMessage !== remoteBeginMessage) {
     if (localBeginMessage && !remoteBeginMessage) {
@@ -120,48 +113,46 @@ function generateRetellLlmDiff(
   }
 
   // Compare states
-  const localStates = local.states || [];
-  const remoteStates = remote.states || [];
+  const localStates = localPrompts.prompts.states || [];
+  const remoteStates = remotePrompts.prompts.states || [];
 
-  // Build maps for efficient lookup
-  const localStateMap = new Map(
-    localStates.map((s) => [s.name, s.state_prompt])
-  );
-  const remoteStateMap = new Map(
-    remoteStates.map((s) => [s.name, s.state_prompt])
-  );
+  // Create maps for easier comparison
+  const localStatesMap = new Map(localStates.map((s) => [s.name, s.state_prompt]));
+  const remoteStatesMap = new Map(remoteStates.map((s) => [s.name, s.state_prompt]));
 
   // Find added and modified states
-  localStateMap.forEach((localPrompt, stateName) => {
-    const remotePrompt = remoteStateMap.get(stateName);
+  for (const [stateName, localPrompt] of localStatesMap) {
+    const remotePrompt = remoteStatesMap.get(stateName);
+    const fieldKey = `states.${stateName}`;
 
-    if (!remotePrompt) {
+    if (remotePrompt === undefined) {
       // State added locally
-      changes[`states.${stateName}`] = {
+      changes[fieldKey] = {
         old: null,
         new: localPrompt,
         change_type: 'added',
       };
     } else if (localPrompt !== remotePrompt) {
-      // State modified
-      changes[`states.${stateName}`] = {
+      // State modified locally
+      changes[fieldKey] = {
         old: remotePrompt,
         new: localPrompt,
         change_type: 'modified',
       };
     }
-  });
+  }
 
   // Find removed states
-  remoteStateMap.forEach((remotePrompt, stateName) => {
-    if (!localStateMap.has(stateName)) {
-      changes[`states.${stateName}`] = {
+  for (const [stateName, remotePrompt] of remoteStatesMap) {
+    if (!localStatesMap.has(stateName)) {
+      const fieldKey = `states.${stateName}`;
+      changes[fieldKey] = {
         old: remotePrompt,
         new: null,
         change_type: 'removed',
       };
     }
-  });
+  }
 
   return {
     agent_id: agentId,
@@ -172,32 +163,32 @@ function generateRetellLlmDiff(
 }
 
 /**
- * Generate diff for conversation-flow agents
+ * Generate diff for Conversation Flow prompts
  */
 function generateConversationFlowDiff(
   agentId: string,
-  local: FlowPrompts,
-  remote: FlowPrompts
+  localPrompts: Extract<LocalPrompts, { type: 'conversation-flow' }>,
+  remotePrompts: Extract<PromptSource, { type: 'conversation-flow' }>
 ): DiffResult {
-  const changes: { [key: string]: ChangeDetail } = {};
+  const changes: Record<string, ChangeDetail> = {};
 
   // Compare global_prompt
-  if (local.global_prompt !== remote.global_prompt) {
+  if (localPrompts.prompts.global_prompt !== remotePrompts.prompts.global_prompt) {
     changes.global_prompt = {
-      old: remote.global_prompt,
-      new: local.global_prompt,
+      old: remotePrompts.prompts.global_prompt,
+      new: localPrompts.prompts.global_prompt,
       change_type: 'modified',
     };
   }
 
-  // Compare nodes (deep comparison using JSON)
-  const localNodesJson = JSON.stringify(local.nodes);
-  const remoteNodesJson = JSON.stringify(remote.nodes);
+  // Compare nodes (using JSON stringification for deep comparison)
+  const localNodesStr = JSON.stringify(localPrompts.prompts.nodes);
+  const remoteNodesStr = JSON.stringify(remotePrompts.prompts.nodes);
 
-  if (localNodesJson !== remoteNodesJson) {
+  if (localNodesStr !== remoteNodesStr) {
     changes.nodes = {
-      old: remote.nodes,
-      new: local.nodes,
+      old: remotePrompts.prompts.nodes,
+      new: localPrompts.prompts.nodes,
       change_type: 'modified',
     };
   }
