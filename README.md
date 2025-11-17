@@ -318,6 +318,35 @@ diff raw.json enriched.json
 
 **Note:** The `--raw` flag works seamlessly with `--fields` for precise data extraction. Raw output returns the official Retell API schema, allowing you to access all fields documented in the [API reference](https://docs.retellai.com/api-references/list-calls).
 
+### Hotspot Detection
+
+Identify conversation issues for focused troubleshooting:
+
+```bash
+# Find all issues in a call
+retell transcripts analyze abc123 --hotspots-only
+
+# Combine with field selection
+retell transcripts analyze abc123 --hotspots-only --fields hotspots
+
+# Set custom thresholds
+retell transcripts analyze abc123 --hotspots-only --latency-threshold 1500
+retell transcripts analyze abc123 --hotspots-only --silence-threshold 3000
+```
+
+**Detected issues:**
+- **Latency spikes** - When p90 latency exceeds threshold (default: 2000ms)
+- **Long silences** - Gaps between turns exceeding threshold (default: 5000ms)
+- **Sentiment** - Negative sentiment indicators
+
+**Use cases:**
+- Rapid troubleshooting of failed calls
+- Prompt iteration and refinement
+- Performance monitoring across calls
+- AI agent workflow optimization
+
+**Note:** The `--hotspots-only` flag works seamlessly with `--fields` for token efficiency.
+
 ## Common Workflows
 
 ### Analyzing Failed Calls

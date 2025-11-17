@@ -16,6 +16,26 @@ interface TranscriptTurn {
   word_count: number;
 }
 
+/**
+ * Represents a detected issue in a conversation
+ */
+interface HotspotIssue {
+  turn_index: number;        // Position in transcript (-1 for overall metrics)
+  timestamp: string;         // Human-readable timestamp (HH:MM:SS or "N/A")
+  issue_type: 'latency_spike' | 'long_silence' | 'sentiment';
+  user_utterance?: string;   // User's text at this point
+  agent_utterance?: string;  // Agent's text at this point
+  metrics?: Record<string, number | string>;  // Relevant metrics (latency, duration, etc.)
+}
+
+/**
+ * Configuration for hotspot detection thresholds
+ */
+interface HotspotConfig {
+  latencyThreshold: number;  // ms, default 2000
+  silenceThreshold: number;  // ms, default 5000
+}
+
 interface AnalysisOutput {
   call_id: string;
   metadata: {
@@ -53,6 +73,9 @@ interface AnalysisOutput {
 export interface AnalyzeTranscriptOptions {
   fields?: string;
   raw?: boolean;
+  hotspotsOnly?: boolean;          // Add this
+  latencyThreshold?: number;       // Add this (optional)
+  silenceThreshold?: number;       // Add this (optional)
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -70,6 +93,125 @@ function extractTranscriptTurns(transcriptObject: any[]): TranscriptTurn[] {
     content: turn.content,
     word_count: turn.content ? turn.content.split(/\s+/).length : 0,
   }));
+}
+
+/**
+ * Format timestamp to human-readable format (HH:MM:SS or MM:SS)
+ * @param seconds Timestamp in seconds (from word-level timing)
+ */
+function formatTimestamp(seconds: number): string {
+  if (!seconds || seconds < 0) return 'N/A';
+
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  const hrs = Math.floor(mins / 60);
+  const displayMins = mins % 60;
+
+  if (hrs > 0) {
+    return `${hrs.toString().padStart(2, '0')}:${displayMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${displayMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Detect latency spikes in call performance
+ */
+function detectLatencySpikes(call: any, config: HotspotConfig): HotspotIssue[] {
+  const hotspots: HotspotIssue[] = [];
+
+  // Check overall p90 latency metrics
+  if (call.latency?.e2e?.p90 && call.latency.e2e.p90 > config.latencyThreshold) {
+    hotspots.push({
+      turn_index: -1,
+      timestamp: 'N/A',
+      issue_type: 'latency_spike',
+      metrics: {
+        latency_p90_e2e: call.latency.e2e.p90,
+        latency_p90_llm: call.latency?.llm?.p90 || 0,
+        latency_p90_tts: call.latency?.tts?.p90 || 0,
+      }
+    });
+  }
+
+  return hotspots;
+}
+
+/**
+ * Detect long silences between conversation turns
+ */
+function detectLongSilences(call: any, config: HotspotConfig): HotspotIssue[] {
+  const hotspots: HotspotIssue[] = [];
+  const transcript = call.transcript_object || [];
+
+  for (let i = 1; i < transcript.length; i++) {
+    const prevTurn = transcript[i - 1];
+    const currTurn = transcript[i];
+
+    // Get last word of previous turn and first word of current turn
+    const prevWords = prevTurn.words || [];
+    const currWords = currTurn.words || [];
+
+    if (prevWords.length === 0 || currWords.length === 0) continue;
+
+    const prevEnd = prevWords[prevWords.length - 1].end;  // in seconds
+    const currStart = currWords[0].start;  // in seconds
+    const gapMs = (currStart - prevEnd) * 1000;  // convert to ms
+
+    if (gapMs > config.silenceThreshold) {
+      hotspots.push({
+        turn_index: i,
+        timestamp: formatTimestamp(currStart),
+        issue_type: 'long_silence',
+        user_utterance: prevTurn.role === 'user' ? prevTurn.content : currTurn.content,
+        agent_utterance: currTurn.role === 'agent' ? currTurn.content : prevTurn.content,
+        metrics: {
+          silence_duration_ms: Math.round(gapMs)
+        }
+      });
+    }
+  }
+
+  return hotspots;
+}
+
+/**
+ * Detect sentiment issues in the conversation
+ */
+function detectSentimentIssues(call: any): HotspotIssue[] {
+  const hotspots: HotspotIssue[] = [];
+
+  // Check overall sentiment
+  if (call.call_analysis?.user_sentiment === 'Negative') {
+    hotspots.push({
+      turn_index: -1,
+      timestamp: 'N/A',
+      issue_type: 'sentiment',
+      metrics: {
+        sentiment: call.call_analysis.user_sentiment
+      }
+    });
+  }
+
+  return hotspots;
+}
+
+/**
+ * Detect all hotspots in a call
+ */
+function detectAllHotspots(call: any, config: HotspotConfig): HotspotIssue[] {
+  const hotspots = [
+    ...detectLatencySpikes(call, config),
+    ...detectLongSilences(call, config),
+    ...detectSentimentIssues(call)
+  ];
+
+  // Sort by turn_index (overall metrics with -1 go first)
+  return hotspots.sort((a, b) => {
+    if (a.turn_index === -1) return -1;
+    if (b.turn_index === -1) return 1;
+    return a.turn_index - b.turn_index;
+  });
 }
 
 // ===== COMMAND IMPLEMENTATION =====
@@ -92,6 +234,28 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
       const output = options.fields
         ? filterFields(call, options.fields.split(',').map(f => f.trim()))
         : call;
+      outputJson(output);
+      return;
+    }
+
+    // If --hotspots-only flag is set, detect and return conversation issues
+    if (options.hotspotsOnly) {
+      const config: HotspotConfig = {
+        latencyThreshold: options.latencyThreshold || 2000,
+        silenceThreshold: options.silenceThreshold || 5000
+      };
+
+      const hotspots = detectAllHotspots(call, config);
+
+      const result = {
+        call_id: callId,
+        hotspots: hotspots
+      };
+
+      const output = options.fields
+        ? filterFields(result, options.fields.split(',').map(f => f.trim()))
+        : result;
+
       outputJson(output);
       return;
     }
