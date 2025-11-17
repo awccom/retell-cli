@@ -99,15 +99,19 @@ transcripts
   .command('analyze <call_id>')
   .description('Analyze a call transcript with performance metrics and insights')
   .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,performance,analysis.summary)')
+  .option('--raw', 'Return unmodified API response instead of enriched analysis')
   .addHelpText('after', `
 Examples:
   $ retell transcripts analyze call_abc123
   $ retell transcripts analyze call_abc123 --fields call_id,performance
+  $ retell transcripts analyze call_abc123 --raw
+  $ retell transcripts analyze call_abc123 --raw --fields call_id,transcript_object
   $ retell transcripts analyze call_abc123 | jq '.performance.latency_p50_ms'
   `)
   .action(async (callId, options) => {
     await analyzeTranscriptCommand(callId, {
       fields: options.fields,
+      raw: options.raw,
     });
   });
 
