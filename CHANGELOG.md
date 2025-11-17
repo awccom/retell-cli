@@ -222,6 +222,57 @@ retell transcripts analyze abc123 --hotspots-only --fields hotspots
 - Edge cases verified (empty transcripts, missing metrics)
 - Backward compatibility verified
 
+### Added - Phase 5: Transcripts Search Command
+
+#### Advanced Search with Hybrid Filtering
+- Added `retell transcripts search` command with multiple filter options:
+  - `--status` - Filter by call status (error, ended, ongoing)
+  - `--agent-id` - Filter by agent ID
+  - `--since` - Filter calls after date (YYYY-MM-DD or ISO format)
+  - `--until` - Filter calls before date (YYYY-MM-DD or ISO format)
+  - `--limit` - Maximum results (default: 50)
+  - `--fields` - Select specific fields (Phase 2 integration)
+
+**Features:**
+- API-based filtering (100% server-side) for maximum performance
+- Structured output with results, total_count, and filters_applied
+- Input validation with helpful error messages
+- Seamless integration with `--fields` for token efficiency
+- Eliminates need for jq/grep in AI agent workflows
+- ISO date format support (YYYY-MM-DD and full ISO 8601)
+
+**Examples:**
+```bash
+# Find error calls for specific agent
+retell transcripts search --status error --agent-id agent_123
+
+# Date range filtering
+retell transcripts search --since 2025-11-01 --until 2025-11-15
+
+# Minimal output with field selection
+retell transcripts search --status error --fields call_id,call_status
+```
+
+**Use Cases:**
+- Batch analysis: Find and analyze problematic calls
+- Performance monitoring: Track errors by agent or time period
+- AI workflows: Automated issue detection without shell scripting
+- Debugging: Quickly locate specific call patterns
+
+#### Documentation
+- Added `localdocs/retell-api-search-capabilities.md` - API research findings
+- Updated README.md with "Search Transcripts" section
+- Updated CLI help text with comprehensive examples
+
+#### Testing
+- All existing tests still passing (78/78) ✅
+- 31 new unit tests for search validation and filtering
+- Manual testing completed for all filter combinations
+- Edge cases verified (empty results, invalid inputs)
+- Integration with `--fields` verified
+
+**Total: 109 tests passing** ✅
+
 ### Fixed - Phase 1: Code Review Improvements
 
 #### Critical Bug Fixes

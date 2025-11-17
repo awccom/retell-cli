@@ -12,6 +12,7 @@ import { loginCommand } from './commands/login';
 import { listTranscriptsCommand } from './commands/transcripts/list';
 import { getTranscriptCommand } from './commands/transcripts/get';
 import { analyzeTranscriptCommand, DEFAULT_LATENCY_THRESHOLD, DEFAULT_SILENCE_THRESHOLD } from './commands/transcripts/analyze';
+import { searchTranscriptsCommand } from './commands/transcripts/search';
 import { listAgentsCommand } from './commands/agents/list';
 import { agentInfoCommand } from './commands/agents/info';
 import { pullPromptsCommand } from './commands/prompts/pull';
@@ -121,6 +122,34 @@ Examples:
       hotspotsOnly: options.hotspotsOnly,
       latencyThreshold: options.latencyThreshold ? parseInt(options.latencyThreshold) : undefined,
       silenceThreshold: options.silenceThreshold ? parseInt(options.silenceThreshold) : undefined,
+    });
+  });
+
+transcripts
+  .command('search')
+  .description('Search transcripts with advanced filtering')
+  .option('--status <status>', 'Filter by call status (error, ended, ongoing)')
+  .option('--agent-id <id>', 'Filter by agent ID')
+  .option('--since <date>', 'Filter calls after this date (YYYY-MM-DD or ISO format)')
+  .option('--until <date>', 'Filter calls before this date (YYYY-MM-DD or ISO format)')
+  .option('--limit <number>', 'Maximum number of results (default: 50)', '50')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell transcripts search --status error
+  $ retell transcripts search --agent-id agent_123 --since 2025-11-01
+  $ retell transcripts search --status error --limit 10
+  $ retell transcripts search --status error --fields call_id,agent_id,call_status
+  $ retell transcripts search --since 2025-11-01 --until 2025-11-15
+  `)
+  .action(async (options) => {
+    await searchTranscriptsCommand({
+      status: options.status,
+      agentId: options.agentId,
+      since: options.since,
+      until: options.until,
+      limit: options.limit ? Number(options.limit) : undefined,
+      fields: options.fields,
     });
   });
 
