@@ -23,10 +23,10 @@ vi.mock('../../services/output-formatter', async () => {
     ...actual,
     outputJson: vi.fn(),
     handleSdkError: vi.fn(),
-    filterFields: vi.fn((data, fields) => {
+    filterFields: vi.fn((data, _fields) => {
       // Simple mock implementation that returns filtered data
       if (Array.isArray(data)) {
-        return data.map(item => ({}));
+        return data.map(_item => ({}));
       }
       return {};
     }),
@@ -339,10 +339,10 @@ describe('searchTranscriptsCommand', () => {
         agentId: 'agent_123',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
-      expect(output).toHaveProperty('results');
-      expect(output).toHaveProperty('total_count');
-      expect(output).toHaveProperty('filters_applied');
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
+      expect(output as any).toHaveProperty('results');
+      expect(output as any).toHaveProperty('total_count');
+      expect(output as any).toHaveProperty('filters_applied');
       expect(output.filters_applied.status).toBe('error');
       expect(output.filters_applied.agent_id).toBe('agent_123');
       expect(output.filters_applied.limit).toBe(50);
@@ -359,7 +359,7 @@ describe('searchTranscriptsCommand', () => {
         limit: 10,
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.filters_applied).toEqual({
         status: 'error',
         agent_id: 'agent_123',
@@ -374,7 +374,7 @@ describe('searchTranscriptsCommand', () => {
 
       await searchTranscriptsCommand({});
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.total_count).toBe(4);
       expect(output.results.length).toBe(4);
     });
@@ -389,10 +389,10 @@ describe('searchTranscriptsCommand', () => {
         fields: 'call_id,call_status',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.results.length).toBeGreaterThan(0);
-      expect(output).toHaveProperty('filters_applied');
-      expect(output).toHaveProperty('total_count');
+      expect(output as any).toHaveProperty('filters_applied');
+      expect(output as any).toHaveProperty('total_count');
     });
 
     it('should apply field filtering to results but not metadata', async () => {
@@ -402,12 +402,12 @@ describe('searchTranscriptsCommand', () => {
         fields: 'call_id,call_status',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       // Results should be filtered by filterFields()
       // But filters_applied and total_count should still exist
-      expect(output).toHaveProperty('results');
-      expect(output).toHaveProperty('total_count');
-      expect(output).toHaveProperty('filters_applied');
+      expect(output as any).toHaveProperty('results');
+      expect(output as any).toHaveProperty('total_count');
+      expect(output as any).toHaveProperty('filters_applied');
     });
 
     it('should correctly filter fields in result objects', async () => {
@@ -417,7 +417,7 @@ describe('searchTranscriptsCommand', () => {
         fields: 'call_id,call_status',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
 
       // Verify filterFields was called with correct parameters
       expect(outputFormatter.filterFields).toHaveBeenCalled();
@@ -441,7 +441,7 @@ describe('searchTranscriptsCommand', () => {
         agentId: 'nonexistent_agent',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.results).toEqual([]);
       expect(output.total_count).toBe(0);
       expect(output.filters_applied).toBeDefined();
@@ -452,7 +452,7 @@ describe('searchTranscriptsCommand', () => {
 
       await searchTranscriptsCommand({});
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.results).toEqual([]);
       expect(output.total_count).toBe(0);
     });
@@ -467,8 +467,6 @@ describe('searchTranscriptsCommand', () => {
     });
 
     it('should handle validation errors', async () => {
-      const validationError = new Error('Invalid status');
-
       await searchTranscriptsCommand({ status: 'invalid' });
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalled();
@@ -516,7 +514,7 @@ describe('searchTranscriptsCommand', () => {
         sort_order: 'descending',
       });
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
       expect(output.results.length).toBe(4);
       expect(output.filters_applied.limit).toBe(50);
     });

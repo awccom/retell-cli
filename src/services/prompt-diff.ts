@@ -5,7 +5,7 @@
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import type { PromptSource, ConversationFlowNode } from './prompt-resolver';
+import type { PromptSource } from './prompt-resolver';
 import type { LocalPrompts } from './prompt-loader';
 
 /**

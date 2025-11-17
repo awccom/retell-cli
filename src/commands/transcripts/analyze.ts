@@ -323,7 +323,7 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
         silenceThreshold: options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD
       };
 
-      const hotspots = detectAllHotspots(call, config);
+      const hotspots = detectAllHotspots(call as any, config);
 
       const result = {
         call_id: callId,
@@ -348,7 +348,7 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
         end_timestamp: call.end_timestamp || 0,
         agent_name: call.agent_name || 'Unknown',
       },
-      transcript: extractTranscriptTurns(call.transcript_object),
+      transcript: extractTranscriptTurns(call.transcript_object as any),
       analysis: {
         summary: call.call_analysis?.call_summary || 'No summary available',
         sentiment: call.call_analysis?.user_sentiment || 'Unknown',

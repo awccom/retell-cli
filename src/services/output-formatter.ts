@@ -305,17 +305,17 @@ export function filterFields<T = any>(
 ): T extends any[] ? Partial<T[number]>[] : Partial<T> {
   // Handle null/undefined
   if (data === null || data === undefined) {
-    return data;
+    return data as any;
   }
 
   // Handle arrays - filter each element
   if (Array.isArray(data)) {
-    return data.map(item => filterFields(item, fields, options));
+    return data.map(item => filterFields(item, fields, options)) as any;
   }
 
   // Handle non-object types - return as-is
   if (typeof data !== 'object') {
-    return data;
+    return data as any;
   }
 
   // Filter object fields

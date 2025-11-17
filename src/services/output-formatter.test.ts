@@ -178,7 +178,7 @@ describe('filterFields', () => {
     });
 
     it('should handle empty arrays', () => {
-      const data = [];
+      const data: any[] = [];
       const result = filterFields(data, ['name']);
 
       expect(result).toEqual([]);
@@ -327,7 +327,7 @@ describe('filterFields', () => {
 
       // Should not throw, and should filter the non-circular fields
       expect(() => filterFields(obj, ['name', 'id'])).not.toThrow();
-      const result = filterFields(obj, ['name', 'id']);
+      const result = filterFields(obj, ['name', 'id']) as any;
       expect(result.name).toBe('test');
       expect(result.id).toBe(123);
     });
@@ -342,10 +342,10 @@ describe('filterFields', () => {
       // Build the path string for 50 levels
       const path = Array(50).fill('level').join('.') + '.value';
 
-      const result = filterFields(deep, [path]);
+      const result = filterFields(deep, [path]) as any;
 
       // Should successfully filter the deep path
-      let current = result;
+      let current: any = result;
       for (let i = 0; i < 50; i++) {
         expect(current).toHaveProperty('level');
         current = current.level;

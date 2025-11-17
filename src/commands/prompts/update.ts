@@ -141,7 +141,7 @@ export async function updatePromptsCommand(agentId: string, options: UpdateOptio
     const client = getRetellClient();
 
     if (promptSource.type === 'retell-llm' && localPrompts.type === 'retell-llm') {
-      await client.llm.update(promptSource.llmId, localPrompts.prompts);
+      await client.llm.update(promptSource.llmId, localPrompts.prompts as any);
 
       outputJson({
         message: 'Prompts updated successfully (draft version)',
@@ -152,7 +152,7 @@ export async function updatePromptsCommand(agentId: string, options: UpdateOptio
         note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
       });
     } else if (promptSource.type === 'conversation-flow' && localPrompts.type === 'conversation-flow') {
-      await client.conversationFlow.update(promptSource.flowId, localPrompts.prompts);
+      await client.conversationFlow.update(promptSource.flowId, localPrompts.prompts as any);
 
       outputJson({
         message: 'Prompts updated successfully (draft version)',

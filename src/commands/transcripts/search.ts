@@ -203,7 +203,7 @@ async function searchTranscripts(
   }
 
   // Fetch from API (all filtering is done server-side!)
-  const response = await client.call.list(apiParams);
+  const response = await client.call.list(apiParams as any);
 
   // The response is an array of calls
   const results = Array.isArray(response) ? response : [];

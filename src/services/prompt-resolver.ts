@@ -87,14 +87,14 @@ export async function resolvePromptSource(agentId: string): Promise<PromptSource
 
     return {
       type: 'retell-llm',
-      llmId: llm.llm_id,
-      agentName: agent.agent_name,
+      llmId: llm.llm_id!,
+      agentName: agent.agent_name!,
       prompts: {
-        llm_id: llm.llm_id,
-        version: llm.version,
-        general_prompt: llm.general_prompt,
-        begin_message: llm.begin_message,
-        states: llm.states,
+        llm_id: llm.llm_id!,
+        version: llm.version!,
+        general_prompt: llm.general_prompt!,
+        begin_message: llm.begin_message ?? undefined,
+        states: (llm.states ?? undefined) as any,
       },
     };
   }
@@ -107,13 +107,13 @@ export async function resolvePromptSource(agentId: string): Promise<PromptSource
 
     return {
       type: 'conversation-flow',
-      flowId: flow.conversation_flow_id,
-      agentName: agent.agent_name,
+      flowId: flow.conversation_flow_id!,
+      agentName: agent.agent_name!,
       prompts: {
-        conversation_flow_id: flow.conversation_flow_id,
-        version: flow.version,
-        global_prompt: flow.global_prompt,
-        nodes: flow.nodes,
+        conversation_flow_id: flow.conversation_flow_id!,
+        version: flow.version!,
+        global_prompt: flow.global_prompt!,
+        nodes: (flow.nodes ?? []) as any,
       },
     };
   }

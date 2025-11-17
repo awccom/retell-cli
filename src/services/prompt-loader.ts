@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
-import type { RetellLlmPrompts, FlowPrompts, ConversationFlowNode } from './prompt-resolver';
+import type { RetellLlmPrompts, FlowPrompts } from './prompt-resolver';
 
 /**
  * Local metadata structure
