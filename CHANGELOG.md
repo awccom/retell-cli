@@ -5,84 +5,6 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2025-11-16
-
-### Added
-
-#### Prompt Diff & Dry Run
-- **`retell prompts diff <agent_id>`** - New command to show differences between local and remote prompts
-  - Compare prompts before applying updates
-  - Structured diff output with old/new values and change types
-  - Supports both retell-llm and conversation-flow agent types
-  - `--source` option for custom prompt directories
-  - `--fields` option for filtering diff output
-- **`--dry-run` flag for `retell prompts update`** - Preview changes without applying them
-  - Shows same structured diff as `prompts diff` command
-  - Prevents accidental prompt updates
-  - Useful for validating changes before publishing
-
-#### Field Filtering Utility
-- **`filterFields()` utility** - Extract specific fields from JSON output using dot notation
-  - Supports nested field selection (e.g., `changes.general_prompt`)
-  - Used by diff command for focused output
-  - Foundation for future field filtering features
-
-#### Shared Prompt Loading
-- **`loadLocalPrompts()` utility** - Centralized prompt loading from local files
-  - Eliminates code duplication between diff and update commands
-  - Validates prompt directory structure
-  - Handles both retell-llm and conversation-flow formats
-
-### Enhanced
-
-#### Prompt Update Command
-- Added dry-run capability to preview changes
-- Improved error messages for type mismatches
-- Better validation of local prompt files
-
-#### Documentation
-- Updated README with diff and dry-run examples
-- Added workflow examples showing new diff command
-- Enhanced AI workflow documentation
-- Added comprehensive command reference for new features
-
-### Features
-
-- **Prevent Accidental Updates** - See exactly what will change before pushing
-- **AI Justification** - AI agents can explain changes by showing diffs
-- **Code Review for Prompts** - Review prompt changes like code PRs
-- **Debugging Support** - Compare local vs remote when troubleshooting
-- **Audit Trail** - Document what changed and when
-
-### Use Cases
-
-**Safe Manual Updates:**
-```bash
-retell prompts pull agent_123
-vim .retell-prompts/agent_123/general_prompt.md
-retell prompts diff agent_123          # See what changed
-retell prompts update agent_123 --dry-run  # Verify changes
-retell prompts update agent_123        # Apply changes
-```
-
-**AI-Assisted Prompt Refinement:**
-```bash
-# AI modifies local prompts based on call analysis
-retell prompts diff agent_123          # AI shows what changed
-retell prompts update agent_123 --dry-run  # AI validates changes
-retell prompts update agent_123        # AI applies changes
-```
-
-### Technical Details
-
-- New services: `prompt-diff.ts`, `prompt-loader.ts`
-- New command: `prompts/diff.ts`
-- Enhanced: `prompts/update.ts` with dry-run support
-- Enhanced: `output-formatter.ts` with field filtering
-- No breaking changes - all new features are opt-in
-
----
-
 ## [1.0.0] - 2025-11-15
 
 ### Added
@@ -215,5 +137,4 @@ For complete documentation, visit: https://github.com/awccom/retell-cli
 
 ---
 
-[1.0.1]: https://github.com/awccom/retell-cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/awccom/retell-cli/releases/tag/v1.0.0
