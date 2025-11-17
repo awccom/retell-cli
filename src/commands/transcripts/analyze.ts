@@ -6,7 +6,7 @@
  */
 
 import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError } from '../../services/output-formatter';
+import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
 
 // ===== TYPES =====
 
@@ -50,6 +50,10 @@ interface AnalysisOutput {
   };
 }
 
+export interface AnalyzeTranscriptOptions {
+  fields?: string;
+}
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -73,8 +77,9 @@ function extractTranscriptTurns(transcriptObject: any[]): TranscriptTurn[] {
  * Analyze a call transcript with structured insights
  *
  * @param callId The call ID to analyze
+ * @param options Command options (fields)
  */
-export async function analyzeTranscriptCommand(callId: string): Promise<void> {
+export async function analyzeTranscriptCommand(callId: string, options: AnalyzeTranscriptOptions = {}): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -116,8 +121,13 @@ export async function analyzeTranscriptCommand(callId: string): Promise<void> {
       },
     };
 
+    // Apply field filtering if requested
+    const output = options.fields
+      ? filterFields(analysis, options.fields.split(',').map(f => f.trim()))
+      : analysis;
+
     // Output structured analysis
-    outputJson(analysis);
+    outputJson(output);
   } catch (error) {
     handleSdkError(error);
   }

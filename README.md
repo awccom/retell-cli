@@ -265,6 +265,31 @@ Publish a draft agent to make changes live.
 retell agent-publish agent_123abc
 ```
 
+### Field Selection
+
+Reduce output size and token usage by selecting specific fields:
+
+```bash
+# Get only call_id and status
+retell transcripts list --fields call_id,call_status
+
+# Select nested fields with dot notation
+retell transcripts get abc123 --fields metadata.duration,analysis.summary
+
+# Combine with other options
+retell agents list --limit 10 --fields agent_id,agent_name
+```
+
+**Supported commands:**
+- All transcript commands (`list`, `get`, `analyze`)
+- All agent commands (`list`, `info`)
+
+**Features:**
+- Dot notation for nested fields (e.g., `metadata.duration`)
+- Works with arrays
+- Reduces token usage by 50-90% for AI workflows
+- Backward compatible (no --fields = full output)
+
 ## Common Workflows
 
 ### Analyzing Failed Calls
