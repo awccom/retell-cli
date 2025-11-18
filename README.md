@@ -94,15 +94,18 @@ retell transcripts analyze call_abc123
 
 ```bash
 # Pull current prompts
-retell prompts pull agent_123abc --output prompts.json
+retell prompts pull agent_123abc
 
-# Edit prompts.json with your changes
+# Edit .retell-prompts/agent_123abc/general_prompt.md with your changes
 
-# Update agent with new prompts (dry run first)
-retell prompts update agent_123abc --source prompts.json --dry-run
+# Check what changed
+retell prompts diff agent_123abc
+
+# Dry run to preview changes
+retell prompts update agent_123abc --dry-run
 
 # Apply changes
-retell prompts update agent_123abc --source prompts.json
+retell prompts update agent_123abc
 
 # Publish the updated agent
 retell agent-publish agent_123abc
@@ -234,6 +237,42 @@ retell prompts pull agent_123abc
 retell prompts pull agent_123abc --output my-prompts.json
 ```
 
+#### `retell prompts diff <agent_id> [options]`
+
+Show differences between local and remote prompts before applying updates.
+
+**Options:**
+- `-s, --source <path>` - Source directory path (default: `.retell-prompts`)
+- `-f, --fields <fields>` - Comma-separated list of fields to return
+
+**Examples:**
+```bash
+# Compare local and remote prompts
+retell prompts diff agent_123abc
+
+# Use custom source directory
+retell prompts diff agent_123abc --source ./custom-prompts
+
+# Show only specific fields
+retell prompts diff agent_123abc --fields has_changes,changes.general_prompt
+```
+
+**Output:**
+```json
+{
+  "agent_id": "agent_123abc",
+  "agent_type": "retell-llm",
+  "has_changes": true,
+  "changes": {
+    "general_prompt": {
+      "old": "You are a helpful assistant...",
+      "new": "You are a helpful assistant specializing in...",
+      "change_type": "modified"
+    }
+  }
+}
+```
+
 #### `retell prompts update <agent_id> [options]`
 
 Update agent prompts from a local file.
@@ -263,6 +302,134 @@ Publish a draft agent to make changes live.
 **Example:**
 ```bash
 retell agent-publish agent_123abc
+```
+
+### Field Selection
+
+Reduce output size and token usage by selecting specific fields:
+
+```bash
+# Get only call_id and status
+retell transcripts list --fields call_id,call_status
+
+# Select nested fields with dot notation
+retell transcripts get abc123 --fields metadata.duration,analysis.summary
+
+# Combine with other options
+retell agents list --limit 10 --fields agent_id,agent_name
+```
+
+**Supported commands:**
+- All transcript commands (`list`, `get`, `analyze`)
+- All agent commands (`list`, `info`)
+
+**Features:**
+- Dot notation for nested fields (e.g., `metadata.duration`)
+- Works with arrays
+- Reduces token usage by 50-90% for AI workflows
+- Backward compatible (no --fields = full output)
+
+### Raw Output Mode
+
+Get the unmodified API response instead of enriched analysis:
+
+```bash
+# Raw API response (useful for debugging)
+retell transcripts analyze abc123 --raw
+
+# Combine with field selection for minimal output
+retell transcripts analyze abc123 --raw --fields call_id,transcript_object
+
+# Compare raw vs enriched
+retell transcripts analyze abc123 --raw > raw.json
+retell transcripts analyze abc123 > enriched.json
+diff raw.json enriched.json
+```
+
+**When to use:**
+- Debugging issues with API responses
+- When tools expect the official Retell API schema
+- Accessing new API fields before CLI enrichment support
+- Comparing raw data to enriched output for validation
+
+**Supported commands:**
+- `transcripts analyze` - returns the raw [Call Object](https://docs.retellai.com/api-references/retrieve-call) exactly as documented in the Retell API reference
+
+**Note:** The `--raw` flag works seamlessly with `--fields` for precise data extraction. Raw output returns the official Retell API schema, allowing you to access all fields documented in the [API reference](https://docs.retellai.com/api-references/list-calls).
+
+### Hotspot Detection
+
+Identify conversation issues for focused troubleshooting:
+
+```bash
+# Find all issues in a call
+retell transcripts analyze abc123 --hotspots-only
+
+# Combine with field selection
+retell transcripts analyze abc123 --hotspots-only --fields hotspots
+
+# Set custom thresholds
+retell transcripts analyze abc123 --hotspots-only --latency-threshold 1500
+retell transcripts analyze abc123 --hotspots-only --silence-threshold 3000
+```
+
+**Detected issues:**
+- **Latency spikes** - When p90 latency exceeds threshold (default: 2000ms)
+- **Long silences** - Gaps between turns exceeding threshold (default: 5000ms)
+- **Sentiment** - Negative sentiment indicators
+
+**Use cases:**
+- Rapid troubleshooting of failed calls
+- Prompt iteration and refinement
+- Performance monitoring across calls
+- AI agent workflow optimization
+
+**Note:** The `--hotspots-only` flag works seamlessly with `--fields` for token efficiency.
+
+### Search Transcripts
+
+Find calls with advanced filtering - no need for jq or grep:
+
+```bash
+# Find all error calls
+retell transcripts search --status error
+
+# Find calls for specific agent in date range
+retell transcripts search \
+  --agent-id agent_123 \
+  --since 2025-11-01 \
+  --until 2025-11-15
+
+# Combine multiple filters
+retell transcripts search \
+  --status error \
+  --agent-id agent_123 \
+  --since 2025-11-01 \
+  --limit 20
+
+# Use field selection for minimal output
+retell transcripts search \
+  --status error \
+  --fields call_id,call_status,agent_id
+```
+
+**Available filters:**
+- `--status` - Call status (error, ended, ongoing)
+- `--agent-id` - Filter by agent
+- `--since` - Calls after date (YYYY-MM-DD or ISO format)
+- `--until` - Calls before date (YYYY-MM-DD or ISO format)
+- `--limit` - Max results (default: 50)
+- `--fields` - Select specific fields (from Phase 2)
+
+**AI Agent Workflow Example:**
+```bash
+# 1. Find all recent error calls
+retell transcripts search --status error --since 2025-11-08 --fields call_id
+
+# 2. For each call, get hotspots
+retell transcripts analyze <call_id> --hotspots-only
+
+# 3. No jq or grep needed - direct JSON parsing!
 ```
 
 ## Common Workflows
@@ -331,12 +498,19 @@ retell transcripts list | jq '.[] | select(.call_status == "error")'
 retell transcripts analyze call_123
 
 # AI pulls current prompts
-retell prompts pull agent_456 --output current-prompts.json
+retell prompts pull agent_456
 
 # AI reads and suggests improvements to prompts
-# Then updates with improved version
-retell prompts update agent_456 --source improved-prompts.json --dry-run
-retell prompts update agent_456 --source improved-prompts.json
+# (Edits .retell-prompts/agent_456/general_prompt.md)
+
+# AI shows what changed
+retell prompts diff agent_456
+
+# AI explains the changes and uses dry-run to verify
+retell prompts update agent_456 --dry-run
+
+# Apply changes
+retell prompts update agent_456
 retell agent-publish agent_456
 ```
 

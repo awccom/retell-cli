@@ -1,0 +1,26 @@
+I need you to implement Phase 5 of the Retell CLI development plan.
+
+Read the comprehensive handoff document at: /home/devon/claude/retell-cli/PHASE-5-HANDOFF.md
+
+Quick summary:
+- You're implementing a "retell transcripts search" command with hybrid filtering
+- Phase 1-4 are complete (78 tests passing)
+- You need to checkout a new branch: feature/phase-5-search-command from develop
+- IMPORTANT: Start with the research phase - investigate Retell API capabilities first
+- When complete: commit, push, and open a PR to develop branch
+
+Follow ALL instructions in PHASE-5-HANDOFF.md exactly, including:
+1. Setup instructions (checkout branch, verify tests)
+2. Research phase (document API capabilities)
+3. Implementation (create search.ts, register command, write tests)
+4. Testing (unit tests + manual testing)
+5. Documentation (README, CHANGELOG)
+6. Commit and PR (use exact commit message from handoff doc)
+
+Supporting files to reference:
+- localdocs/phase-5-search-command.md
+- localdocs/v1.0.1-development-plan.md
+- src/commands/transcripts/list.ts (reference)
+- src/services/output-formatter.ts (filterFields utility)
+
+Start by reading PHASE-5-HANDOFF.md completely, then begin with the setup instructions.

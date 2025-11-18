@@ -33,15 +33,15 @@ export async function publishAgentCommand(agentId: string): Promise<void> {
     const client = getRetellClient();
 
     // Publish the agent
-    const result = await client.agent.publish(agentId);
+    const result = await client.agent.publish(agentId) as any;
 
     // Output success message with version info
     outputJson({
       message: 'Agent published successfully',
-      agent_id: result.agent_id,
-      agent_name: result.agent_name,
-      version: result.version,
-      is_published: result.is_published,
+      agent_id: result?.agent_id || agentId,
+      agent_name: result?.agent_name || 'Unknown',
+      version: result?.version || 'Unknown',
+      is_published: result?.is_published ?? true,
       note: 'Draft version incremented and ready for new changes',
     });
   } catch (error) {

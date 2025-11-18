@@ -1,6 +1,6 @@
 {
   "name": "retell-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official command-line tool for Retell AI - analyze call transcripts, manage agents, and update prompts with ease",
   "main": "dist/index.js",
   "bin": {
@@ -14,6 +14,9 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
     "dev": "npm run build -- --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -47,6 +50,7 @@
   "dependencies": {
     "commander": "^11.0.0",
     "dotenv": "^16.0.0",
+    "microdiff": "^1.5.0",
     "retell-sdk": "^4.5.0",
     "zod": "^3.22.0"
   },

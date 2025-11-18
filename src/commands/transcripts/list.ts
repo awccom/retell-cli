@@ -6,12 +6,13 @@
  */
 
 import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError } from '../../services/output-formatter';
+import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
 
 // ===== TYPES =====
 
 export interface ListTranscriptsOptions {
   limit?: number;
+  fields?: string;
 }
 
 // ===== COMMAND IMPLEMENTATION =====
@@ -30,8 +31,13 @@ export async function listTranscriptsCommand(options: ListTranscriptsOptions): P
       limit: options.limit || 50,
     });
 
+    // Apply field filtering if requested
+    const output = options.fields
+      ? filterFields(calls, options.fields.split(',').map(f => f.trim()))
+      : calls;
+
     // Output as JSON
-    outputJson(calls);
+    outputJson(output);
   } catch (error) {
     handleSdkError(error);
   }

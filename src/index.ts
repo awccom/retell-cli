@@ -11,11 +11,13 @@ import { join } from 'path';
 import { loginCommand } from './commands/login';
 import { listTranscriptsCommand } from './commands/transcripts/list';
 import { getTranscriptCommand } from './commands/transcripts/get';
-import { analyzeTranscriptCommand } from './commands/transcripts/analyze';
+import { analyzeTranscriptCommand, DEFAULT_LATENCY_THRESHOLD, DEFAULT_SILENCE_THRESHOLD } from './commands/transcripts/analyze';
+import { searchTranscriptsCommand } from './commands/transcripts/search';
 import { listAgentsCommand } from './commands/agents/list';
 import { agentInfoCommand } from './commands/agents/info';
 import { pullPromptsCommand } from './commands/prompts/pull';
 import { updatePromptsCommand } from './commands/prompts/update';
+import { diffPromptsCommand } from './commands/prompts/diff';
 import { publishAgentCommand } from './commands/agent/publish';
 
 // Read package.json for version
@@ -59,10 +61,12 @@ transcripts
   .command('list')
   .description('List all call transcripts')
   .option('-l, --limit <number>', 'Maximum number of calls to return (default: 50)', '50')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,call_status,metadata.duration)')
   .addHelpText('after', `
 Examples:
   $ retell transcripts list
   $ retell transcripts list --limit 100
+  $ retell transcripts list --fields call_id,call_status
   $ retell transcripts list | jq '.[] | select(.call_status == "error")'
   `)
   .action(async (options) => {
@@ -73,31 +77,81 @@ Examples:
     }
     await listTranscriptsCommand({
       limit,
+      fields: options.fields,
     });
   });
 
 transcripts
   .command('get <call_id>')
   .description('Get a specific call transcript')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,metadata.duration,analysis)')
   .addHelpText('after', `
 Examples:
   $ retell transcripts get call_abc123
+  $ retell transcripts get call_abc123 --fields call_id,metadata.duration
   $ retell transcripts get call_abc123 | jq '.transcript_object'
   `)
-  .action(async (callId) => {
-    await getTranscriptCommand(callId);
+  .action(async (callId, options) => {
+    await getTranscriptCommand(callId, {
+      fields: options.fields,
+    });
   });
 
 transcripts
   .command('analyze <call_id>')
   .description('Analyze a call transcript with performance metrics and insights')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., call_id,performance,analysis.summary)')
+  .option('--raw', 'Return unmodified API response instead of enriched analysis')
+  .option('--hotspots-only', 'Return only conversation hotspots/issues for troubleshooting')
+  .option('--latency-threshold <ms>', `Latency threshold in ms for hotspot detection (default: ${DEFAULT_LATENCY_THRESHOLD})`, String(DEFAULT_LATENCY_THRESHOLD))
+  .option('--silence-threshold <ms>', `Silence threshold in ms for hotspot detection (default: ${DEFAULT_SILENCE_THRESHOLD})`, String(DEFAULT_SILENCE_THRESHOLD))
   .addHelpText('after', `
 Examples:
   $ retell transcripts analyze call_abc123
+  $ retell transcripts analyze call_abc123 --fields call_id,performance
+  $ retell transcripts analyze call_abc123 --raw
+  $ retell transcripts analyze call_abc123 --raw --fields call_id,transcript_object
+  $ retell transcripts analyze call_abc123 --hotspots-only
+  $ retell transcripts analyze call_abc123 --hotspots-only --latency-threshold 1500
+  $ retell transcripts analyze call_abc123 --hotspots-only --fields hotspots
   $ retell transcripts analyze call_abc123 | jq '.performance.latency_p50_ms'
   `)
-  .action(async (callId) => {
-    await analyzeTranscriptCommand(callId);
+  .action(async (callId, options) => {
+    await analyzeTranscriptCommand(callId, {
+      fields: options.fields,
+      raw: options.raw,
+      hotspotsOnly: options.hotspotsOnly,
+      latencyThreshold: options.latencyThreshold ? parseInt(options.latencyThreshold) : undefined,
+      silenceThreshold: options.silenceThreshold ? parseInt(options.silenceThreshold) : undefined,
+    });
+  });
+
+transcripts
+  .command('search')
+  .description('Search transcripts with advanced filtering')
+  .option('--status <status>', 'Filter by call status (error, ended, ongoing)')
+  .option('--agent-id <id>', 'Filter by agent ID')
+  .option('--since <date>', 'Filter calls after this date (YYYY-MM-DD or ISO format)')
+  .option('--until <date>', 'Filter calls before this date (YYYY-MM-DD or ISO format)')
+  .option('--limit <number>', 'Maximum number of results (default: 50)', '50')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell transcripts search --status error
+  $ retell transcripts search --agent-id agent_123 --since 2025-11-01
+  $ retell transcripts search --status error --limit 10
+  $ retell transcripts search --status error --fields call_id,agent_id,call_status
+  $ retell transcripts search --since 2025-11-01 --until 2025-11-15
+  `)
+  .action(async (options) => {
+    await searchTranscriptsCommand({
+      status: options.status,
+      agentId: options.agentId,
+      since: options.since,
+      until: options.until,
+      limit: options.limit ? Number(options.limit) : undefined,
+      fields: options.fields,
+    });
   });
 
 // Agents commands (Phase 4)
@@ -109,10 +163,12 @@ agents
   .command('list')
   .description('List all agents')
   .option('-l, --limit <number>', 'Maximum number of agents to return (default: 100)', '100')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., agent_id,agent_name,response_engine_type)')
   .addHelpText('after', `
 Examples:
   $ retell agents list
   $ retell agents list --limit 10
+  $ retell agents list --fields agent_id,agent_name
   $ retell agents list | jq '.[] | select(.response_engine.type == "retell-llm")'
   `)
   .action(async (options) => {
@@ -123,19 +179,24 @@ Examples:
     }
     await listAgentsCommand({
       limit,
+      fields: options.fields,
     });
   });
 
 agents
   .command('info <agent_id>')
   .description('Get detailed agent information')
+  .option('--fields <fields>', 'Comma-separated list of fields to return (e.g., agent_name,response_engine.type,voice_config)')
   .addHelpText('after', `
 Examples:
   $ retell agents info agent_123abc
+  $ retell agents info agent_123abc --fields agent_name,response_engine.type
   $ retell agents info agent_123abc | jq '.response_engine.type'
   `)
-  .action(async (agentId) => {
-    await agentInfoCommand(agentId);
+  .action(async (agentId, options) => {
+    await agentInfoCommand(agentId, {
+      fields: options.fields,
+    });
   });
 
 // Prompts commands (Phase 5)
@@ -154,6 +215,21 @@ Examples:
   `)
   .action(async (agentId, options) => {
     await pullPromptsCommand(agentId, options);
+  });
+
+prompts
+  .command('diff <agent_id>')
+  .description('Show differences between local and remote prompts')
+  .option('-s, --source <path>', 'Source directory path (default: .retell-prompts)', '.retell-prompts')
+  .option('-f, --fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell prompts diff agent_123abc
+  $ retell prompts diff agent_123abc --source ./custom-prompts
+  $ retell prompts diff agent_123abc --fields has_changes,changes.general_prompt
+  `)
+  .action(async (agentId, options) => {
+    await diffPromptsCommand(agentId, options);
   });
 
 prompts

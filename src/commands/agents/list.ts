@@ -5,10 +5,11 @@
  */
 
 import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError } from '../../services/output-formatter';
+import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
 
 export interface ListAgentsOptions {
   limit?: number;
+  fields?: string;
 }
 
 /**
@@ -70,7 +71,12 @@ export async function listAgentsCommand(options: ListAgentsOptions = {}): Promis
       };
     });
 
-    outputJson(formatted);
+    // Apply field filtering if requested
+    const output = options.fields
+      ? filterFields(formatted, options.fields.split(',').map(f => f.trim()))
+      : formatted;
+
+    outputJson(output);
   } catch (error) {
     handleSdkError(error);
   }
