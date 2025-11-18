@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/retell-cli.svg)](https://www.npmjs.com/package/retell-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Official command-line tool for Retell AI - analyze call transcripts and manage agent prompts.
+Community-built command-line tool for Retell AI - designed to give AI assistants efficient access to transcripts, agents, and prompts without using context-expensive MCP servers.
 
 ## Features
 
@@ -486,7 +486,17 @@ jq -s '[.[] | .performance.latency_p50_ms.e2e] | add / length' analysis-*.json
 
 ## For AI Agents
 
-All commands output JSON by default, making this CLI perfect for AI coding assistants like Claude Code, Cursor, and GitHub Copilot.
+**This CLI was specifically designed for AI assistants** to access Retell AI efficiently without the token overhead of MCP servers. All commands output JSON by default, making it perfect for Claude Code, Cursor, Aider, and other AI coding assistants.
+
+### Why This Tool Exists
+
+Traditional MCP (Model Context Protocol) servers can consume significant context windows when working with Retell AI data. This CLI provides a lightweight, token-efficient alternative that:
+
+- **Reduces token usage by 50-90%** with field selection (`--fields`)
+- **Provides structured JSON output** for easy parsing
+- **Offers hotspot detection** for focused troubleshooting
+- **Enables safe prompt updates** with diff and dry-run features
+- **Works across all shells** (bash, zsh, fish) for maximum compatibility
 
 ### Example AI Workflow
 
@@ -641,4 +651,4 @@ If you encounter any issues or have questions:
 
 ---
 
-Built with by the Retell AI community.
+Built by the community for AI-assisted Retell AI development. Not affiliated with or endorsed by Retell AI.

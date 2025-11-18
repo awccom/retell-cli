@@ -1,7 +1,7 @@
 {
   "name": "retell-cli",
   "version": "1.0.1",
-  "description": "Official command-line tool for Retell AI - analyze call transcripts, manage agents, and update prompts with ease",
+  "description": "Community CLI for Retell AI - efficient access to transcripts, agents, and prompts for AI assistants without MCP overhead",
   "main": "dist/index.js",
   "bin": {
     "retell": "dist/index.js"
@@ -34,7 +34,7 @@
     "call-analysis",
     "retell-sdk"
   ],
-  "author": "Retell AI Community",
+  "author": "awccom",
   "license": "MIT",
   "repository": {
     "type": "git",

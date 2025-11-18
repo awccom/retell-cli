@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/devon/claude/retell-cli/logs/.c625d0548d91f911a913346df284a27c6cca0a3a-audit.json",
+    "files": [
+        {
+            "date": 1763404586691,
+            "name": "/home/devon/claude/retell-cli/logs/mcp-puppeteer-2025-11-17.log",
+            "hash": "a65671abce7a22aa71bebbf896a2f69e6a6e7b88d91685e8bff284aff52910b8"
+        },
+        {
+            "date": 1763478906164,
+            "name": "/home/devon/claude/retell-cli/logs/mcp-puppeteer-2025-11-18.log",
+            "hash": "36595cef88d8609579a537a3149a01c5904df6638a49b9a8a640965bd16625cb"
+        }
+    ],
+    "hashType": "sha256"
+}
