@@ -7,6 +7,7 @@
 
 import { getRetellClient } from '../../services/retell-client';
 import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { z } from 'zod';
 
 // ===== CONSTANTS =====
 
@@ -16,7 +17,22 @@ const MAX_LIMIT = 1000;
 /** Default number of results if not specified */
 const DEFAULT_LIMIT = 50;
 
-// ===== TYPES =====
+// ===== TYPES & VALIDATION =====
+
+/**
+ * Zod schema for validating API call responses
+ * This ensures the API returns the expected data structure
+ */
+const CallSchema = z.object({
+  call_id: z.string(),
+  call_status: z.string().optional(),
+  agent_id: z.string().optional(),
+  start_timestamp: z.number().optional(),
+  end_timestamp: z.number().optional(),
+  // Allow additional fields (the API may return more fields than we validate)
+}).passthrough();
+
+const CallListSchema = z.array(CallSchema);
 
 /**
  * Options for searching transcripts
@@ -95,7 +111,7 @@ function parseDate(dateStr: string): ParsedDate {
   // Strict validation: accept YYYY-MM-DD, or ISO 8601 with timezone/offset
   const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
   const iso8601Pattern =
-    /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+    /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
 
   if (!iso8601Pattern.test(dateStr)) {
     throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
@@ -220,11 +236,19 @@ async function searchTranscripts(
   // Fetch from API (all filtering is done server-side!)
   const response = await client.call.list(apiParams as any);
 
-  // The response is an array of calls
-  const results = Array.isArray(response) ? response : [];
+  // Validate response format with Zod
+  const validation = CallListSchema.safeParse(response);
+
+  if (!validation.success) {
+    console.warn('Warning: API response validation failed:', validation.error.message);
+    throw new Error(`Invalid API response format: ${validation.error.message}`);
+  }
+
+  const results = validation.data;
+  const requestedLimit = options.limit || DEFAULT_LIMIT;
 
   // Build result object
-  return {
+  const result = {
     results: results,
     total_count: results.length,
     filters_applied: {
@@ -232,9 +256,19 @@ async function searchTranscripts(
       ...(options.agentId && { agent_id: options.agentId }),
       ...(options.since && { since: options.since }),
       ...(options.until && { until: options.until }),
-      limit: options.limit || DEFAULT_LIMIT,
+      limit: requestedLimit,
     },
   };
+
+  // Warn if results might be truncated (hit the limit exactly)
+  if (results.length === requestedLimit && results.length > 0) {
+    console.warn(
+      `Warning: Results limited to ${results.length}. There may be additional results available. ` +
+        `Use --limit to increase (max: ${MAX_LIMIT}).`
+    );
+  }
+
+  return result;
 }
 
 // ===== COMMAND IMPLEMENTATION =====

@@ -38,16 +38,29 @@ export interface DiffResult {
  *
  * @param obj1 First object to compare
  * @param obj2 Second object to compare
+ * @param maxDepth Maximum depth to traverse (default: 100)
  * @returns true if objects are deeply equal
+ * @throws Error if maximum depth is exceeded
  */
-function deepEqual(obj1: unknown, obj2: unknown): boolean {
+function deepEqual(obj1: unknown, obj2: unknown, maxDepth: number = 100): boolean {
   // Handle primitive types and null
   if (obj1 === obj2) return true;
   if (obj1 === null || obj2 === null) return false;
   if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
 
+  // Track depth to prevent stack overflow on very large/deep objects
+  let currentDepth = 0;
+
   // Use sorted JSON for deterministic comparison
   const sortedStringify = (obj: any): string => {
+    // Check depth limit
+    if (++currentDepth > maxDepth) {
+      throw new Error(
+        `Maximum depth (${maxDepth}) exceeded during comparison. ` +
+          'This may indicate a circular reference or extremely deep nesting.'
+      );
+    }
+
     if (obj === null) return 'null';
     if (typeof obj !== 'object') return JSON.stringify(obj);
     if (Array.isArray(obj)) {
@@ -58,7 +71,16 @@ function deepEqual(obj1: unknown, obj2: unknown): boolean {
     return '{' + pairs.join(',') + '}';
   };
 
-  return sortedStringify(obj1) === sortedStringify(obj2);
+  try {
+    return sortedStringify(obj1) === sortedStringify(obj2);
+  } catch (error) {
+    // If we hit depth limit, log warning and fall back to reference equality
+    if (error instanceof Error && error.message.includes('Maximum depth')) {
+      console.warn('Warning:', error.message, 'Falling back to reference equality.');
+      return obj1 === obj2;
+    }
+    throw error;
+  }
 }
 
 /**

@@ -452,9 +452,12 @@ describe('searchTranscriptsCommand', () => {
 
       await searchTranscriptsCommand({});
 
-      const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0] as any;
-      expect(output.results).toEqual([]);
-      expect(output.total_count).toBe(0);
+      // With Zod validation, invalid responses now properly throw errors
+      // Verify that handleSdkError was called with an error
+      expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+      const errorArg = vi.mocked(outputFormatter.handleSdkError).mock.calls[0][0];
+      expect(errorArg).toBeInstanceOf(Error);
+      expect((errorArg as Error).message).toContain('Invalid API response format');
     });
 
     it('should handle API errors via handleSdkError', async () => {
