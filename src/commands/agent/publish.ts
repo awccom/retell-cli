@@ -29,19 +29,36 @@ import { outputJson, handleSdkError } from '../../services/output-formatter';
  * await publishAgentCommand('agent-123abc');
  */
 export async function publishAgentCommand(agentId: string): Promise<void> {
+  const client = getRetellClient();
+
   try {
-    const client = getRetellClient();
+    await client.agent.publish(agentId);
+  } catch (error) {
+    // Check if this is the known SDK bug where it fails to parse empty response
+    // The Retell API returns an empty body for publish, but the SDK tries to parse it as JSON
+    if (
+      error instanceof Error &&
+      error.message.includes('invalid json response body') &&
+      error.message.includes('Unexpected end of JSON input')
+    ) {
+      // The API call succeeded but SDK failed to parse empty response
+      // Continue to fetch agent details below
+    } else {
+      // Re-throw other errors to be handled normally
+      handleSdkError(error);
+    }
+  }
 
-    // Publish the agent
-    const result = await client.agent.publish(agentId) as any;
+  // Fetch agent to verify publish succeeded and get current state
+  try {
+    const agent = await client.agent.retrieve(agentId);
 
-    // Output success message with version info
     outputJson({
       message: 'Agent published successfully',
-      agent_id: result?.agent_id || agentId,
-      agent_name: result?.agent_name || 'Unknown',
-      version: result?.version || 'Unknown',
-      is_published: result?.is_published ?? true,
+      agent_id: agent.agent_id,
+      agent_name: agent.agent_name || 'Unknown',
+      version: agent.version || 'Unknown',
+      is_published: agent.is_published ?? true,
       note: 'Draft version incremented and ready for new changes',
     });
   } catch (error) {
