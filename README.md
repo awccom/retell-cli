@@ -10,6 +10,7 @@ Community-built command-line tool for Retell AI - designed to give AI assistants
 - **Transcript Management** - List, retrieve, and analyze call transcripts
 - **Agent Management** - View and configure Retell AI agents
 - **Prompt Engineering** - Pull, edit, and update agent prompts
+- **Tool Management** - Full CRUD for agent tools (webhooks, custom functions, etc.)
 - **Multi-format Support** - Works with Retell LLM and Conversation Flows
 - **AI-Friendly** - JSON output by default for AI coding assistants
 - **Cross-Shell** - Works in bash, fish, zsh, and more
@@ -304,6 +305,164 @@ Publish a draft agent to make changes live.
 retell agent-publish agent_123abc
 ```
 
+### Tools
+
+Manage agent tools (custom functions, webhooks, etc.). Tools are embedded within Retell LLM and Conversation Flow configurations.
+
+#### `retell tools list <agent_id> [options]`
+
+List all tools configured for an agent.
+
+**Options:**
+- `--state <name>` - Filter by state name (Retell LLM only)
+- `--component <id>` - Filter by component ID (Conversation Flow only)
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Examples:**
+```bash
+# List all tools
+retell tools list agent_123abc
+
+# Filter by state (Retell LLM)
+retell tools list agent_123abc --state greeting
+
+# Show only total count
+retell tools list agent_123abc --fields total_count,general_tools
+```
+
+#### `retell tools get <agent_id> <tool_name> [options]`
+
+Get detailed information about a specific tool.
+
+**Options:**
+- `--state <name>` - State name to search within (Retell LLM only)
+- `--component <id>` - Component ID to search within (Conversation Flow only)
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Example:**
+```bash
+retell tools get agent_123abc lookup_customer
+```
+
+#### `retell tools add <agent_id> [options]`
+
+Add a new tool to an agent from a JSON file.
+
+**Options:**
+- `-f, --file <path>` - Path to JSON file containing tool definition (required)
+- `--state <name>` - Add to specific state (Retell LLM only)
+- `--component <id>` - Add to specific component (Conversation Flow only)
+- `--dry-run` - Preview changes without applying them
+
+**Example tool.json:**
+```json
+{
+  "name": "lookup_customer",
+  "type": "custom",
+  "description": "Look up customer information in CRM",
+  "url": "https://api.example.com/customers/lookup",
+  "method": "POST",
+  "speak_after_execution": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "phone_number": { "type": "string", "description": "Customer phone" }
+    },
+    "required": ["phone_number"]
+  }
+}
+```
+
+**Examples:**
+```bash
+# Add to general tools
+retell tools add agent_123abc --file tool.json
+
+# Add to specific state
+retell tools add agent_123abc --file tool.json --state booking
+
+# Preview changes first
+retell tools add agent_123abc --file tool.json --dry-run
+```
+
+#### `retell tools update <agent_id> <tool_name> [options]`
+
+Update an existing tool with a new definition.
+
+**Options:**
+- `-f, --file <path>` - Path to JSON file containing updated tool definition (required)
+- `--state <name>` - State where tool exists (Retell LLM only)
+- `--component <id>` - Component where tool exists (Conversation Flow only)
+- `--dry-run` - Preview changes without applying them
+
+**Example:**
+```bash
+retell tools update agent_123abc lookup_customer --file updated-tool.json
+```
+
+#### `retell tools remove <agent_id> <tool_name> [options]`
+
+Remove a tool from an agent.
+
+**Options:**
+- `--state <name>` - State where tool exists (Retell LLM only)
+- `--component <id>` - Component where tool exists (Conversation Flow only)
+- `--dry-run` - Preview changes without applying them
+
+**Examples:**
+```bash
+# Remove from general tools
+retell tools remove agent_123abc lookup_customer
+
+# Remove from specific state
+retell tools remove agent_123abc book_cal --state booking
+
+# Preview removal
+retell tools remove agent_123abc my_tool --dry-run
+```
+
+#### `retell tools export <agent_id> [options]`
+
+Export all tools from an agent to a JSON file.
+
+**Options:**
+- `-o, --output <path>` - Output file path (prints to stdout if not specified)
+
+**Examples:**
+```bash
+# Export to stdout
+retell tools export agent_123abc
+
+# Export to file
+retell tools export agent_123abc --output tools.json
+```
+
+#### `retell tools import <agent_id> [options]`
+
+Import tools from a JSON file to an agent.
+
+**Options:**
+- `-f, --file <path>` - Path to JSON file containing tools to import (required)
+- `--dry-run` - Preview changes without applying them
+- `--replace` - Replace existing tools with same name instead of skipping
+
+**Examples:**
+```bash
+# Import tools
+retell tools import agent_123abc --file tools.json
+
+# Preview import
+retell tools import agent_123abc --file tools.json --dry-run
+
+# Replace existing tools
+retell tools import agent_123abc --file tools.json --replace
+```
+
+**Important:** After modifying tools, remember to publish the agent:
+```bash
+retell agent-publish agent_123abc
+```
+
 ### Field Selection
 
 Reduce output size and token usage by selecting specific fields:
@@ -322,6 +481,7 @@ retell agents list --limit 10 --fields agent_id,agent_name
 **Supported commands:**
 - All transcript commands (`list`, `get`, `analyze`)
 - All agent commands (`list`, `info`)
+- Tools commands (`list`, `get`)
 
 **Features:**
 - Dot notation for nested fields (e.g., `metadata.duration`)
