@@ -26,6 +26,27 @@ import { updateToolCommand } from './commands/tools/update';
 import { removeToolCommand } from './commands/tools/remove';
 import { exportToolsCommand } from './commands/tools/export';
 import { importToolsCommand } from './commands/tools/import';
+import { listTestCasesCommand } from './commands/tests/cases/list';
+import { getTestCaseCommand } from './commands/tests/cases/get';
+import { createTestCaseCommand } from './commands/tests/cases/create';
+import { updateTestCaseCommand } from './commands/tests/cases/update';
+import { deleteTestCaseCommand } from './commands/tests/cases/delete';
+import { listBatchTestsCommand } from './commands/tests/batch/list';
+import { getBatchTestCommand } from './commands/tests/batch/get';
+import { createBatchTestCommand } from './commands/tests/batch/create';
+import { listTestRunsCommand } from './commands/tests/runs/list';
+import { getTestRunCommand } from './commands/tests/runs/get';
+import { listKnowledgeBasesCommand } from './commands/kb/list';
+import { getKnowledgeBaseCommand } from './commands/kb/get';
+import { createKnowledgeBaseCommand } from './commands/kb/create';
+import { deleteKnowledgeBaseCommand } from './commands/kb/delete';
+import { addKnowledgeBaseSourcesCommand } from './commands/kb/sources/add';
+import { deleteKnowledgeBaseSourceCommand } from './commands/kb/sources/delete';
+import { listFlowsCommand } from './commands/flows/list';
+import { getFlowCommand } from './commands/flows/get';
+import { createFlowCommand } from './commands/flows/create';
+import { updateFlowCommand } from './commands/flows/update';
+import { deleteFlowCommand } from './commands/flows/delete';
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -410,6 +431,420 @@ Examples:
       dryRun: options.dryRun,
       replace: options.replace,
     });
+  });
+
+// Tests commands
+const tests = program
+  .command('tests')
+  .description('Manage test cases, batch tests, and test runs');
+
+// Tests cases subcommand group
+const testsCases = tests
+  .command('cases')
+  .description('Manage test case definitions');
+
+testsCases
+  .command('list')
+  .description('List all test case definitions for an LLM or flow')
+  .requiredOption('-t, --type <type>', 'Response engine type (retell-llm or conversation-flow)')
+  .option('--llm-id <id>', 'LLM ID (required when type is retell-llm)')
+  .option('--flow-id <id>', 'Flow ID (required when type is conversation-flow)')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests cases list --type retell-llm --llm-id llm_abc123
+  $ retell tests cases list --type conversation-flow --flow-id cf_abc123
+  $ retell tests cases list --type retell-llm --llm-id llm_abc123 --fields test_case_definitions
+  `)
+  .action(async (options) => {
+    if (options.type !== 'retell-llm' && options.type !== 'conversation-flow') {
+      console.error('Error: type must be "retell-llm" or "conversation-flow"');
+      process.exit(1);
+    }
+    await listTestCasesCommand({
+      type: options.type,
+      llmId: options.llmId,
+      flowId: options.flowId,
+      fields: options.fields,
+    });
+  });
+
+testsCases
+  .command('get <test_case_definition_id>')
+  .description('Get a specific test case definition')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests cases get tcd_abc123
+  $ retell tests cases get tcd_abc123 --fields name,user_prompt
+  `)
+  .action(async (testCaseDefinitionId, options) => {
+    await getTestCaseCommand(testCaseDefinitionId, {
+      fields: options.fields,
+    });
+  });
+
+testsCases
+  .command('create')
+  .description('Create a new test case definition from a JSON file')
+  .requiredOption('-f, --file <path>', 'Path to JSON file containing test case definition')
+  .option('--llm-id <id>', 'LLM ID (mutually exclusive with --flow-id)')
+  .option('--flow-id <id>', 'Flow ID (mutually exclusive with --llm-id)')
+  .option('--version <number>', 'Version of the LLM or flow (optional)')
+  .addHelpText('after', `
+Examples:
+  $ retell tests cases create --file test-case.json --llm-id llm_abc123
+  $ retell tests cases create --file test-case.json --flow-id cf_abc123
+  $ retell tests cases create --file test-case.json --llm-id llm_abc123 --version 2
+
+Test case JSON format:
+  {
+    "name": "Greeting Test",
+    "user_prompt": "Hello, I need help with my order",
+    "scenario": "User is calling about an order issue",
+    "metrics": ["response_quality", "task_completion"]
+  }
+  `)
+  .action(async (options) => {
+    await createTestCaseCommand({
+      file: options.file,
+      llmId: options.llmId,
+      flowId: options.flowId,
+      version: options.version ? parseInt(options.version, 10) : undefined,
+    });
+  });
+
+testsCases
+  .command('update <test_case_definition_id>')
+  .description('Update an existing test case definition from a JSON file')
+  .requiredOption('-f, --file <path>', 'Path to JSON file containing test case updates')
+  .addHelpText('after', `
+Examples:
+  $ retell tests cases update tcd_abc123 --file test-case.json
+  `)
+  .action(async (testCaseDefinitionId, options) => {
+    await updateTestCaseCommand(testCaseDefinitionId, {
+      file: options.file,
+    });
+  });
+
+testsCases
+  .command('delete <test_case_definition_id>')
+  .description('Delete a test case definition')
+  .addHelpText('after', `
+Examples:
+  $ retell tests cases delete tcd_abc123
+  `)
+  .action(async (testCaseDefinitionId) => {
+    await deleteTestCaseCommand(testCaseDefinitionId);
+  });
+
+// Tests batch subcommand group
+const testsBatch = tests
+  .command('batch')
+  .description('Manage batch tests');
+
+testsBatch
+  .command('list')
+  .description('List all batch tests for an LLM or flow')
+  .requiredOption('-t, --type <type>', 'Response engine type (retell-llm or conversation-flow)')
+  .option('--llm-id <id>', 'LLM ID (required when type is retell-llm)')
+  .option('--flow-id <id>', 'Flow ID (required when type is conversation-flow)')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests batch list --type retell-llm --llm-id llm_abc123
+  $ retell tests batch list --type conversation-flow --flow-id cf_abc123
+  $ retell tests batch list --type retell-llm --llm-id llm_abc123 --fields batch_tests
+  `)
+  .action(async (options) => {
+    if (options.type !== 'retell-llm' && options.type !== 'conversation-flow') {
+      console.error('Error: type must be "retell-llm" or "conversation-flow"');
+      process.exit(1);
+    }
+    await listBatchTestsCommand({
+      type: options.type,
+      llmId: options.llmId,
+      flowId: options.flowId,
+      fields: options.fields,
+    });
+  });
+
+testsBatch
+  .command('get <batch_job_id>')
+  .description('Get a specific batch test with its status and stats')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests batch get bjj_abc123
+  $ retell tests batch get bjj_abc123 --fields status,stats
+  `)
+  .action(async (batchJobId, options) => {
+    await getBatchTestCommand(batchJobId, {
+      fields: options.fields,
+    });
+  });
+
+testsBatch
+  .command('create')
+  .description('Create a new batch test with specified test case definitions')
+  .option('--llm-id <id>', 'LLM ID (mutually exclusive with --flow-id)')
+  .option('--flow-id <id>', 'Flow ID (mutually exclusive with --llm-id)')
+  .requiredOption('--cases <ids>', 'Comma-separated list of test case definition IDs')
+  .option('--version <number>', 'Version of the LLM or flow (optional)')
+  .addHelpText('after', `
+Examples:
+  $ retell tests batch create --llm-id llm_abc123 --cases tcd_xxx,tcd_yyy,tcd_zzz
+  $ retell tests batch create --flow-id cf_abc123 --cases tcd_xxx,tcd_yyy
+  $ retell tests batch create --llm-id llm_abc123 --cases tcd_xxx --version 2
+  `)
+  .action(async (options) => {
+    await createBatchTestCommand({
+      llmId: options.llmId,
+      flowId: options.flowId,
+      cases: options.cases,
+      version: options.version ? parseInt(options.version, 10) : undefined,
+    });
+  });
+
+// Tests runs subcommand group
+const testsRuns = tests
+  .command('runs')
+  .description('View test run results');
+
+testsRuns
+  .command('list <batch_job_id>')
+  .description('List all test runs for a batch test')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests runs list bjj_abc123
+  $ retell tests runs list bjj_abc123 --fields test_runs
+  `)
+  .action(async (batchJobId, options) => {
+    await listTestRunsCommand(batchJobId, {
+      fields: options.fields,
+    });
+  });
+
+testsRuns
+  .command('get <test_run_id>')
+  .description('Get a specific test run result')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell tests runs get tcj_abc123
+  $ retell tests runs get tcj_abc123 --fields status,metric_results
+  `)
+  .action(async (testRunId, options) => {
+    await getTestRunCommand(testRunId, {
+      fields: options.fields,
+    });
+  });
+
+// Knowledge Base commands
+const kb = program
+  .command('kb')
+  .description('Manage RAG knowledge bases');
+
+kb
+  .command('list')
+  .description('List all knowledge bases')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell kb list
+  $ retell kb list --fields knowledge_base_id,knowledge_base_name,status
+  `)
+  .action(async (options) => {
+    await listKnowledgeBasesCommand({
+      fields: options.fields,
+    });
+  });
+
+kb
+  .command('get <knowledge_base_id>')
+  .description('Get a specific knowledge base')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell kb get kb_abc123
+  $ retell kb get kb_abc123 --fields knowledge_base_name,status,knowledge_base_sources
+  `)
+  .action(async (knowledgeBaseId, options) => {
+    await getKnowledgeBaseCommand(knowledgeBaseId, {
+      fields: options.fields,
+    });
+  });
+
+kb
+  .command('create')
+  .description('Create a new knowledge base')
+  .requiredOption('-n, --name <name>', 'Knowledge base name (max 40 characters)')
+  .option('--urls <urls>', 'Comma-separated list of URLs to scrape')
+  .option('--texts <file>', 'Path to JSON file with text entries [{ title, text }, ...]')
+  .option('--auto-refresh', 'Enable 12-hour automatic refresh for URL sources')
+  .addHelpText('after', `
+Examples:
+  $ retell kb create --name "Product Docs"
+  $ retell kb create --name "Support KB" --urls https://docs.example.com,https://help.example.com
+  $ retell kb create --name "FAQ" --texts texts.json
+  $ retell kb create --name "Docs" --urls https://docs.example.com --auto-refresh
+
+Text file format (texts.json):
+  [
+    { "title": "Getting Started", "text": "Welcome to our product..." },
+    { "title": "FAQ", "text": "Frequently asked questions..." }
+  ]
+  `)
+  .action(async (options) => {
+    await createKnowledgeBaseCommand({
+      name: options.name,
+      urls: options.urls,
+      texts: options.texts,
+      autoRefresh: options.autoRefresh,
+    });
+  });
+
+kb
+  .command('delete <knowledge_base_id>')
+  .description('Delete a knowledge base')
+  .addHelpText('after', `
+Examples:
+  $ retell kb delete kb_abc123
+  `)
+  .action(async (knowledgeBaseId) => {
+    await deleteKnowledgeBaseCommand(knowledgeBaseId);
+  });
+
+// Knowledge Base sources subcommand group
+const kbSources = kb
+  .command('sources')
+  .description('Manage knowledge base sources');
+
+kbSources
+  .command('add <knowledge_base_id>')
+  .description('Add sources to an existing knowledge base')
+  .option('--urls <urls>', 'Comma-separated list of URLs to scrape')
+  .option('--texts <file>', 'Path to JSON file with text entries [{ title, text }, ...]')
+  .addHelpText('after', `
+Examples:
+  $ retell kb sources add kb_abc123 --urls https://docs.example.com/new
+  $ retell kb sources add kb_abc123 --texts additional-texts.json
+  $ retell kb sources add kb_abc123 --urls https://faq.example.com --texts more-texts.json
+  `)
+  .action(async (knowledgeBaseId, options) => {
+    await addKnowledgeBaseSourcesCommand(knowledgeBaseId, {
+      urls: options.urls,
+      texts: options.texts,
+    });
+  });
+
+kbSources
+  .command('delete <knowledge_base_id> <source_id>')
+  .description('Remove a source from a knowledge base')
+  .addHelpText('after', `
+Examples:
+  $ retell kb sources delete kb_abc123 source_xyz789
+  `)
+  .action(async (knowledgeBaseId, sourceId) => {
+    await deleteKnowledgeBaseSourceCommand(knowledgeBaseId, sourceId);
+  });
+
+// Conversation Flow commands
+const flows = program
+  .command('flows')
+  .description('Manage conversation flow response engines');
+
+flows
+  .command('list')
+  .description('List all conversation flows')
+  .option('-l, --limit <number>', 'Maximum number of flows to return (default: 100, max: 1000)', '100')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell flows list
+  $ retell flows list --limit 50
+  $ retell flows list --fields conversation_flow_id,version,start_speaker
+  `)
+  .action(async (options) => {
+    const limit = parseInt(options.limit, 10);
+    if (isNaN(limit) || limit < 1 || limit > 1000) {
+      console.error('Error: limit must be a positive number between 1 and 1000');
+      process.exit(1);
+    }
+    await listFlowsCommand({
+      limit,
+      fields: options.fields,
+    });
+  });
+
+flows
+  .command('get <conversation_flow_id>')
+  .description('Get a specific conversation flow')
+  .option('--version <number>', 'Specific version to retrieve (defaults to latest)')
+  .option('--fields <fields>', 'Comma-separated list of fields to return')
+  .addHelpText('after', `
+Examples:
+  $ retell flows get cf_abc123
+  $ retell flows get cf_abc123 --version 2
+  $ retell flows get cf_abc123 --fields conversation_flow_id,nodes,edges
+  `)
+  .action(async (conversationFlowId, options) => {
+    await getFlowCommand(conversationFlowId, {
+      version: options.version ? parseInt(options.version, 10) : undefined,
+      fields: options.fields,
+    });
+  });
+
+flows
+  .command('create')
+  .description('Create a new conversation flow from a JSON file')
+  .requiredOption('-f, --file <path>', 'Path to JSON file containing flow configuration')
+  .addHelpText('after', `
+Examples:
+  $ retell flows create --file flow.json
+
+Flow JSON format (minimal):
+  {
+    "start_speaker": "agent",
+    "start_node_id": "node_1",
+    "nodes": [...],
+    "edges": [...]
+  }
+  `)
+  .action(async (options) => {
+    await createFlowCommand({
+      file: options.file,
+    });
+  });
+
+flows
+  .command('update <conversation_flow_id>')
+  .description('Update an existing conversation flow from a JSON file')
+  .requiredOption('-f, --file <path>', 'Path to JSON file containing flow updates')
+  .option('--version <number>', 'Specific version to update (defaults to latest)')
+  .addHelpText('after', `
+Examples:
+  $ retell flows update cf_abc123 --file updates.json
+  $ retell flows update cf_abc123 --file updates.json --version 2
+  `)
+  .action(async (conversationFlowId, options) => {
+    await updateFlowCommand(conversationFlowId, {
+      file: options.file,
+      version: options.version ? parseInt(options.version, 10) : undefined,
+    });
+  });
+
+flows
+  .command('delete <conversation_flow_id>')
+  .description('Delete a conversation flow')
+  .addHelpText('after', `
+Examples:
+  $ retell flows delete cf_abc123
+  `)
+  .action(async (conversationFlowId) => {
+    await deleteFlowCommand(conversationFlowId);
   });
 
 // Parse command line arguments
