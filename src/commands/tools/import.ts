@@ -5,11 +5,22 @@
  * Supports both Retell LLM and Conversation Flow agents.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { getRetellClient } from '../../services/retell-client';
-import { resolveToolsSource, getAllToolNames } from '../../services/tool-resolver';
-import { outputJson, outputError, handleSdkError } from '../../services/output-formatter';
-import type { ToolsImportInput, ToolsImportOutput, AnyTool } from '../../types/tools';
+import { readFileSync, existsSync } from "fs";
+import { getRetellClient } from "../../services/retell-client";
+import {
+  resolveToolsSource,
+  getAllToolNames,
+} from "../../services/tool-resolver";
+import {
+  outputJson,
+  outputError,
+  handleSdkError,
+} from "../../services/output-formatter";
+import type {
+  ToolsImportInput,
+  ToolsImportOutput,
+  AnyTool,
+} from "../../types/tools";
 
 /**
  * Options for the import tools command
@@ -29,39 +40,51 @@ export interface ImportToolsOptions {
  * @param agentId The unique agent ID
  * @param options Command options
  */
-export async function importToolsCommand(agentId: string, options: ImportToolsOptions): Promise<void> {
+export async function importToolsCommand(
+  agentId: string,
+  options: ImportToolsOptions,
+): Promise<void> {
   try {
     // Validate file exists
     if (!existsSync(options.file)) {
-      outputError(`Import file not found: ${options.file}`, 'FILE_NOT_FOUND');
+      outputError(`Import file not found: ${options.file}`, "FILE_NOT_FOUND");
       return;
     }
 
     // Parse import file
     let importData: ToolsImportInput;
     try {
-      const content = readFileSync(options.file, 'utf-8');
+      const content = readFileSync(options.file, "utf-8");
       importData = JSON.parse(content);
     } catch (error: any) {
       if (error instanceof SyntaxError) {
-        outputError(`Invalid JSON in import file: ${error.message}`, 'INVALID_JSON');
+        outputError(
+          `Invalid JSON in import file: ${error.message}`,
+          "INVALID_JSON",
+        );
       } else {
-        outputError(`Error reading import file: ${error.message}`, 'FILE_READ_ERROR');
+        outputError(
+          `Error reading import file: ${error.message}`,
+          "FILE_READ_ERROR",
+        );
       }
       return;
     }
 
     // Validate import data has tools
     if (!importData.tools) {
-      outputError('Import file must contain a "tools" object', 'INVALID_IMPORT');
+      outputError(
+        'Import file must contain a "tools" object',
+        "INVALID_IMPORT",
+      );
       return;
     }
 
     // Resolve current agent tools
     const source = await resolveToolsSource(agentId);
 
-    if (source.type === 'custom-llm') {
-      outputError(source.error, 'CUSTOM_LLM_NOT_SUPPORTED');
+    if (source.type === "custom-llm") {
+      outputError(source.error, "CUSTOM_LLM_NOT_SUPPORTED");
       return;
     }
 
@@ -75,12 +98,12 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
     const toolsSkipped: string[] = [];
     const toolsReplaced: string[] = [];
 
-    if (source.type === 'retell-llm') {
+    if (source.type === "retell-llm") {
       // Validate import format matches agent type
       if (importData.tools.flow || importData.tools.components) {
         outputError(
-          'Import file contains Conversation Flow tools, but agent is Retell LLM',
-          'TYPE_MISMATCH'
+          "Import file contains Conversation Flow tools, but agent is Retell LLM",
+          "TYPE_MISMATCH",
         );
         return;
       }
@@ -97,7 +120,9 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
         for (const tool of importData.tools.general) {
           if (existingNames.has(tool.name)) {
             if (options.replace) {
-              const idx = generalTools.findIndex((t: any) => t.name === tool.name);
+              const idx = generalTools.findIndex(
+                (t: any) => t.name === tool.name,
+              );
               if (idx !== -1) {
                 generalTools[idx] = tool as any;
                 toolsReplaced.push(tool.name);
@@ -115,12 +140,14 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
 
       // Process state tools
       if (importData.tools.states) {
-        for (const [stateName, tools] of Object.entries(importData.tools.states)) {
+        for (const [stateName, tools] of Object.entries(
+          importData.tools.states,
+        )) {
           const stateIndex = states.findIndex((s) => s.name === stateName);
           if (stateIndex === -1) {
             outputError(
-              `State '${stateName}' not found in agent. Available states: ${states.map((s) => s.name).join(', ') || 'none'}`,
-              'STATE_NOT_FOUND'
+              `State '${stateName}' not found in agent. Available states: ${states.map((s) => s.name).join(", ") || "none"}`,
+              "STATE_NOT_FOUND",
             );
             return;
           }
@@ -130,7 +157,9 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
           for (const tool of tools as AnyTool[]) {
             if (existingNames.has(tool.name)) {
               if (options.replace) {
-                const idx = stateTools.findIndex((t: any) => t.name === tool.name);
+                const idx = stateTools.findIndex(
+                  (t: any) => t.name === tool.name,
+                );
                 if (idx !== -1) {
                   stateTools[idx] = tool as any;
                   toolsReplaced.push(`${stateName}/${tool.name}`);
@@ -145,17 +174,20 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
             }
           }
 
-          states[stateIndex] = { ...states[stateIndex], tools: stateTools as any };
+          states[stateIndex] = {
+            ...states[stateIndex],
+            tools: stateTools as any,
+          };
         }
       }
 
       // Handle dry-run
       if (options.dryRun) {
         outputJson({
-          message: 'Dry run - no changes applied',
+          message: "Dry run - no changes applied",
           agent_id: agentId,
           agent_name: source.agentName,
-          engine_type: 'retell-llm',
+          engine_type: "retell-llm",
           tools_would_add: toolsAdded,
           tools_would_replace: toolsReplaced,
           tools_would_skip: toolsSkipped,
@@ -171,14 +203,15 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
       });
 
       const output: ToolsImportOutput = {
-        message: 'Tools imported successfully (draft version)',
+        message: "Tools imported successfully (draft version)",
         agent_id: agentId,
         agent_name: source.agentName,
         imported_count: toolsAdded.length + toolsReplaced.length,
         tools_added: [...toolsAdded, ...toolsReplaced],
-        note: toolsSkipped.length > 0
-          ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
-          : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+        note:
+          toolsSkipped.length > 0
+            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
+            : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
       };
       outputJson(output);
     } else {
@@ -186,8 +219,8 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
       // Validate import format matches agent type
       if (importData.tools.general || importData.tools.states) {
         outputError(
-          'Import file contains Retell LLM tools, but agent is Conversation Flow',
-          'TYPE_MISMATCH'
+          "Import file contains Retell LLM tools, but agent is Conversation Flow",
+          "TYPE_MISMATCH",
         );
         return;
       }
@@ -222,12 +255,14 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
 
       // Process component tools
       if (importData.tools.components) {
-        for (const [compId, tools] of Object.entries(importData.tools.components)) {
+        for (const [compId, tools] of Object.entries(
+          importData.tools.components,
+        )) {
           const compIndex = components.findIndex((c) => c.name === compId);
           if (compIndex === -1) {
             outputError(
-              `Component '${compId}' not found in agent. Available components: ${components.map((c) => c.name).join(', ') || 'none'}`,
-              'COMPONENT_NOT_FOUND'
+              `Component '${compId}' not found in agent. Available components: ${components.map((c) => c.name).join(", ") || "none"}`,
+              "COMPONENT_NOT_FOUND",
             );
             return;
           }
@@ -237,7 +272,9 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
           for (const tool of tools as AnyTool[]) {
             if (existingNames.has(tool.name)) {
               if (options.replace) {
-                const idx = compTools.findIndex((t: any) => t.name === tool.name);
+                const idx = compTools.findIndex(
+                  (t: any) => t.name === tool.name,
+                );
                 if (idx !== -1) {
                   compTools[idx] = tool as any;
                   toolsReplaced.push(`${compId}/${tool.name}`);
@@ -252,17 +289,20 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
             }
           }
 
-          components[compIndex] = { ...components[compIndex], tools: compTools as any };
+          components[compIndex] = {
+            ...components[compIndex],
+            tools: compTools as any,
+          };
         }
       }
 
       // Handle dry-run
       if (options.dryRun) {
         outputJson({
-          message: 'Dry run - no changes applied',
+          message: "Dry run - no changes applied",
           agent_id: agentId,
           agent_name: source.agentName,
-          engine_type: 'conversation-flow',
+          engine_type: "conversation-flow",
           tools_would_add: toolsAdded,
           tools_would_replace: toolsReplaced,
           tools_would_skip: toolsSkipped,
@@ -278,20 +318,21 @@ export async function importToolsCommand(agentId: string, options: ImportToolsOp
       });
 
       const output: ToolsImportOutput = {
-        message: 'Tools imported successfully (draft version)',
+        message: "Tools imported successfully (draft version)",
         agent_id: agentId,
         agent_name: source.agentName,
         imported_count: toolsAdded.length + toolsReplaced.length,
         tools_added: [...toolsAdded, ...toolsReplaced],
-        note: toolsSkipped.length > 0
-          ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
-          : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+        note:
+          toolsSkipped.length > 0
+            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
+            : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
       };
       outputJson(output);
     }
   } catch (error) {
     if (error instanceof SyntaxError) {
-      outputError(`Invalid JSON: ${error.message}`, 'INVALID_JSON');
+      outputError(`Invalid JSON: ${error.message}`, "INVALID_JSON");
       return;
     }
     handleSdkError(error);

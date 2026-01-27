@@ -4,8 +4,12 @@
  * Gets a specific batch test by ID.
  */
 
-import { getBatchTest } from '../../../services/test-api';
-import { outputJson, handleSdkError, filterFields } from '../../../services/output-formatter';
+import { getBatchTest } from "../../../services/test-api";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../../services/output-formatter";
 
 /**
  * Options for the get batch test command
@@ -23,13 +27,16 @@ export interface GetBatchTestOptions {
  */
 export async function getBatchTestCommand(
   batchJobId: string,
-  options: GetBatchTestOptions
+  options: GetBatchTestOptions,
 ): Promise<void> {
   try {
     const batchTest = await getBatchTest(batchJobId);
 
     if (options.fields) {
-      const filtered = filterFields(batchTest, options.fields.split(',').map((f) => f.trim()));
+      const filtered = filterFields(
+        batchTest,
+        options.fields.split(",").map((f) => f.trim()),
+      );
       outputJson(filtered);
     } else {
       outputJson(batchTest);

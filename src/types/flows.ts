@@ -9,12 +9,16 @@
 /**
  * Who speaks first in the conversation flow
  */
-export type StartSpeaker = 'user' | 'agent';
+export type StartSpeaker = "user" | "agent";
 
 /**
  * Model choice options for conversation flows
  */
-export type ModelChoice = 'gpt-4o' | 'gpt-4o-mini' | 'claude-3.5-sonnet' | 'claude-3.5-haiku';
+export type ModelChoice =
+  | "gpt-4o"
+  | "gpt-4o-mini"
+  | "claude-3.5-sonnet"
+  | "claude-3.5-haiku";
 
 /**
  * Conversation flow object from the API (simplified)
@@ -86,5 +90,5 @@ export interface FlowMutationOutput {
   message: string;
   conversation_flow_id: string;
   version?: number;
-  operation: 'create' | 'update' | 'delete';
+  operation: "create" | "update" | "delete";
 }

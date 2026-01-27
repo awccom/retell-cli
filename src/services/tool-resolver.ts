@@ -7,14 +7,14 @@
  * - Conversation Flow: tools[] and components[].tools[]
  */
 
-import { getRetellClient } from './retell-client';
+import { getRetellClient } from "./retell-client";
 import type {
   ToolsSource,
   RetellLlmTool,
   ConversationFlowTool,
   AnyTool,
   ToolWithLocation,
-} from '../types/tools';
+} from "../types/tools";
 
 // ===== PUBLIC API =====
 
@@ -29,14 +29,16 @@ import type {
  * @throws {NotFoundError} If agent or LLM/flow not found
  * @throws {AuthenticationError} If API key is invalid
  */
-export async function resolveToolsSource(agentId: string): Promise<ToolsSource> {
+export async function resolveToolsSource(
+  agentId: string,
+): Promise<ToolsSource> {
   const client = getRetellClient();
 
   // Step 1: Get agent to determine response_engine type
   const agent = await client.agent.retrieve(agentId);
 
   // Step 2: Branch based on response engine type
-  if (agent.response_engine.type === 'retell-llm') {
+  if (agent.response_engine.type === "retell-llm") {
     // Fetch Retell LLM configuration
     const llm = await client.llm.retrieve(agent.response_engine.llm_id);
 
@@ -55,13 +57,16 @@ export async function resolveToolsSource(agentId: string): Promise<ToolsSource> 
     }
 
     // Calculate total count
-    const stateToolCount = Object.values(stateTools).reduce((sum, t) => sum + t.length, 0);
+    const stateToolCount = Object.values(stateTools).reduce(
+      (sum, t) => sum + t.length,
+      0,
+    );
     const totalCount = generalTools.length + stateToolCount;
 
     return {
-      type: 'retell-llm',
+      type: "retell-llm",
       agentId,
-      agentName: agent.agent_name ?? 'Unknown',
+      agentName: agent.agent_name ?? "Unknown",
       llmId: llm.llm_id!,
       generalTools,
       stateTools,
@@ -69,10 +74,10 @@ export async function resolveToolsSource(agentId: string): Promise<ToolsSource> 
     };
   }
 
-  if (agent.response_engine.type === 'conversation-flow') {
+  if (agent.response_engine.type === "conversation-flow") {
     // Fetch Conversation Flow configuration
     const flow = await client.conversationFlow.retrieve(
-      agent.response_engine.conversation_flow_id
+      agent.response_engine.conversation_flow_id,
     );
 
     // Extract flow-level tools
@@ -90,13 +95,16 @@ export async function resolveToolsSource(agentId: string): Promise<ToolsSource> 
     }
 
     // Calculate total count
-    const componentToolCount = Object.values(componentTools).reduce((sum, t) => sum + t.length, 0);
+    const componentToolCount = Object.values(componentTools).reduce(
+      (sum, t) => sum + t.length,
+      0,
+    );
     const totalCount = flowTools.length + componentToolCount;
 
     return {
-      type: 'conversation-flow',
+      type: "conversation-flow",
       agentId,
-      agentName: agent.agent_name ?? 'Unknown',
+      agentName: agent.agent_name ?? "Unknown",
       flowId: flow.conversation_flow_id!,
       flowTools,
       componentTools,
@@ -106,8 +114,9 @@ export async function resolveToolsSource(agentId: string): Promise<ToolsSource> 
 
   // Custom LLM cannot be managed via API
   return {
-    type: 'custom-llm',
-    error: 'Custom LLM agents cannot be managed via API. Use the Retell dashboard to manage tools for custom LLM agents.',
+    type: "custom-llm",
+    error:
+      "Custom LLM agents cannot be managed via API. Use the Retell dashboard to manage tools for custom LLM agents.",
   };
 }
 
@@ -122,11 +131,11 @@ export async function resolveToolsSource(agentId: string): Promise<ToolsSource> 
 export async function findToolInLlm(
   agentId: string,
   toolName: string,
-  stateName?: string
+  stateName?: string,
 ): Promise<ToolWithLocation | null> {
   const source = await resolveToolsSource(agentId);
 
-  if (source.type !== 'retell-llm') {
+  if (source.type !== "retell-llm") {
     return null;
   }
 
@@ -138,7 +147,7 @@ export async function findToolInLlm(
       if (tool) {
         return {
           tool,
-          location: { location: 'state', stateName },
+          location: { location: "state", stateName },
         };
       }
     }
@@ -150,7 +159,7 @@ export async function findToolInLlm(
   if (generalTool) {
     return {
       tool: generalTool,
-      location: { location: 'general' },
+      location: { location: "general" },
     };
   }
 
@@ -160,7 +169,7 @@ export async function findToolInLlm(
     if (tool) {
       return {
         tool,
-        location: { location: 'state', stateName: state },
+        location: { location: "state", stateName: state },
       };
     }
   }
@@ -179,11 +188,11 @@ export async function findToolInLlm(
 export async function findToolInFlow(
   agentId: string,
   toolName: string,
-  componentId?: string
+  componentId?: string,
 ): Promise<ToolWithLocation | null> {
   const source = await resolveToolsSource(agentId);
 
-  if (source.type !== 'conversation-flow') {
+  if (source.type !== "conversation-flow") {
     return null;
   }
 
@@ -195,7 +204,7 @@ export async function findToolInFlow(
       if (tool) {
         return {
           tool,
-          location: { location: 'component', componentId },
+          location: { location: "component", componentId },
         };
       }
     }
@@ -207,7 +216,7 @@ export async function findToolInFlow(
   if (flowTool) {
     return {
       tool: flowTool,
-      location: { location: 'flow' },
+      location: { location: "flow" },
     };
   }
 
@@ -217,7 +226,7 @@ export async function findToolInFlow(
     if (tool) {
       return {
         tool,
-        location: { location: 'component', componentId: compId },
+        location: { location: "component", componentId: compId },
       };
     }
   }
@@ -236,32 +245,36 @@ export async function findToolInFlow(
 export async function findTool(
   agentId: string,
   toolName: string,
-  locationHint?: string
-): Promise<{ tool: ToolWithLocation; agentName: string; engineType: string } | null> {
+  locationHint?: string,
+): Promise<{
+  tool: ToolWithLocation;
+  agentName: string;
+  engineType: string;
+} | null> {
   const source = await resolveToolsSource(agentId);
 
-  if (source.type === 'custom-llm') {
+  if (source.type === "custom-llm") {
     return null;
   }
 
-  if (source.type === 'retell-llm') {
+  if (source.type === "retell-llm") {
     const result = await findToolInLlm(agentId, toolName, locationHint);
     if (result) {
       return {
         tool: result,
         agentName: source.agentName,
-        engineType: 'retell-llm',
+        engineType: "retell-llm",
       };
     }
   }
 
-  if (source.type === 'conversation-flow') {
+  if (source.type === "conversation-flow") {
     const result = await findToolInFlow(agentId, toolName, locationHint);
     if (result) {
       return {
         tool: result,
         agentName: source.agentName,
-        engineType: 'conversation-flow',
+        engineType: "conversation-flow",
       };
     }
   }
@@ -275,7 +288,11 @@ export async function findTool(
  * @param tool The tool to summarize
  * @returns Summary object
  */
-export function summarizeTool(tool: AnyTool): { name: string; type: string; description?: string } {
+export function summarizeTool(tool: AnyTool): {
+  name: string;
+  type: string;
+  description?: string;
+} {
   return {
     name: tool.name,
     type: tool.type,
@@ -290,11 +307,11 @@ export function summarizeTool(tool: AnyTool): { name: string; type: string; desc
  * @returns Array of all tool names
  */
 export function getAllToolNames(source: ToolsSource): string[] {
-  if (source.type === 'custom-llm') {
+  if (source.type === "custom-llm") {
     return [];
   }
 
-  if (source.type === 'retell-llm') {
+  if (source.type === "retell-llm") {
     const names = source.generalTools.map((t) => t.name);
     for (const tools of Object.values(source.stateTools)) {
       names.push(...tools.map((t) => t.name));
@@ -302,7 +319,7 @@ export function getAllToolNames(source: ToolsSource): string[] {
     return names;
   }
 
-  if (source.type === 'conversation-flow') {
+  if (source.type === "conversation-flow") {
     const names = source.flowTools.map((t) => t.name);
     for (const tools of Object.values(source.componentTools)) {
       names.push(...tools.map((t) => t.name));

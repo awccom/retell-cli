@@ -4,9 +4,16 @@
  * Creates a new batch test with specified test case definitions.
  */
 
-import { createBatchTest } from '../../../services/test-api';
-import { outputJson, outputError, handleSdkError } from '../../../services/output-formatter';
-import type { ResponseEngine, BatchTestCreateOutput } from '../../../types/tests';
+import { createBatchTest } from "../../../services/test-api";
+import {
+  outputJson,
+  outputError,
+  handleSdkError,
+} from "../../../services/output-formatter";
+import type {
+  ResponseEngine,
+  BatchTestCreateOutput,
+} from "../../../types/tests";
 
 /**
  * Options for the create batch test command
@@ -25,25 +32,39 @@ export interface CreateBatchTestOptions {
 /**
  * Build the response engine object from options
  */
-function buildResponseEngine(options: CreateBatchTestOptions): ResponseEngine | null {
+function buildResponseEngine(
+  options: CreateBatchTestOptions,
+): ResponseEngine | null {
   if (options.llmId && options.flowId) {
-    outputError('Cannot specify both --llm-id and --flow-id', 'INVALID_PARAMETERS');
+    outputError(
+      "Cannot specify both --llm-id and --flow-id",
+      "INVALID_PARAMETERS",
+    );
     return null;
   }
 
   if (!options.llmId && !options.flowId) {
-    outputError('Either --llm-id or --flow-id is required', 'MISSING_PARAMETER');
+    outputError(
+      "Either --llm-id or --flow-id is required",
+      "MISSING_PARAMETER",
+    );
     return null;
   }
 
   if (options.llmId) {
-    const engine: ResponseEngine = { type: 'retell-llm', llm_id: options.llmId };
+    const engine: ResponseEngine = {
+      type: "retell-llm",
+      llm_id: options.llmId,
+    };
     if (options.version !== undefined) {
       engine.version = options.version;
     }
     return engine;
   } else {
-    const engine: ResponseEngine = { type: 'conversation-flow', conversation_flow_id: options.flowId! };
+    const engine: ResponseEngine = {
+      type: "conversation-flow",
+      conversation_flow_id: options.flowId!,
+    };
     if (options.version !== undefined) {
       engine.version = options.version;
     }
@@ -56,16 +77,24 @@ function buildResponseEngine(options: CreateBatchTestOptions): ResponseEngine | 
  *
  * @param options Command options
  */
-export async function createBatchTestCommand(options: CreateBatchTestOptions): Promise<void> {
+export async function createBatchTestCommand(
+  options: CreateBatchTestOptions,
+): Promise<void> {
   try {
     const responseEngine = buildResponseEngine(options);
     if (!responseEngine) return;
 
     // Parse test case definition IDs
-    const testCaseDefinitionIds = options.cases.split(',').map((id) => id.trim()).filter(Boolean);
+    const testCaseDefinitionIds = options.cases
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
 
     if (testCaseDefinitionIds.length === 0) {
-      outputError('At least one test case definition ID is required', 'MISSING_PARAMETER');
+      outputError(
+        "At least one test case definition ID is required",
+        "MISSING_PARAMETER",
+      );
       return;
     }
 
@@ -75,7 +104,7 @@ export async function createBatchTestCommand(options: CreateBatchTestOptions): P
     });
 
     const output: BatchTestCreateOutput = {
-      message: 'Batch test created successfully',
+      message: "Batch test created successfully",
       test_case_batch_job_id: batchTest.test_case_batch_job_id,
       status: batchTest.status,
       response_engine: responseEngine,

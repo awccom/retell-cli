@@ -10,7 +10,7 @@
  * Document source in a knowledge base
  */
 export interface KnowledgeBaseDocumentSource {
-  type: 'document';
+  type: "document";
   source_id: string;
   filename: string;
   file_url: string;
@@ -20,7 +20,7 @@ export interface KnowledgeBaseDocumentSource {
  * Text source in a knowledge base
  */
 export interface KnowledgeBaseTextSource {
-  type: 'text';
+  type: "text";
   source_id: string;
   title: string;
   content_url: string;
@@ -30,7 +30,7 @@ export interface KnowledgeBaseTextSource {
  * URL source in a knowledge base
  */
 export interface KnowledgeBaseUrlSource {
-  type: 'url';
+  type: "url";
   source_id: string;
   url: string;
 }
@@ -48,7 +48,7 @@ export type KnowledgeBaseSource =
 /**
  * Knowledge base status
  */
-export type KnowledgeBaseStatus = 'in_progress' | 'complete' | 'error';
+export type KnowledgeBaseStatus = "in_progress" | "complete" | "error";
 
 /**
  * Knowledge base object from the API
@@ -121,5 +121,5 @@ export interface KnowledgeBaseMutationOutput {
   message: string;
   knowledge_base_id: string;
   knowledge_base_name?: string;
-  operation: 'create' | 'delete' | 'add_sources' | 'delete_source';
+  operation: "create" | "delete" | "add_sources" | "delete_source";
 }

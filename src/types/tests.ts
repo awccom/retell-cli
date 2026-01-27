@@ -10,7 +10,7 @@
  * Response engine for Retell LLM
  */
 export interface RetellLlmResponseEngine {
-  type: 'retell-llm';
+  type: "retell-llm";
   llm_id: string;
   version?: number;
 }
@@ -19,7 +19,7 @@ export interface RetellLlmResponseEngine {
  * Response engine for Conversation Flow
  */
 export interface ConversationFlowResponseEngine {
-  type: 'conversation-flow';
+  type: "conversation-flow";
   conversation_flow_id: string;
   version?: number;
 }
@@ -27,7 +27,9 @@ export interface ConversationFlowResponseEngine {
 /**
  * Union type for response engines
  */
-export type ResponseEngine = RetellLlmResponseEngine | ConversationFlowResponseEngine;
+export type ResponseEngine =
+  | RetellLlmResponseEngine
+  | ConversationFlowResponseEngine;
 
 // ===== TEST CASE DEFINITION TYPES =====
 
@@ -35,11 +37,11 @@ export type ResponseEngine = RetellLlmResponseEngine | ConversationFlowResponseE
  * Available test metrics
  */
 export type TestMetric =
-  | 'response_quality'
-  | 'task_completion'
-  | 'latency'
-  | 'sentiment'
-  | 'custom';
+  | "response_quality"
+  | "task_completion"
+  | "latency"
+  | "sentiment"
+  | "custom";
 
 /**
  * Test case definition from API
@@ -96,7 +98,7 @@ export interface TestCaseDefinitionMutationOutput {
   message: string;
   test_case_definition_id: string;
   name: string;
-  operation: 'create' | 'update' | 'delete';
+  operation: "create" | "update" | "delete";
   response_engine: ResponseEngine;
 }
 
@@ -105,7 +107,7 @@ export interface TestCaseDefinitionMutationOutput {
 /**
  * Batch test status
  */
-export type BatchTestStatus = 'in_progress' | 'complete';
+export type BatchTestStatus = "in_progress" | "complete";
 
 /**
  * Batch test from API
@@ -152,7 +154,7 @@ export interface BatchTestCreateOutput {
 /**
  * Test run status
  */
-export type TestRunStatus = 'in_progress' | 'pass' | 'fail' | 'error';
+export type TestRunStatus = "in_progress" | "pass" | "fail" | "error";
 
 /**
  * Test run metric result

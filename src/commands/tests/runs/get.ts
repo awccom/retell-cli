@@ -4,8 +4,12 @@
  * Gets a specific test run by ID.
  */
 
-import { getTestRun } from '../../../services/test-api';
-import { outputJson, handleSdkError, filterFields } from '../../../services/output-formatter';
+import { getTestRun } from "../../../services/test-api";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../../services/output-formatter";
 
 /**
  * Options for the get test run command
@@ -23,13 +27,16 @@ export interface GetTestRunOptions {
  */
 export async function getTestRunCommand(
   testRunId: string,
-  options: GetTestRunOptions
+  options: GetTestRunOptions,
 ): Promise<void> {
   try {
     const testRun = await getTestRun(testRunId);
 
     if (options.fields) {
-      const filtered = filterFields(testRun, options.fields.split(',').map((f) => f.trim()));
+      const filtered = filterFields(
+        testRun,
+        options.fields.split(",").map((f) => f.trim()),
+      );
       outputJson(filtered);
     } else {
       outputJson(testRun);

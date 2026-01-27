@@ -5,8 +5,12 @@
  * Usage: retell transcripts list [--limit <number>]
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
 
 // ===== TYPES =====
 
@@ -22,7 +26,9 @@ export interface ListTranscriptsOptions {
  *
  * @param options Command options (limit)
  */
-export async function listTranscriptsCommand(options: ListTranscriptsOptions): Promise<void> {
+export async function listTranscriptsCommand(
+  options: ListTranscriptsOptions,
+): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -33,7 +39,10 @@ export async function listTranscriptsCommand(options: ListTranscriptsOptions): P
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(calls, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          calls,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : calls;
 
     // Output as JSON

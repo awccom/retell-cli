@@ -4,9 +4,13 @@
  * Lists all test runs for a specific batch test.
  */
 
-import { listTestRuns } from '../../../services/test-api';
-import { outputJson, handleSdkError, filterFields } from '../../../services/output-formatter';
-import type { TestRunListOutput } from '../../../types/tests';
+import { listTestRuns } from "../../../services/test-api";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../../services/output-formatter";
+import type { TestRunListOutput } from "../../../types/tests";
 
 /**
  * Options for the list test runs command
@@ -24,7 +28,7 @@ export interface ListTestRunsOptions {
  */
 export async function listTestRunsCommand(
   batchJobId: string,
-  options: ListTestRunsOptions
+  options: ListTestRunsOptions,
 ): Promise<void> {
   try {
     const testRuns = await listTestRuns(batchJobId);
@@ -36,7 +40,10 @@ export async function listTestRunsCommand(
     };
 
     if (options.fields) {
-      const filtered = filterFields(output, options.fields.split(',').map((f) => f.trim()));
+      const filtered = filterFields(
+        output,
+        options.fields.split(",").map((f) => f.trim()),
+      );
       outputJson(filtered);
     } else {
       outputJson(output);

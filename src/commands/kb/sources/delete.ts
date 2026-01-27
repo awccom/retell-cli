@@ -5,9 +5,9 @@
  * Usage: retell kb sources delete <knowledge_base_id> <source_id>
  */
 
-import { getRetellClient } from '../../../services/retell-client';
-import { outputJson, handleSdkError } from '../../../services/output-formatter';
-import type { KnowledgeBaseMutationOutput } from '../../../types/kb';
+import { getRetellClient } from "../../../services/retell-client";
+import { outputJson, handleSdkError } from "../../../services/output-formatter";
+import type { KnowledgeBaseMutationOutput } from "../../../types/kb";
 
 /**
  * Delete a source from a knowledge base
@@ -17,19 +17,22 @@ import type { KnowledgeBaseMutationOutput } from '../../../types/kb';
  */
 export async function deleteKnowledgeBaseSourceCommand(
   knowledgeBaseId: string,
-  sourceId: string
+  sourceId: string,
 ): Promise<void> {
   try {
     const client = getRetellClient();
 
     // Delete the source from the knowledge base
-    const knowledgeBase = await client.knowledgeBase.deleteSource(knowledgeBaseId, sourceId);
+    const knowledgeBase = await client.knowledgeBase.deleteSource(
+      knowledgeBaseId,
+      sourceId,
+    );
 
     const output: KnowledgeBaseMutationOutput = {
-      message: 'Source deleted successfully',
+      message: "Source deleted successfully",
       knowledge_base_id: knowledgeBase.knowledge_base_id,
       knowledge_base_name: knowledgeBase.knowledge_base_name,
-      operation: 'delete_source',
+      operation: "delete_source",
     };
 
     outputJson({

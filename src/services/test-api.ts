@@ -5,15 +5,15 @@
  * supported in the SDK yet.
  */
 
-import { getConfig } from './config';
+import { getConfig } from "./config";
 import type {
   ResponseEngine,
   TestCaseDefinition,
   BatchTest,
   TestRun,
-} from '../types/tests';
+} from "../types/tests";
 
-const BASE_URL = 'https://api.retellai.com';
+const BASE_URL = "https://api.retellai.com";
 
 /**
  * Make an authenticated API request
@@ -21,15 +21,15 @@ const BASE_URL = 'https://api.retellai.com';
 async function apiRequest<T>(
   method: string,
   path: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<T> {
   const config = getConfig();
 
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      'Authorization': `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -67,21 +67,21 @@ async function apiRequest<T>(
  * List test case definitions
  */
 export async function listTestCaseDefinitions(
-  responseEngine: ResponseEngine
+  responseEngine: ResponseEngine,
 ): Promise<TestCaseDefinition[]> {
   const params = new URLSearchParams();
 
-  if (responseEngine.type === 'retell-llm') {
-    params.set('type', 'retell-llm');
-    params.set('llm_id', responseEngine.llm_id);
+  if (responseEngine.type === "retell-llm") {
+    params.set("type", "retell-llm");
+    params.set("llm_id", responseEngine.llm_id);
   } else {
-    params.set('type', 'conversation-flow');
-    params.set('conversation_flow_id', responseEngine.conversation_flow_id);
+    params.set("type", "conversation-flow");
+    params.set("conversation_flow_id", responseEngine.conversation_flow_id);
   }
 
   return apiRequest<TestCaseDefinition[]>(
-    'GET',
-    `/list-test-case-definitions?${params.toString()}`
+    "GET",
+    `/list-test-case-definitions?${params.toString()}`,
   );
 }
 
@@ -89,11 +89,11 @@ export async function listTestCaseDefinitions(
  * Get a test case definition
  */
 export async function getTestCaseDefinition(
-  testCaseDefinitionId: string
+  testCaseDefinitionId: string,
 ): Promise<TestCaseDefinition> {
   return apiRequest<TestCaseDefinition>(
-    'GET',
-    `/get-test-case-definition/${testCaseDefinitionId}`
+    "GET",
+    `/get-test-case-definition/${testCaseDefinitionId}`,
   );
 }
 
@@ -108,9 +108,9 @@ export async function createTestCaseDefinition(params: {
   metrics?: string[];
 }): Promise<TestCaseDefinition> {
   return apiRequest<TestCaseDefinition>(
-    'POST',
-    '/create-test-case-definition',
-    params
+    "POST",
+    "/create-test-case-definition",
+    params,
   );
 }
 
@@ -124,12 +124,12 @@ export async function updateTestCaseDefinition(
     user_prompt?: string;
     scenario?: string;
     metrics?: string[];
-  }
+  },
 ): Promise<TestCaseDefinition> {
   return apiRequest<TestCaseDefinition>(
-    'PUT',
+    "PUT",
     `/update-test-case-definition/${testCaseDefinitionId}`,
-    params
+    params,
   );
 }
 
@@ -137,11 +137,11 @@ export async function updateTestCaseDefinition(
  * Delete a test case definition
  */
 export async function deleteTestCaseDefinition(
-  testCaseDefinitionId: string
+  testCaseDefinitionId: string,
 ): Promise<void> {
   await apiRequest<void>(
-    'DELETE',
-    `/delete-test-case-definition/${testCaseDefinitionId}`
+    "DELETE",
+    `/delete-test-case-definition/${testCaseDefinitionId}`,
   );
 }
 
@@ -151,34 +151,29 @@ export async function deleteTestCaseDefinition(
  * List batch tests
  */
 export async function listBatchTests(
-  responseEngine: ResponseEngine
+  responseEngine: ResponseEngine,
 ): Promise<BatchTest[]> {
   const params = new URLSearchParams();
 
-  if (responseEngine.type === 'retell-llm') {
-    params.set('type', 'retell-llm');
-    params.set('llm_id', responseEngine.llm_id);
+  if (responseEngine.type === "retell-llm") {
+    params.set("type", "retell-llm");
+    params.set("llm_id", responseEngine.llm_id);
   } else {
-    params.set('type', 'conversation-flow');
-    params.set('conversation_flow_id', responseEngine.conversation_flow_id);
+    params.set("type", "conversation-flow");
+    params.set("conversation_flow_id", responseEngine.conversation_flow_id);
   }
 
   return apiRequest<BatchTest[]>(
-    'GET',
-    `/list-batch-tests?${params.toString()}`
+    "GET",
+    `/list-batch-tests?${params.toString()}`,
   );
 }
 
 /**
  * Get a batch test
  */
-export async function getBatchTest(
-  batchJobId: string
-): Promise<BatchTest> {
-  return apiRequest<BatchTest>(
-    'GET',
-    `/get-batch-test/${batchJobId}`
-  );
+export async function getBatchTest(batchJobId: string): Promise<BatchTest> {
+  return apiRequest<BatchTest>("GET", `/get-batch-test/${batchJobId}`);
 }
 
 /**
@@ -188,11 +183,7 @@ export async function createBatchTest(params: {
   response_engine: ResponseEngine;
   test_case_definition_ids: string[];
 }): Promise<BatchTest> {
-  return apiRequest<BatchTest>(
-    'POST',
-    '/create-batch-test',
-    params
-  );
+  return apiRequest<BatchTest>("POST", "/create-batch-test", params);
 }
 
 // ===== TEST RUNS =====
@@ -200,23 +191,13 @@ export async function createBatchTest(params: {
 /**
  * List test runs for a batch test
  */
-export async function listTestRuns(
-  batchJobId: string
-): Promise<TestRun[]> {
-  return apiRequest<TestRun[]>(
-    'GET',
-    `/list-test-runs/${batchJobId}`
-  );
+export async function listTestRuns(batchJobId: string): Promise<TestRun[]> {
+  return apiRequest<TestRun[]>("GET", `/list-test-runs/${batchJobId}`);
 }
 
 /**
  * Get a test run
  */
-export async function getTestRun(
-  testRunId: string
-): Promise<TestRun> {
-  return apiRequest<TestRun>(
-    'GET',
-    `/get-test-run/${testRunId}`
-  );
+export async function getTestRun(testRunId: string): Promise<TestRun> {
+  return apiRequest<TestRun>("GET", `/get-test-run/${testRunId}`);
 }

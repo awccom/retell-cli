@@ -5,9 +5,13 @@
  * Usage: retell flows get <conversation_flow_id> [--version <number>] [--fields <fields>]
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
-import type { GetFlowOptions } from '../../types/flows';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
+import type { GetFlowOptions } from "../../types/flows";
 
 /**
  * Get a specific conversation flow
@@ -17,7 +21,7 @@ import type { GetFlowOptions } from '../../types/flows';
  */
 export async function getFlowCommand(
   conversationFlowId: string,
-  options: GetFlowOptions
+  options: GetFlowOptions,
 ): Promise<void> {
   try {
     const client = getRetellClient();
@@ -29,11 +33,17 @@ export async function getFlowCommand(
     }
 
     // Call the SDK to get the conversation flow
-    const flow = await client.conversationFlow.retrieve(conversationFlowId, retrieveOptions);
+    const flow = await client.conversationFlow.retrieve(
+      conversationFlowId,
+      retrieveOptions,
+    );
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(flow, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          flow,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : flow;
 
     // Output as JSON

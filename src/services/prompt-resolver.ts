@@ -8,7 +8,7 @@
  * - custom-llm: Uses custom WebSocket (NOT SUPPORTED for prompt management)
  */
 
-import { getRetellClient } from './retell-client';
+import { getRetellClient } from "./retell-client";
 
 // ===== TYPE DEFINITIONS =====
 
@@ -49,9 +49,19 @@ export type FlowPrompts = {
  * Union type representing all possible prompt sources
  */
 export type PromptSource =
-  | { type: 'retell-llm'; llmId: string; agentName: string; prompts: RetellLlmPrompts }
-  | { type: 'conversation-flow'; flowId: string; agentName: string; prompts: FlowPrompts }
-  | { type: 'custom-llm'; error: string };
+  | {
+      type: "retell-llm";
+      llmId: string;
+      agentName: string;
+      prompts: RetellLlmPrompts;
+    }
+  | {
+      type: "conversation-flow";
+      flowId: string;
+      agentName: string;
+      prompts: FlowPrompts;
+    }
+  | { type: "custom-llm"; error: string };
 
 // ===== PUBLIC API =====
 
@@ -74,19 +84,21 @@ export type PromptSource =
  *   console.log(result.prompts.general_prompt);
  * }
  */
-export async function resolvePromptSource(agentId: string): Promise<PromptSource> {
+export async function resolvePromptSource(
+  agentId: string,
+): Promise<PromptSource> {
   const client = getRetellClient();
 
   // Step 1: Get agent to determine response_engine type
   const agent = await client.agent.retrieve(agentId);
 
   // Step 2: Branch based on response engine type
-  if (agent.response_engine.type === 'retell-llm') {
+  if (agent.response_engine.type === "retell-llm") {
     // Fetch Retell LLM configuration
     const llm = await client.llm.retrieve(agent.response_engine.llm_id);
 
     return {
-      type: 'retell-llm',
+      type: "retell-llm",
       llmId: llm.llm_id!,
       agentName: agent.agent_name!,
       prompts: {
@@ -99,14 +111,14 @@ export async function resolvePromptSource(agentId: string): Promise<PromptSource
     };
   }
 
-  if (agent.response_engine.type === 'conversation-flow') {
+  if (agent.response_engine.type === "conversation-flow") {
     // Fetch Conversation Flow configuration
     const flow = await client.conversationFlow.retrieve(
-      agent.response_engine.conversation_flow_id
+      agent.response_engine.conversation_flow_id,
     );
 
     return {
-      type: 'conversation-flow',
+      type: "conversation-flow",
       flowId: flow.conversation_flow_id!,
       agentName: agent.agent_name!,
       prompts: {
@@ -120,7 +132,8 @@ export async function resolvePromptSource(agentId: string): Promise<PromptSource
 
   // Custom LLM cannot be managed via API
   return {
-    type: 'custom-llm',
-    error: 'Custom LLM agents cannot be managed via API. Use the Retell dashboard to update prompts for custom LLM agents.',
+    type: "custom-llm",
+    error:
+      "Custom LLM agents cannot be managed via API. Use the Retell dashboard to update prompts for custom LLM agents.",
   };
 }

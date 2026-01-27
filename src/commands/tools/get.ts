@@ -5,9 +5,14 @@
  * Supports both Retell LLM and Conversation Flow agents.
  */
 
-import { findTool, resolveToolsSource } from '../../services/tool-resolver';
-import { outputJson, outputError, handleSdkError, filterFields } from '../../services/output-formatter';
-import type { ToolGetOutput } from '../../types/tools';
+import { findTool, resolveToolsSource } from "../../services/tool-resolver";
+import {
+  outputJson,
+  outputError,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
+import type { ToolGetOutput } from "../../types/tools";
 
 /**
  * Options for the get tool command
@@ -31,18 +36,19 @@ export interface GetToolOptions {
 export async function getToolCommand(
   agentId: string,
   toolName: string,
-  options: GetToolOptions
+  options: GetToolOptions,
 ): Promise<void> {
   try {
     // First check if the agent type is supported
     const source = await resolveToolsSource(agentId);
-    if (source.type === 'custom-llm') {
-      outputError(source.error, 'CUSTOM_LLM_NOT_SUPPORTED');
+    if (source.type === "custom-llm") {
+      outputError(source.error, "CUSTOM_LLM_NOT_SUPPORTED");
       return;
     }
 
     // Determine location hint based on agent type
-    const locationHint = source.type === 'retell-llm' ? options.state : options.component;
+    const locationHint =
+      source.type === "retell-llm" ? options.state : options.component;
 
     // Find the tool
     const result = await findTool(agentId, toolName, locationHint);
@@ -50,9 +56,9 @@ export async function getToolCommand(
     if (!result) {
       let errorMsg = `Tool '${toolName}' not found`;
       if (locationHint) {
-        errorMsg += ` in ${source.type === 'retell-llm' ? 'state' : 'component'} '${locationHint}'`;
+        errorMsg += ` in ${source.type === "retell-llm" ? "state" : "component"} '${locationHint}'`;
       }
-      outputError(errorMsg, 'TOOL_NOT_FOUND');
+      outputError(errorMsg, "TOOL_NOT_FOUND");
       return;
     }
 
@@ -66,7 +72,10 @@ export async function getToolCommand(
 
     // Apply field filtering if specified
     if (options.fields) {
-      const filtered = filterFields(output, options.fields.split(',').map((f) => f.trim()));
+      const filtered = filterFields(
+        output,
+        options.fields.split(",").map((f) => f.trim()),
+      );
       outputJson(filtered);
     } else {
       outputJson(output);

@@ -4,8 +4,12 @@
  * Gets a specific test case definition by ID.
  */
 
-import { getTestCaseDefinition } from '../../../services/test-api';
-import { outputJson, handleSdkError, filterFields } from '../../../services/output-formatter';
+import { getTestCaseDefinition } from "../../../services/test-api";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../../services/output-formatter";
 
 /**
  * Options for the get test case command
@@ -23,13 +27,16 @@ export interface GetTestCaseOptions {
  */
 export async function getTestCaseCommand(
   testCaseDefinitionId: string,
-  options: GetTestCaseOptions
+  options: GetTestCaseOptions,
 ): Promise<void> {
   try {
     const testCase = await getTestCaseDefinition(testCaseDefinitionId);
 
     if (options.fields) {
-      const filtered = filterFields(testCase, options.fields.split(',').map((f) => f.trim()));
+      const filtered = filterFields(
+        testCase,
+        options.fields.split(",").map((f) => f.trim()),
+      );
       outputJson(filtered);
     } else {
       outputJson(testCase);

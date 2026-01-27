@@ -5,9 +5,13 @@
  * Usage: retell kb get <knowledge_base_id> [--fields <fields>]
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
-import type { GetKnowledgeBaseOptions } from '../../types/kb';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
+import type { GetKnowledgeBaseOptions } from "../../types/kb";
 
 /**
  * Get a specific knowledge base
@@ -17,7 +21,7 @@ import type { GetKnowledgeBaseOptions } from '../../types/kb';
  */
 export async function getKnowledgeBaseCommand(
   knowledgeBaseId: string,
-  options: GetKnowledgeBaseOptions
+  options: GetKnowledgeBaseOptions,
 ): Promise<void> {
   try {
     const client = getRetellClient();
@@ -27,7 +31,10 @@ export async function getKnowledgeBaseCommand(
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(knowledgeBase, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          knowledgeBase,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : knowledgeBase;
 
     // Output as JSON

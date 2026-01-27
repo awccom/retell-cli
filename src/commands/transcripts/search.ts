@@ -5,9 +5,13 @@
  * Usage: retell transcripts search [options]
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
-import { z } from 'zod';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
+import { z } from "zod";
 
 // ===== CONSTANTS =====
 
@@ -23,14 +27,16 @@ const DEFAULT_LIMIT = 50;
  * Zod schema for validating API call responses
  * This ensures the API returns the expected data structure
  */
-const CallSchema = z.object({
-  call_id: z.string(),
-  call_status: z.string().optional(),
-  agent_id: z.string().optional(),
-  start_timestamp: z.number().optional(),
-  end_timestamp: z.number().optional(),
-  // Allow additional fields (the API may return more fields than we validate)
-}).passthrough();
+const CallSchema = z
+  .object({
+    call_id: z.string(),
+    call_status: z.string().optional(),
+    agent_id: z.string().optional(),
+    start_timestamp: z.number().optional(),
+    end_timestamp: z.number().optional(),
+    // Allow additional fields (the API may return more fields than we validate)
+  })
+  .passthrough();
 
 const CallListSchema = z.array(CallSchema);
 
@@ -76,7 +82,7 @@ interface ApiFilterCriteria {
 
 interface ApiListParams {
   limit: number;
-  sort_order: 'ascending' | 'descending';
+  sort_order: "ascending" | "descending";
   filter_criteria?: ApiFilterCriteria;
 }
 
@@ -87,7 +93,7 @@ interface ApiListParams {
 class ValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
   }
 }
 
@@ -105,7 +111,7 @@ interface ParsedDate {
 
 function parseDate(dateStr: string): ParsedDate {
   if (!dateStr) {
-    throw new ValidationError('Date string cannot be empty');
+    throw new ValidationError("Date string cannot be empty");
   }
 
   // Strict validation: accept YYYY-MM-DD, or ISO 8601 with timezone/offset
@@ -114,7 +120,9 @@ function parseDate(dateStr: string): ParsedDate {
     /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
 
   if (!iso8601Pattern.test(dateStr)) {
-    throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
+    throw new ValidationError(
+      `Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`,
+    );
   }
 
   // Parse as ISO date
@@ -122,7 +130,9 @@ function parseDate(dateStr: string): ParsedDate {
 
   // Double-check the parsed date is valid
   if (isNaN(date.getTime())) {
-    throw new ValidationError(`Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`);
+    throw new ValidationError(
+      `Invalid date format: "${dateStr}". Use YYYY-MM-DD or ISO 8601 format.`,
+    );
   }
 
   return { date, isDateOnly: dateOnlyPattern.test(dateStr) };
@@ -132,12 +142,15 @@ function parseDate(dateStr: string): ParsedDate {
  * Validate search options and return parsed dates
  * Returns cached parsed dates to avoid redundant parsing
  */
-function validateSearchOptions(options: SearchOptions): { sinceDate?: ParsedDate; untilDate?: ParsedDate } {
+function validateSearchOptions(options: SearchOptions): {
+  sinceDate?: ParsedDate;
+  untilDate?: ParsedDate;
+} {
   // Validate status
-  const validStatuses = ['error', 'ended', 'ongoing'];
+  const validStatuses = ["error", "ended", "ongoing"];
   if (options.status && !validStatuses.includes(options.status)) {
     throw new ValidationError(
-      `Invalid status: "${options.status}". Valid options: ${validStatuses.join(', ')}`
+      `Invalid status: "${options.status}". Valid options: ${validStatuses.join(", ")}`,
     );
   }
 
@@ -163,18 +176,25 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: ParsedDate
   if (parsedDates.sinceDate && parsedDates.untilDate) {
     if (parsedDates.sinceDate.date > parsedDates.untilDate.date) {
       throw new ValidationError(
-        `Invalid date range: --since ("${options.since}") is after --until ("${options.until}")`
+        `Invalid date range: --since ("${options.since}") is after --until ("${options.until}")`,
       );
     }
   }
 
   // Validate limit
-  if (options.limit !== undefined && (options.limit < 1 || !Number.isInteger(options.limit))) {
-    throw new ValidationError(`Limit must be a positive integer (got: "${options.limit}")`);
+  if (
+    options.limit !== undefined &&
+    (options.limit < 1 || !Number.isInteger(options.limit))
+  ) {
+    throw new ValidationError(
+      `Limit must be a positive integer (got: "${options.limit}")`,
+    );
   }
 
   if (options.limit !== undefined && options.limit > MAX_LIMIT) {
-    throw new ValidationError(`Limit cannot exceed ${MAX_LIMIT} (got: "${options.limit}")`);
+    throw new ValidationError(
+      `Limit cannot exceed ${MAX_LIMIT} (got: "${options.limit}")`,
+    );
   }
 
   return parsedDates;
@@ -191,14 +211,14 @@ function validateSearchOptions(options: SearchOptions): { sinceDate?: ParsedDate
  */
 async function searchTranscripts(
   options: SearchOptions,
-  parsedDates: { sinceDate?: ParsedDate; untilDate?: ParsedDate }
+  parsedDates: { sinceDate?: ParsedDate; untilDate?: ParsedDate },
 ): Promise<SearchResult> {
   const client = getRetellClient();
 
   // Build API parameters with proper typing
   const apiParams: ApiListParams = {
     limit: options.limit || DEFAULT_LIMIT,
-    sort_order: 'descending', // Most recent first
+    sort_order: "descending", // Most recent first
   };
 
   // Build filter_criteria object
@@ -220,11 +240,13 @@ async function searchTranscripts(
     filterCriteria.start_timestamp = {};
 
     if (parsedDates.sinceDate) {
-      filterCriteria.start_timestamp.lower_threshold = parsedDates.sinceDate.date.getTime();
+      filterCriteria.start_timestamp.lower_threshold =
+        parsedDates.sinceDate.date.getTime();
     }
 
     if (parsedDates.untilDate) {
-      filterCriteria.start_timestamp.upper_threshold = parsedDates.untilDate.date.getTime();
+      filterCriteria.start_timestamp.upper_threshold =
+        parsedDates.untilDate.date.getTime();
     }
   }
 
@@ -240,7 +262,10 @@ async function searchTranscripts(
   const validation = CallListSchema.safeParse(response);
 
   if (!validation.success) {
-    console.warn('Warning: API response validation failed:', validation.error.message);
+    console.warn(
+      "Warning: API response validation failed:",
+      validation.error.message,
+    );
     throw new Error(`Invalid API response format: ${validation.error.message}`);
   }
 
@@ -264,7 +289,7 @@ async function searchTranscripts(
   if (results.length === requestedLimit && results.length > 0) {
     console.warn(
       `Warning: Results limited to ${results.length}. There may be additional results available. ` +
-        `Use --limit to increase (max: ${MAX_LIMIT}).`
+        `Use --limit to increase (max: ${MAX_LIMIT}).`,
     );
   }
 
@@ -278,7 +303,9 @@ async function searchTranscripts(
  *
  * @param options Search options (status, agentId, dates, limit, fields)
  */
-export async function searchTranscriptsCommand(options: SearchOptions = {}): Promise<void> {
+export async function searchTranscriptsCommand(
+  options: SearchOptions = {},
+): Promise<void> {
   try {
     // Validate options and get cached parsed dates
     const parsedDates = validateSearchOptions(options);
@@ -289,8 +316,11 @@ export async function searchTranscriptsCommand(options: SearchOptions = {}): Pro
     // Apply field filtering if requested
     const output = options.fields
       ? {
-          results: searchResult.results.map(r =>
-            filterFields(r, options.fields!.split(',').map(f => f.trim()))
+          results: searchResult.results.map((r) =>
+            filterFields(
+              r,
+              options.fields!.split(",").map((f) => f.trim()),
+            ),
           ),
           total_count: searchResult.total_count,
           filters_applied: searchResult.filters_applied,

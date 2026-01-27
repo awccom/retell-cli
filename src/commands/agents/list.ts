@@ -4,8 +4,12 @@
  * Lists all agents with formatted output showing key configuration fields.
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
 
 export interface ListAgentsOptions {
   limit?: number;
@@ -35,7 +39,9 @@ export interface ListAgentsOptions {
  * // List agents with custom limit
  * await listAgentsCommand({ limit: 50 });
  */
-export async function listAgentsCommand(options: ListAgentsOptions = {}): Promise<void> {
+export async function listAgentsCommand(
+  options: ListAgentsOptions = {},
+): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -44,21 +50,23 @@ export async function listAgentsCommand(options: ListAgentsOptions = {}): Promis
     });
 
     // Format for cleaner output
-    const formatted = agents.map(agent => {
+    const formatted = agents.map((agent) => {
       // Extract response engine ID based on type
       let response_engine_id: string;
       switch (agent.response_engine.type) {
-        case 'retell-llm':
-          response_engine_id = agent.response_engine.llm_id || 'unknown';
+        case "retell-llm":
+          response_engine_id = agent.response_engine.llm_id || "unknown";
           break;
-        case 'conversation-flow':
-          response_engine_id = agent.response_engine.conversation_flow_id || 'unknown';
+        case "conversation-flow":
+          response_engine_id =
+            agent.response_engine.conversation_flow_id || "unknown";
           break;
-        case 'custom-llm':
-          response_engine_id = agent.response_engine.llm_websocket_url || 'unknown';
+        case "custom-llm":
+          response_engine_id =
+            agent.response_engine.llm_websocket_url || "unknown";
           break;
         default:
-          response_engine_id = 'unknown';
+          response_engine_id = "unknown";
       }
 
       return {
@@ -73,7 +81,10 @@ export async function listAgentsCommand(options: ListAgentsOptions = {}): Promis
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(formatted, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          formatted,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : formatted;
 
     outputJson(output);

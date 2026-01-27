@@ -19,7 +19,7 @@ export interface ChangeDetail {
   /** New value (null if removed) */
   new: string | number | boolean | object | null;
   /** Type of change */
-  change_type: 'added' | 'removed' | 'modified';
+  change_type: "added" | "removed" | "modified";
 }
 
 /**
@@ -29,7 +29,7 @@ export interface DiffResult {
   /** Unique agent identifier */
   agent_id: string;
   /** Type of agent (determines prompt structure) */
-  agent_type: 'retell-llm' | 'conversation-flow';
+  agent_type: "retell-llm" | "conversation-flow";
   /** Whether any changes were detected */
   has_changes: boolean;
   /** Map of field paths to their changes */
@@ -47,7 +47,7 @@ export interface HotspotIssue {
   /** Timestamp when the issue occurred */
   timestamp: string;
   /** Category of issue detected */
-  issue_type: 'latency_spike' | 'interruption' | 'sentiment' | 'long_silence';
+  issue_type: "latency_spike" | "interruption" | "sentiment" | "long_silence";
   /** What the user said (if available) */
   user_utterance?: string;
   /** How the agent responded (if available) */

@@ -5,13 +5,13 @@
  * Supports both retell-llm and conversation-flow agent types.
  */
 
-import type { PromptSource } from './prompt-resolver';
-import type { LocalPrompts } from './prompt-loader';
+import type { PromptSource } from "./prompt-resolver";
+import type { LocalPrompts } from "./prompt-loader";
 
 /**
  * Change type enumeration
  */
-export type ChangeType = 'added' | 'modified' | 'removed';
+export type ChangeType = "added" | "modified" | "removed";
 
 /**
  * Details about a specific field change
@@ -27,7 +27,7 @@ export interface ChangeDetail {
  */
 export interface DiffResult {
   agent_id: string;
-  agent_type: 'retell-llm' | 'conversation-flow';
+  agent_type: "retell-llm" | "conversation-flow";
   has_changes: boolean;
   changes: Record<string, ChangeDetail>;
 }
@@ -42,11 +42,15 @@ export interface DiffResult {
  * @returns true if objects are deeply equal
  * @throws Error if maximum depth is exceeded
  */
-function deepEqual(obj1: unknown, obj2: unknown, maxDepth: number = 100): boolean {
+function deepEqual(
+  obj1: unknown,
+  obj2: unknown,
+  maxDepth: number = 100,
+): boolean {
   // Handle primitive types and null
   if (obj1 === obj2) return true;
   if (obj1 === null || obj2 === null) return false;
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
+  if (typeof obj1 !== "object" || typeof obj2 !== "object") return false;
 
   // Track depth to prevent stack overflow on very large/deep objects
   let currentDepth = 0;
@@ -57,26 +61,32 @@ function deepEqual(obj1: unknown, obj2: unknown, maxDepth: number = 100): boolea
     if (++currentDepth > maxDepth) {
       throw new Error(
         `Maximum depth (${maxDepth}) exceeded during comparison. ` +
-          'This may indicate a circular reference or extremely deep nesting.'
+          "This may indicate a circular reference or extremely deep nesting.",
       );
     }
 
-    if (obj === null) return 'null';
-    if (typeof obj !== 'object') return JSON.stringify(obj);
+    if (obj === null) return "null";
+    if (typeof obj !== "object") return JSON.stringify(obj);
     if (Array.isArray(obj)) {
-      return '[' + obj.map(sortedStringify).join(',') + ']';
+      return "[" + obj.map(sortedStringify).join(",") + "]";
     }
     const keys = Object.keys(obj).sort();
-    const pairs = keys.map((k) => JSON.stringify(k) + ':' + sortedStringify(obj[k]));
-    return '{' + pairs.join(',') + '}';
+    const pairs = keys.map(
+      (k) => JSON.stringify(k) + ":" + sortedStringify(obj[k]),
+    );
+    return "{" + pairs.join(",") + "}";
   };
 
   try {
     return sortedStringify(obj1) === sortedStringify(obj2);
   } catch (error) {
     // If we hit depth limit, log warning and fall back to reference equality
-    if (error instanceof Error && error.message.includes('Maximum depth')) {
-      console.warn('Warning:', error.message, 'Falling back to reference equality.');
+    if (error instanceof Error && error.message.includes("Maximum depth")) {
+      console.warn(
+        "Warning:",
+        error.message,
+        "Falling back to reference equality.",
+      );
       return obj1 === obj2;
     }
     throw error;
@@ -94,24 +104,30 @@ function deepEqual(obj1: unknown, obj2: unknown, maxDepth: number = 100): boolea
 export function generateDiff(
   agentId: string,
   localPrompts: LocalPrompts,
-  remotePrompts: PromptSource
+  remotePrompts: PromptSource,
 ): DiffResult {
   // Handle custom LLM case
-  if (remotePrompts.type === 'custom-llm') {
-    throw new Error('Cannot diff custom LLM agents');
+  if (remotePrompts.type === "custom-llm") {
+    throw new Error("Cannot diff custom LLM agents");
   }
 
   // Validate type match
   if (localPrompts.type !== remotePrompts.type) {
     throw new Error(
-      `Type mismatch: local files are ${localPrompts.type}, but agent uses ${remotePrompts.type}`
+      `Type mismatch: local files are ${localPrompts.type}, but agent uses ${remotePrompts.type}`,
     );
   }
 
   // Generate diff based on type
-  if (localPrompts.type === 'retell-llm' && remotePrompts.type === 'retell-llm') {
+  if (
+    localPrompts.type === "retell-llm" &&
+    remotePrompts.type === "retell-llm"
+  ) {
     return generateRetellLlmDiff(agentId, localPrompts, remotePrompts);
-  } else if (localPrompts.type === 'conversation-flow' && remotePrompts.type === 'conversation-flow') {
+  } else if (
+    localPrompts.type === "conversation-flow" &&
+    remotePrompts.type === "conversation-flow"
+  ) {
     return generateConversationFlowDiff(agentId, localPrompts, remotePrompts);
   }
 
@@ -123,17 +139,19 @@ export function generateDiff(
  */
 function generateRetellLlmDiff(
   agentId: string,
-  localPrompts: Extract<LocalPrompts, { type: 'retell-llm' }>,
-  remotePrompts: Extract<PromptSource, { type: 'retell-llm' }>
+  localPrompts: Extract<LocalPrompts, { type: "retell-llm" }>,
+  remotePrompts: Extract<PromptSource, { type: "retell-llm" }>,
 ): DiffResult {
   const changes: Record<string, ChangeDetail> = {};
 
   // Compare general_prompt
-  if (localPrompts.prompts.general_prompt !== remotePrompts.prompts.general_prompt) {
+  if (
+    localPrompts.prompts.general_prompt !== remotePrompts.prompts.general_prompt
+  ) {
     changes.general_prompt = {
       old: remotePrompts.prompts.general_prompt,
       new: localPrompts.prompts.general_prompt,
-      change_type: 'modified',
+      change_type: "modified",
     };
   }
 
@@ -146,19 +164,19 @@ function generateRetellLlmDiff(
       changes.begin_message = {
         old: null,
         new: localBeginMessage,
-        change_type: 'added',
+        change_type: "added",
       };
     } else if (!localBeginMessage && remoteBeginMessage) {
       changes.begin_message = {
         old: remoteBeginMessage,
         new: null,
-        change_type: 'removed',
+        change_type: "removed",
       };
     } else {
       changes.begin_message = {
         old: remoteBeginMessage,
         new: localBeginMessage,
-        change_type: 'modified',
+        change_type: "modified",
       };
     }
   }
@@ -168,8 +186,12 @@ function generateRetellLlmDiff(
   const remoteStates = remotePrompts.prompts.states || [];
 
   // Create maps for easier comparison
-  const localStatesMap = new Map(localStates.map((s) => [s.name, s.state_prompt]));
-  const remoteStatesMap = new Map(remoteStates.map((s) => [s.name, s.state_prompt]));
+  const localStatesMap = new Map(
+    localStates.map((s) => [s.name, s.state_prompt]),
+  );
+  const remoteStatesMap = new Map(
+    remoteStates.map((s) => [s.name, s.state_prompt]),
+  );
 
   // Find added and modified states
   for (const [stateName, localPrompt] of localStatesMap) {
@@ -181,14 +203,14 @@ function generateRetellLlmDiff(
       changes[fieldKey] = {
         old: null,
         new: localPrompt,
-        change_type: 'added',
+        change_type: "added",
       };
     } else if (localPrompt !== remotePrompt) {
       // State modified locally
       changes[fieldKey] = {
         old: remotePrompt,
         new: localPrompt,
-        change_type: 'modified',
+        change_type: "modified",
       };
     }
   }
@@ -200,14 +222,14 @@ function generateRetellLlmDiff(
       changes[fieldKey] = {
         old: remotePrompt,
         new: null,
-        change_type: 'removed',
+        change_type: "removed",
       };
     }
   }
 
   return {
     agent_id: agentId,
-    agent_type: 'retell-llm',
+    agent_type: "retell-llm",
     has_changes: Object.keys(changes).length > 0,
     changes,
   };
@@ -218,17 +240,19 @@ function generateRetellLlmDiff(
  */
 function generateConversationFlowDiff(
   agentId: string,
-  localPrompts: Extract<LocalPrompts, { type: 'conversation-flow' }>,
-  remotePrompts: Extract<PromptSource, { type: 'conversation-flow' }>
+  localPrompts: Extract<LocalPrompts, { type: "conversation-flow" }>,
+  remotePrompts: Extract<PromptSource, { type: "conversation-flow" }>,
 ): DiffResult {
   const changes: Record<string, ChangeDetail> = {};
 
   // Compare global_prompt
-  if (localPrompts.prompts.global_prompt !== remotePrompts.prompts.global_prompt) {
+  if (
+    localPrompts.prompts.global_prompt !== remotePrompts.prompts.global_prompt
+  ) {
     changes.global_prompt = {
       old: remotePrompts.prompts.global_prompt,
       new: localPrompts.prompts.global_prompt,
-      change_type: 'modified',
+      change_type: "modified",
     };
   }
 
@@ -250,7 +274,7 @@ function generateConversationFlowDiff(
       changes[fieldKey] = {
         old: null,
         new: localNode,
-        change_type: 'added',
+        change_type: "added",
       };
     } else {
       // Compare nodes using deterministic deep equality
@@ -259,7 +283,7 @@ function generateConversationFlowDiff(
         changes[fieldKey] = {
           old: remoteNode,
           new: localNode,
-          change_type: 'modified',
+          change_type: "modified",
         };
       }
     }
@@ -272,14 +296,14 @@ function generateConversationFlowDiff(
       changes[fieldKey] = {
         old: remoteNode,
         new: null,
-        change_type: 'removed',
+        change_type: "removed",
       };
     }
   }
 
   return {
     agent_id: agentId,
-    agent_type: 'conversation-flow',
+    agent_type: "conversation-flow",
     has_changes: Object.keys(changes).length > 0,
     changes,
   };

@@ -5,8 +5,12 @@
  * Usage: retell transcripts get <call_id>
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
 
 // ===== TYPES =====
 
@@ -22,7 +26,10 @@ export interface GetTranscriptOptions {
  * @param callId The call ID to retrieve
  * @param options Command options (fields)
  */
-export async function getTranscriptCommand(callId: string, options: GetTranscriptOptions = {}): Promise<void> {
+export async function getTranscriptCommand(
+  callId: string,
+  options: GetTranscriptOptions = {},
+): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -31,7 +38,10 @@ export async function getTranscriptCommand(callId: string, options: GetTranscrip
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(call, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          call,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : call;
 
     // Output the call object as JSON

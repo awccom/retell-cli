@@ -5,8 +5,8 @@
  * the API key from the config service.
  */
 
-import Retell from 'retell-sdk';
-import { getConfig, ConfigError } from './config';
+import Retell from "retell-sdk";
+import { getConfig, ConfigError } from "./config";
 
 // ===== SINGLETON STATE =====
 
@@ -15,8 +15,8 @@ let clientInstance: Retell | null = null;
 // ===== CLIENT CONFIGURATION =====
 
 const CLIENT_CONFIG = {
-  maxRetries: 2,      // Retry failed requests 2 times (SDK default)
-  timeout: 60000,     // 60 second timeout (SDK default)
+  maxRetries: 2, // Retry failed requests 2 times (SDK default)
+  timeout: 60000, // 60 second timeout (SDK default)
 };
 
 // ===== PUBLIC API =====
@@ -43,7 +43,9 @@ export function getRetellClient(): Retell {
       if (error instanceof ConfigError) {
         throw error; // Re-throw config errors
       }
-      throw new Error(`Failed to initialize Retell client: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to initialize Retell client: ${(error as Error).message}`,
+      );
     }
 
     // Initialize client

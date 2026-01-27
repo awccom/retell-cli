@@ -5,12 +5,12 @@
  * All output goes to stdout, errors go to stderr.
  */
 
-import Retell from 'retell-sdk';
+import Retell from "retell-sdk";
 
 // ===== CONSTANTS =====
 
 /** Keys that could be used for prototype pollution attacks */
-const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+const DANGEROUS_KEYS = ["__proto__", "constructor", "prototype"];
 
 /** Pattern to match array index strings */
 const ARRAY_INDEX_PATTERN = /^\d+$/;
@@ -44,11 +44,11 @@ function validateSafeKey(key: string): void {
  * @throws {Error} If path contains dangerous keys (__proto__, constructor, prototype)
  */
 function hasNestedPath(obj: any, path: string): boolean {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
+  if (obj === null || obj === undefined || typeof obj !== "object") {
     return false;
   }
 
-  const keys = path.split('.');
+  const keys = path.split(".");
 
   // Check for dangerous keys in the path
   for (const key of keys) {
@@ -69,7 +69,7 @@ function hasNestedPath(obj: any, path: string): boolean {
         return false;
       }
       current = current[index];
-    } else if (typeof current === 'object') {
+    } else if (typeof current === "object") {
       if (!(key in current)) {
         return false;
       }
@@ -94,11 +94,11 @@ function hasNestedPath(obj: any, path: string): boolean {
  * getNestedValue({ data: [{ id: 1 }] }, "data.0.id") // Returns 1
  */
 function getNestedValue(obj: any, path: string): any {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return undefined;
   }
 
-  const keys = path.split('.');
+  const keys = path.split(".");
   let current = obj;
 
   for (const key of keys) {
@@ -113,7 +113,7 @@ function getNestedValue(obj: any, path: string): any {
         return undefined;
       }
       current = current[index];
-    } else if (typeof current === 'object') {
+    } else if (typeof current === "object") {
       current = current[key];
     } else {
       return undefined;
@@ -136,7 +136,7 @@ function getNestedValue(obj: any, path: string): any {
  * // obj is now { user: { name: "John" } }
  */
 function setNestedValue(obj: any, path: string, value: any): void {
-  const keys = path.split('.');
+  const keys = path.split(".");
   const lastKey = keys.pop()!;
 
   // Protect against prototype pollution
@@ -150,7 +150,11 @@ function setNestedValue(obj: any, path: string, value: any): void {
     // Protect against prototype pollution
     validateSafeKey(key);
 
-    if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+    if (
+      !(key in current) ||
+      typeof current[key] !== "object" ||
+      current[key] === null
+    ) {
       // Determine if next key is an array index
       const nextKey = keys[i + 1];
       const isNextKeyArrayIndex = nextKey && ARRAY_INDEX_PATTERN.test(nextKey);
@@ -181,8 +185,8 @@ export function outputJson(data: unknown): void {
  */
 export function outputError(error: Error | string, code?: string): never {
   const errorObj = {
-    error: typeof error === 'string' ? error : error.message,
-    code: code || 'UNKNOWN_ERROR',
+    error: typeof error === "string" ? error : error.message,
+    code: code || "UNKNOWN_ERROR",
   };
 
   console.error(JSON.stringify(errorObj, null, 2));
@@ -200,58 +204,70 @@ export function outputError(error: Error | string, code?: string): never {
 export function handleSdkError(error: unknown): never {
   // Handle Retell SDK errors
   if (error instanceof Retell.NotFoundError) {
-    outputError('Resource not found', 'NOT_FOUND');
+    outputError("Resource not found", "NOT_FOUND");
   }
 
   if (error instanceof Retell.AuthenticationError) {
     outputError(
-      'Authentication failed. Invalid API key. Please run `retell login` to authenticate.',
-      'AUTH_ERROR'
+      "Authentication failed. Invalid API key. Please run `retell login` to authenticate.",
+      "AUTH_ERROR",
     );
   }
 
   if (error instanceof Retell.BadRequestError) {
-    const message = error.message || 'Invalid request parameters';
-    outputError(message, 'BAD_REQUEST');
+    const message = error.message || "Invalid request parameters";
+    outputError(message, "BAD_REQUEST");
   }
 
   if (error instanceof Retell.RateLimitError) {
-    outputError('Rate limit exceeded. Please try again later.', 'RATE_LIMIT');
+    outputError("Rate limit exceeded. Please try again later.", "RATE_LIMIT");
   }
 
   if (error instanceof Retell.PermissionDeniedError) {
-    outputError('Permission denied. Check your API key permissions.', 'PERMISSION_DENIED');
+    outputError(
+      "Permission denied. Check your API key permissions.",
+      "PERMISSION_DENIED",
+    );
   }
 
   if (error instanceof Retell.InternalServerError) {
-    outputError('Retell API server error. Please try again later.', 'SERVER_ERROR');
+    outputError(
+      "Retell API server error. Please try again later.",
+      "SERVER_ERROR",
+    );
   }
 
   if (error instanceof Retell.APIConnectionError) {
-    outputError('Failed to connect to Retell API. Check your network connection.', 'CONNECTION_ERROR');
+    outputError(
+      "Failed to connect to Retell API. Check your network connection.",
+      "CONNECTION_ERROR",
+    );
   }
 
   if (error instanceof Retell.APIConnectionTimeoutError) {
-    outputError('Request to Retell API timed out. Please try again.', 'TIMEOUT_ERROR');
+    outputError(
+      "Request to Retell API timed out. Please try again.",
+      "TIMEOUT_ERROR",
+    );
   }
 
   if (error instanceof Retell.APIError) {
     // Generic API error
-    const message = error.message || 'An API error occurred';
-    outputError(message, 'API_ERROR');
+    const message = error.message || "An API error occurred";
+    outputError(message, "API_ERROR");
   }
 
   // Non-SDK errors
   if (error instanceof Error) {
     // Check if it's a ValidationError (by name, to avoid circular dependencies)
-    if (error.name === 'ValidationError') {
-      outputError(error.message, 'VALIDATION_ERROR');
+    if (error.name === "ValidationError") {
+      outputError(error.message, "VALIDATION_ERROR");
     }
-    outputError(error.message, 'UNKNOWN_ERROR');
+    outputError(error.message, "UNKNOWN_ERROR");
   }
 
   // Completely unknown error type
-  outputError('An unexpected error occurred', 'UNKNOWN_ERROR');
+  outputError("An unexpected error occurred", "UNKNOWN_ERROR");
 }
 
 /**
@@ -260,7 +276,10 @@ export function handleSdkError(error: unknown): never {
  * @param message Success message
  * @param data Optional additional data
  */
-export function outputSuccess(message: string, data?: Record<string, unknown>): void {
+export function outputSuccess(
+  message: string,
+  data?: Record<string, unknown>,
+): void {
   const output = {
     message,
     ...data,
@@ -301,7 +320,7 @@ export function outputSuccess(message: string, data?: Record<string, unknown>): 
 export function filterFields<T = any>(
   data: T,
   fields: string[],
-  options: { strict?: boolean } = {}
+  options: { strict?: boolean } = {},
 ): T extends any[] ? Partial<T[number]>[] : Partial<T> {
   // Handle null/undefined
   if (data === null || data === undefined) {
@@ -310,11 +329,11 @@ export function filterFields<T = any>(
 
   // Handle arrays - filter each element
   if (Array.isArray(data)) {
-    return data.map(item => filterFields(item, fields, options)) as any;
+    return data.map((item) => filterFields(item, fields, options)) as any;
   }
 
   // Handle non-object types - return as-is
-  if (typeof data !== 'object') {
+  if (typeof data !== "object") {
     return data as any;
   }
 
@@ -327,9 +346,10 @@ export function filterFields<T = any>(
     if (!hasNestedPath(data, field)) {
       // Build helpful error message with available fields
       const availableFields = Object.keys(data);
-      const fieldList = availableFields.length > 0
-        ? `Available fields: ${availableFields.join(', ')}`
-        : 'No fields available';
+      const fieldList =
+        availableFields.length > 0
+          ? `Available fields: ${availableFields.join(", ")}`
+          : "No fields available";
       const warning = `Field '${field}' not found in data. ${fieldList}`;
       warnings.push(warning);
 
@@ -354,7 +374,7 @@ export function filterFields<T = any>(
     if (process.env.DEBUG) {
       console.warn(JSON.stringify({ warnings }, null, 2));
     } else {
-      warnings.forEach(warning => console.warn(`Warning: ${warning}`));
+      warnings.forEach((warning) => console.warn(`Warning: ${warning}`));
     }
   }
 

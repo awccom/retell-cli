@@ -11,24 +11,24 @@
  * All supported tool types in Retell LLM agents
  */
 export type RetellLlmToolType =
-  | 'end_call'
-  | 'transfer_call'
-  | 'check_availability_cal'
-  | 'book_appointment_cal'
-  | 'press_digit'
-  | 'custom'
-  | 'extract_dynamic_variable'
-  | 'agent_swap'
-  | 'mcp'
-  | 'send_sms';
+  | "end_call"
+  | "transfer_call"
+  | "check_availability_cal"
+  | "book_appointment_cal"
+  | "press_digit"
+  | "custom"
+  | "extract_dynamic_variable"
+  | "agent_swap"
+  | "mcp"
+  | "send_sms";
 
 /**
  * All supported tool types in Conversation Flow agents
  */
 export type ConversationFlowToolType =
-  | 'custom'
-  | 'check_availability_cal'
-  | 'book_appointment_cal';
+  | "custom"
+  | "check_availability_cal"
+  | "book_appointment_cal";
 
 // ===== BASE TOOL INTERFACES =====
 
@@ -45,14 +45,14 @@ export interface BaseTool {
  * End call tool - terminates the call
  */
 export interface EndCallTool extends BaseTool {
-  type: 'end_call';
+  type: "end_call";
 }
 
 /**
  * Transfer call tool - transfers to another number
  */
 export interface TransferCallTool extends BaseTool {
-  type: 'transfer_call';
+  type: "transfer_call";
   transfer_destination: unknown;
   transfer_option: unknown;
 }
@@ -61,7 +61,7 @@ export interface TransferCallTool extends BaseTool {
  * Check calendar availability tool
  */
 export interface CheckAvailabilityCalTool extends BaseTool {
-  type: 'check_availability_cal';
+  type: "check_availability_cal";
   cal_api_key: string;
   event_type_id: number;
   timezone?: string;
@@ -71,7 +71,7 @@ export interface CheckAvailabilityCalTool extends BaseTool {
  * Book appointment tool
  */
 export interface BookAppointmentCalTool extends BaseTool {
-  type: 'book_appointment_cal';
+  type: "book_appointment_cal";
   cal_api_key: string;
   event_type_id: number;
   timezone?: string;
@@ -81,14 +81,14 @@ export interface BookAppointmentCalTool extends BaseTool {
  * Press DTMF digit tool
  */
 export interface PressDigitTool extends BaseTool {
-  type: 'press_digit';
+  type: "press_digit";
 }
 
 /**
  * Custom HTTP webhook tool - most common type
  */
 export interface CustomTool extends BaseTool {
-  type: 'custom';
+  type: "custom";
   url?: string;
   speak_during_execution?: boolean;
   speak_after_execution?: boolean;
@@ -107,7 +107,7 @@ export interface CustomTool extends BaseTool {
  * Extract dynamic variable tool
  */
 export interface ExtractDynamicVariableTool extends BaseTool {
-  type: 'extract_dynamic_variable';
+  type: "extract_dynamic_variable";
   parameters?: {
     type: string;
     properties?: Record<string, unknown>;
@@ -119,17 +119,20 @@ export interface ExtractDynamicVariableTool extends BaseTool {
  * Agent swap tool
  */
 export interface AgentSwapTool extends BaseTool {
-  type: 'agent_swap';
+  type: "agent_swap";
   swap_to_agent_id: string;
   transfer_call_info_to_swapped_agent?: boolean;
-  webhook_setting?: 'both_agents' | 'only_destination_agent' | 'only_source_agent';
+  webhook_setting?:
+    | "both_agents"
+    | "only_destination_agent"
+    | "only_source_agent";
 }
 
 /**
  * MCP tool
  */
 export interface McpTool extends BaseTool {
-  type: 'mcp';
+  type: "mcp";
   mcp_id?: string;
   speak_during_execution?: boolean;
   speak_after_execution?: boolean;
@@ -141,14 +144,14 @@ export interface McpTool extends BaseTool {
  * Send SMS tool
  */
 export interface SendSMSTool extends BaseTool {
-  type: 'send_sms';
+  type: "send_sms";
 }
 
 /**
  * Conversation Flow custom tool (slightly different structure)
  */
 export interface ConversationFlowCustomTool extends BaseTool {
-  type: 'custom';
+  type: "custom";
   tool_id?: string;
   url?: string;
   speak_during_execution?: boolean;
@@ -201,7 +204,7 @@ export type AnyTool = RetellLlmTool | ConversationFlowTool;
  */
 export interface ToolLocation {
   /** Where the tool is defined */
-  location: 'general' | 'state' | 'flow' | 'component';
+  location: "general" | "state" | "flow" | "component";
   /** State name (for Retell LLM state tools) */
   stateName?: string;
   /** Component ID (for Conversation Flow component tools) */
@@ -220,7 +223,7 @@ export interface ToolWithLocation {
  * Result of resolving tools for a Retell LLM agent
  */
 export interface RetellLlmToolsResult {
-  type: 'retell-llm';
+  type: "retell-llm";
   agentId: string;
   agentName: string;
   llmId: string;
@@ -233,7 +236,7 @@ export interface RetellLlmToolsResult {
  * Result of resolving tools for a Conversation Flow agent
  */
 export interface ConversationFlowToolsResult {
-  type: 'conversation-flow';
+  type: "conversation-flow";
   agentId: string;
   agentName: string;
   flowId: string;
@@ -246,7 +249,7 @@ export interface ConversationFlowToolsResult {
  * Error result when tools cannot be resolved
  */
 export interface ToolsErrorResult {
-  type: 'custom-llm';
+  type: "custom-llm";
   error: string;
 }
 
@@ -266,10 +269,13 @@ export type ToolsSource =
 export interface ToolsListOutputLlm {
   agent_id: string;
   agent_name: string;
-  engine_type: 'retell-llm';
+  engine_type: "retell-llm";
   llm_id: string;
   general_tools: Array<{ name: string; type: string; description?: string }>;
-  state_tools: Record<string, Array<{ name: string; type: string; description?: string }>>;
+  state_tools: Record<
+    string,
+    Array<{ name: string; type: string; description?: string }>
+  >;
   total_count: number;
 }
 
@@ -279,10 +285,13 @@ export interface ToolsListOutputLlm {
 export interface ToolsListOutputFlow {
   agent_id: string;
   agent_name: string;
-  engine_type: 'conversation-flow';
+  engine_type: "conversation-flow";
   flow_id: string;
   flow_tools: Array<{ name: string; type: string; description?: string }>;
-  component_tools: Record<string, Array<{ name: string; type: string; description?: string }>>;
+  component_tools: Record<
+    string,
+    Array<{ name: string; type: string; description?: string }>
+  >;
   total_count: number;
 }
 
@@ -310,7 +319,7 @@ export interface ToolMutationOutput {
   agent_id: string;
   agent_name: string;
   tool_name: string;
-  operation: 'add' | 'update' | 'remove';
+  operation: "add" | "update" | "remove";
   location?: ToolLocation;
   note?: string;
 }
@@ -321,7 +330,7 @@ export interface ToolMutationOutput {
 export interface ToolsExportOutput {
   agent_id: string;
   agent_name: string;
-  engine_type: 'retell-llm' | 'conversation-flow';
+  engine_type: "retell-llm" | "conversation-flow";
   exported_at: string;
   tools: {
     general?: AnyTool[];

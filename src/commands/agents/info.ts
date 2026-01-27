@@ -4,8 +4,12 @@
  * Retrieves detailed configuration for a specific agent.
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
 
 export interface AgentInfoOptions {
   fields?: string;
@@ -32,7 +36,10 @@ export interface AgentInfoOptions {
  * // Get information for a specific agent
  * await agentInfoCommand('agent-123abc');
  */
-export async function agentInfoCommand(agentId: string, options: AgentInfoOptions = {}): Promise<void> {
+export async function agentInfoCommand(
+  agentId: string,
+  options: AgentInfoOptions = {},
+): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -40,7 +47,10 @@ export async function agentInfoCommand(agentId: string, options: AgentInfoOption
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(agent, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          agent,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : agent;
 
     // Output agent object

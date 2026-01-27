@@ -5,16 +5,20 @@
  * Usage: retell transcripts analyze <call_id>
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
 
 // ===== CONSTANTS =====
 
 /**
  * Default threshold values for hotspot detection
  */
-export const DEFAULT_LATENCY_THRESHOLD = 2000;  // ms
-export const DEFAULT_SILENCE_THRESHOLD = 5000;  // ms
+export const DEFAULT_LATENCY_THRESHOLD = 2000; // ms
+export const DEFAULT_SILENCE_THRESHOLD = 5000; // ms
 
 // ===== TYPES =====
 
@@ -29,11 +33,11 @@ interface CallResponse {
   end_timestamp?: number;
   agent_name?: string;
   transcript_object?: Array<{
-    role: 'agent' | 'user';
+    role: "agent" | "user";
     content: string;
     words?: Array<{
-      start: number;  // seconds
-      end: number;    // seconds
+      start: number; // seconds
+      end: number; // seconds
       word: string;
     }>;
   }>;
@@ -64,7 +68,7 @@ interface CallResponse {
 }
 
 interface TranscriptTurn {
-  role: 'agent' | 'user';
+  role: "agent" | "user";
   content: string;
   word_count: number;
 }
@@ -73,20 +77,20 @@ interface TranscriptTurn {
  * Represents a detected issue in a conversation
  */
 interface HotspotIssue {
-  turn_index: number;        // Position in transcript (-1 for overall metrics)
-  timestamp: string;         // Human-readable timestamp (HH:MM:SS or "N/A")
-  issue_type: 'latency_spike' | 'long_silence' | 'sentiment';
-  user_utterance?: string;   // User's text at this point
-  agent_utterance?: string;  // Agent's text at this point
-  metrics?: Record<string, number | string>;  // Relevant metrics (latency, duration, etc.)
+  turn_index: number; // Position in transcript (-1 for overall metrics)
+  timestamp: string; // Human-readable timestamp (HH:MM:SS or "N/A")
+  issue_type: "latency_spike" | "long_silence" | "sentiment";
+  user_utterance?: string; // User's text at this point
+  agent_utterance?: string; // Agent's text at this point
+  metrics?: Record<string, number | string>; // Relevant metrics (latency, duration, etc.)
 }
 
 /**
  * Configuration for hotspot detection thresholds
  */
 interface HotspotConfig {
-  latencyThreshold: number;  // ms, default 2000
-  silenceThreshold: number;  // ms, default 5000
+  latencyThreshold: number; // ms, default 2000
+  silenceThreshold: number; // ms, default 5000
 }
 
 interface AnalysisOutput {
@@ -126,9 +130,9 @@ interface AnalysisOutput {
 export interface AnalyzeTranscriptOptions {
   fields?: string;
   raw?: boolean;
-  hotspotsOnly?: boolean;          // Add this
-  latencyThreshold?: number;       // Add this (optional)
-  silenceThreshold?: number;       // Add this (optional)
+  hotspotsOnly?: boolean; // Add this
+  latencyThreshold?: number; // Add this (optional)
+  silenceThreshold?: number; // Add this (optional)
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -163,7 +167,7 @@ function extractTranscriptTurns(transcriptObject: any[]): TranscriptTurn[] {
  * @param seconds Timestamp in seconds (from word-level timing)
  */
 function formatTimestamp(seconds: number): string {
-  if (!seconds || seconds < 0) return 'N/A';
+  if (!seconds || seconds < 0) return "N/A";
 
   const totalSeconds = Math.floor(seconds);
   const mins = Math.floor(totalSeconds / 60);
@@ -172,28 +176,34 @@ function formatTimestamp(seconds: number): string {
   const displayMins = mins % 60;
 
   if (hrs > 0) {
-    return `${hrs.toString().padStart(2, '0')}:${displayMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hrs.toString().padStart(2, "0")}:${displayMins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }
-  return `${displayMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${displayMins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
 /**
  * Detect latency spikes in call performance
  */
-function detectLatencySpikes(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
+function detectLatencySpikes(
+  call: CallResponse,
+  config: HotspotConfig,
+): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
 
   // Check overall p90 latency metrics
-  if (call.latency?.e2e?.p90 && call.latency.e2e.p90 > config.latencyThreshold) {
+  if (
+    call.latency?.e2e?.p90 &&
+    call.latency.e2e.p90 > config.latencyThreshold
+  ) {
     hotspots.push({
       turn_index: -1,
-      timestamp: 'N/A',
-      issue_type: 'latency_spike',
+      timestamp: "N/A",
+      issue_type: "latency_spike",
       metrics: {
         latency_p90_e2e: call.latency.e2e.p90,
         latency_p90_llm: call.latency?.llm?.p90 || 0,
         latency_p90_tts: call.latency?.tts?.p90 || 0,
-      }
+      },
     });
   }
 
@@ -203,7 +213,10 @@ function detectLatencySpikes(call: CallResponse, config: HotspotConfig): Hotspot
 /**
  * Detect long silences between conversation turns
  */
-function detectLongSilences(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
+function detectLongSilences(
+  call: CallResponse,
+  config: HotspotConfig,
+): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
   const transcript = call.transcript_object || [];
 
@@ -224,18 +237,20 @@ function detectLongSilences(call: CallResponse, config: HotspotConfig): HotspotI
     // Skip if timing data is missing
     if (prevEnd === undefined || currStart === undefined) continue;
 
-    const gapMs = (currStart - prevEnd) * 1000;  // convert to ms
+    const gapMs = (currStart - prevEnd) * 1000; // convert to ms
 
     if (gapMs > config.silenceThreshold) {
       hotspots.push({
         turn_index: i,
         timestamp: formatTimestamp(currStart),
-        issue_type: 'long_silence',
-        user_utterance: prevTurn.role === 'user' ? prevTurn.content : currTurn.content,
-        agent_utterance: currTurn.role === 'agent' ? currTurn.content : prevTurn.content,
+        issue_type: "long_silence",
+        user_utterance:
+          prevTurn.role === "user" ? prevTurn.content : currTurn.content,
+        agent_utterance:
+          currTurn.role === "agent" ? currTurn.content : prevTurn.content,
         metrics: {
-          silence_duration_ms: Math.round(gapMs)
-        }
+          silence_duration_ms: Math.round(gapMs),
+        },
       });
     }
   }
@@ -250,14 +265,14 @@ function detectSentimentIssues(call: CallResponse): HotspotIssue[] {
   const hotspots: HotspotIssue[] = [];
 
   // Check overall sentiment
-  if (call.call_analysis?.user_sentiment === 'Negative') {
+  if (call.call_analysis?.user_sentiment === "Negative") {
     hotspots.push({
       turn_index: -1,
-      timestamp: 'N/A',
-      issue_type: 'sentiment',
+      timestamp: "N/A",
+      issue_type: "sentiment",
       metrics: {
-        sentiment: call.call_analysis.user_sentiment
-      }
+        sentiment: call.call_analysis.user_sentiment,
+      },
     });
   }
 
@@ -267,11 +282,14 @@ function detectSentimentIssues(call: CallResponse): HotspotIssue[] {
 /**
  * Detect all hotspots in a call
  */
-function detectAllHotspots(call: CallResponse, config: HotspotConfig): HotspotIssue[] {
+function detectAllHotspots(
+  call: CallResponse,
+  config: HotspotConfig,
+): HotspotIssue[] {
   const hotspots = [
     ...detectLatencySpikes(call, config),
     ...detectLongSilences(call, config),
-    ...detectSentimentIssues(call)
+    ...detectSentimentIssues(call),
   ];
 
   // Sort by turn_index (overall metrics with -1 go first)
@@ -290,15 +308,20 @@ function detectAllHotspots(call: CallResponse, config: HotspotConfig): HotspotIs
  * @param callId The call ID to analyze
  * @param options Command options (fields)
  */
-export async function analyzeTranscriptCommand(callId: string, options: AnalyzeTranscriptOptions = {}): Promise<void> {
+export async function analyzeTranscriptCommand(
+  callId: string,
+  options: AnalyzeTranscriptOptions = {},
+): Promise<void> {
   try {
     // Validate threshold values inside try/catch so errors are formatted consistently
     if (options.hotspotsOnly) {
-      const latencyThreshold = options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD;
-      const silenceThreshold = options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD;
+      const latencyThreshold =
+        options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD;
+      const silenceThreshold =
+        options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD;
 
-      validateThreshold(latencyThreshold, 'Latency threshold');
-      validateThreshold(silenceThreshold, 'Silence threshold');
+      validateThreshold(latencyThreshold, "Latency threshold");
+      validateThreshold(silenceThreshold, "Silence threshold");
     }
 
     const client = getRetellClient();
@@ -309,7 +332,10 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
     // If --raw flag is set, return unmodified API response
     if (options.raw) {
       const output = options.fields
-        ? filterFields(call, options.fields.split(',').map(f => f.trim()))
+        ? filterFields(
+            call,
+            options.fields.split(",").map((f) => f.trim()),
+          )
         : call;
       outputJson(output);
       return;
@@ -319,18 +345,21 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
     if (options.hotspotsOnly) {
       const config: HotspotConfig = {
         latencyThreshold: options.latencyThreshold ?? DEFAULT_LATENCY_THRESHOLD,
-        silenceThreshold: options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD
+        silenceThreshold: options.silenceThreshold ?? DEFAULT_SILENCE_THRESHOLD,
       };
 
       const hotspots = detectAllHotspots(call as any, config);
 
       const result = {
         call_id: callId,
-        hotspots: hotspots
+        hotspots: hotspots,
       };
 
       const output = options.fields
-        ? filterFields(result, options.fields.split(',').map(f => f.trim()))
+        ? filterFields(
+            result,
+            options.fields.split(",").map((f) => f.trim()),
+          )
         : result;
 
       outputJson(output);
@@ -341,16 +370,16 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
     const analysis: AnalysisOutput = {
       call_id: callId,
       metadata: {
-        status: call.call_status || 'unknown',
+        status: call.call_status || "unknown",
         duration_ms: call.duration_ms || 0,
         start_timestamp: call.start_timestamp || 0,
         end_timestamp: call.end_timestamp || 0,
-        agent_name: call.agent_name || 'Unknown',
+        agent_name: call.agent_name || "Unknown",
       },
       transcript: extractTranscriptTurns(call.transcript_object as any),
       analysis: {
-        summary: call.call_analysis?.call_summary || 'No summary available',
-        sentiment: call.call_analysis?.user_sentiment || 'Unknown',
+        summary: call.call_analysis?.call_summary || "No summary available",
+        sentiment: call.call_analysis?.user_sentiment || "Unknown",
         successful: call.call_analysis?.call_successful ?? false,
         in_voicemail: call.call_analysis?.in_voicemail ?? false,
       },
@@ -374,7 +403,10 @@ export async function analyzeTranscriptCommand(callId: string, options: AnalyzeT
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(analysis, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          analysis,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : analysis;
 
     // Output structured analysis

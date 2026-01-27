@@ -4,10 +4,17 @@
  * Updates an existing test case definition from a JSON file.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { updateTestCaseDefinition } from '../../../services/test-api';
-import { outputJson, outputError, handleSdkError } from '../../../services/output-formatter';
-import type { TestCaseDefinitionUpdateInput, TestCaseDefinitionMutationOutput } from '../../../types/tests';
+import { readFileSync, existsSync } from "fs";
+import { updateTestCaseDefinition } from "../../../services/test-api";
+import {
+  outputJson,
+  outputError,
+  handleSdkError,
+} from "../../../services/output-formatter";
+import type {
+  TestCaseDefinitionUpdateInput,
+  TestCaseDefinitionMutationOutput,
+} from "../../../types/tests";
 
 /**
  * Options for the update test case command
@@ -25,25 +32,34 @@ export interface UpdateTestCaseOptions {
  */
 export async function updateTestCaseCommand(
   testCaseDefinitionId: string,
-  options: UpdateTestCaseOptions
+  options: UpdateTestCaseOptions,
 ): Promise<void> {
   try {
     // Validate file exists
     if (!existsSync(options.file)) {
-      outputError(`Test case file not found: ${options.file}`, 'FILE_NOT_FOUND');
+      outputError(
+        `Test case file not found: ${options.file}`,
+        "FILE_NOT_FOUND",
+      );
       return;
     }
 
     // Parse test case updates
     let input: TestCaseDefinitionUpdateInput;
     try {
-      const content = readFileSync(options.file, 'utf-8');
+      const content = readFileSync(options.file, "utf-8");
       input = JSON.parse(content);
     } catch (error: any) {
       if (error instanceof SyntaxError) {
-        outputError(`Invalid JSON in test case file: ${error.message}`, 'INVALID_JSON');
+        outputError(
+          `Invalid JSON in test case file: ${error.message}`,
+          "INVALID_JSON",
+        );
       } else {
-        outputError(`Error reading test case file: ${error.message}`, 'FILE_READ_ERROR');
+        outputError(
+          `Error reading test case file: ${error.message}`,
+          "FILE_READ_ERROR",
+        );
       }
       return;
     }
@@ -56,17 +72,17 @@ export async function updateTestCaseCommand(
     });
 
     const output: TestCaseDefinitionMutationOutput = {
-      message: 'Test case definition updated successfully',
+      message: "Test case definition updated successfully",
       test_case_definition_id: testCase.test_case_definition_id,
       name: testCase.name,
-      operation: 'update',
+      operation: "update",
       response_engine: testCase.response_engine,
     };
 
     outputJson(output);
   } catch (error) {
     if (error instanceof SyntaxError) {
-      outputError(`Invalid JSON: ${error.message}`, 'INVALID_JSON');
+      outputError(`Invalid JSON: ${error.message}`, "INVALID_JSON");
       return;
     }
     handleSdkError(error);

@@ -5,8 +5,8 @@
  * This increments the version number and makes the draft changes live.
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError } from '../../services/output-formatter';
+import { getRetellClient } from "../../services/retell-client";
+import { outputJson, handleSdkError } from "../../services/output-formatter";
 
 /**
  * Publish an agent's draft version to production
@@ -38,8 +38,8 @@ export async function publishAgentCommand(agentId: string): Promise<void> {
     // The Retell API returns an empty body for publish, but the SDK tries to parse it as JSON
     if (
       error instanceof Error &&
-      error.message.includes('invalid json response body') &&
-      error.message.includes('Unexpected end of JSON input')
+      error.message.includes("invalid json response body") &&
+      error.message.includes("Unexpected end of JSON input")
     ) {
       // The API call succeeded but SDK failed to parse empty response
       // Continue to fetch agent details below
@@ -54,12 +54,12 @@ export async function publishAgentCommand(agentId: string): Promise<void> {
     const agent = await client.agent.retrieve(agentId);
 
     outputJson({
-      message: 'Agent published successfully',
+      message: "Agent published successfully",
       agent_id: agent.agent_id,
-      agent_name: agent.agent_name || 'Unknown',
-      version: agent.version || 'Unknown',
+      agent_name: agent.agent_name || "Unknown",
+      version: agent.version || "Unknown",
       is_published: agent.is_published ?? true,
-      note: 'Draft version incremented and ready for new changes',
+      note: "Draft version incremented and ready for new changes",
     });
   } catch (error) {
     handleSdkError(error);

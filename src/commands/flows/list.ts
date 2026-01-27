@@ -5,16 +5,22 @@
  * Usage: retell flows list [--limit <number>] [--fields <fields>]
  */
 
-import { getRetellClient } from '../../services/retell-client';
-import { outputJson, handleSdkError, filterFields } from '../../services/output-formatter';
-import type { ListFlowsOptions } from '../../types/flows';
+import { getRetellClient } from "../../services/retell-client";
+import {
+  outputJson,
+  handleSdkError,
+  filterFields,
+} from "../../services/output-formatter";
+import type { ListFlowsOptions } from "../../types/flows";
 
 /**
  * List all conversation flows
  *
  * @param options Command options
  */
-export async function listFlowsCommand(options: ListFlowsOptions): Promise<void> {
+export async function listFlowsCommand(
+  options: ListFlowsOptions,
+): Promise<void> {
   try {
     const client = getRetellClient();
 
@@ -25,7 +31,10 @@ export async function listFlowsCommand(options: ListFlowsOptions): Promise<void>
 
     // Apply field filtering if requested
     const output = options.fields
-      ? filterFields(flows, options.fields.split(',').map(f => f.trim()))
+      ? filterFields(
+          flows,
+          options.fields.split(",").map((f) => f.trim()),
+        )
       : flows;
 
     // Output as JSON
