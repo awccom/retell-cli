@@ -11,6 +11,8 @@ import type {
   TestCaseDefinition,
   BatchTest,
   TestRun,
+  ToolMock,
+  LlmModel,
 } from "../types/tests";
 
 const BASE_URL = "https://api.retellai.com";
@@ -106,6 +108,9 @@ export async function createTestCaseDefinition(params: {
   user_prompt?: string;
   scenario?: string;
   metrics?: string[];
+  dynamic_variables?: Record<string, string>;
+  tool_mocks?: ToolMock[];
+  llm_model?: LlmModel;
 }): Promise<TestCaseDefinition> {
   return apiRequest<TestCaseDefinition>(
     "POST",
@@ -124,6 +129,9 @@ export async function updateTestCaseDefinition(
     user_prompt?: string;
     scenario?: string;
     metrics?: string[];
+    dynamic_variables?: Record<string, string>;
+    tool_mocks?: ToolMock[];
+    llm_model?: LlmModel;
   },
 ): Promise<TestCaseDefinition> {
   return apiRequest<TestCaseDefinition>(

@@ -69,6 +69,9 @@ export async function updateTestCaseCommand(
       user_prompt: input.user_prompt,
       scenario: input.scenario,
       metrics: input.metrics,
+      dynamic_variables: input.dynamic_variables,
+      tool_mocks: input.tool_mocks,
+      llm_model: input.llm_model,
     });
 
     const output: TestCaseDefinitionMutationOutput = {

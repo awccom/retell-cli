@@ -44,6 +44,56 @@ export type TestMetric =
   | "custom";
 
 /**
+ * Tool mock input match rule - matches any input
+ */
+export interface ToolMockInputMatchRuleAny {
+  type: "any";
+}
+
+/**
+ * Tool mock input match rule - partial match on args
+ */
+export interface ToolMockInputMatchRulePartial {
+  type: "partial_match";
+  args: Record<string, unknown>;
+}
+
+/**
+ * Union type for tool mock input match rules
+ */
+export type ToolMockInputMatchRule =
+  | ToolMockInputMatchRuleAny
+  | ToolMockInputMatchRulePartial;
+
+/**
+ * Tool mock definition
+ */
+export interface ToolMock {
+  tool_name: string;
+  input_match_rule: ToolMockInputMatchRule;
+  output: string; // JSON string
+  result?: boolean | null;
+}
+
+/**
+ * Available LLM models for test cases
+ */
+export type LlmModel =
+  | "gpt-4.1"
+  | "gpt-4.1-mini"
+  | "gpt-4.1-nano"
+  | "gpt-5"
+  | "gpt-5.1"
+  | "gpt-5.2"
+  | "gpt-5-mini"
+  | "gpt-5-nano"
+  | "claude-4.5-sonnet"
+  | "claude-4.5-haiku"
+  | "gemini-2.5-flash"
+  | "gemini-2.5-flash-lite"
+  | "gemini-3.0-flash";
+
+/**
  * Test case definition from API
  */
 export interface TestCaseDefinition {
@@ -53,6 +103,9 @@ export interface TestCaseDefinition {
   scenario?: string;
   metrics?: TestMetric[];
   response_engine: ResponseEngine;
+  dynamic_variables?: Record<string, string>;
+  tool_mocks?: ToolMock[];
+  llm_model?: LlmModel;
   created_at?: string;
   updated_at?: string;
 }
@@ -65,6 +118,9 @@ export interface TestCaseDefinitionCreateInput {
   user_prompt?: string;
   scenario?: string;
   metrics?: TestMetric[];
+  dynamic_variables?: Record<string, string>;
+  tool_mocks?: ToolMock[];
+  llm_model?: LlmModel;
 }
 
 /**
@@ -75,6 +131,9 @@ export interface TestCaseDefinitionUpdateInput {
   user_prompt?: string;
   scenario?: string;
   metrics?: TestMetric[];
+  dynamic_variables?: Record<string, string>;
+  tool_mocks?: ToolMock[];
+  llm_model?: LlmModel;
 }
 
 /**
