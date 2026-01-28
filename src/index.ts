@@ -19,6 +19,9 @@ import {
 import { searchTranscriptsCommand } from "./commands/transcripts/search";
 import { listAgentsCommand } from "./commands/agents/list";
 import { agentInfoCommand } from "./commands/agents/info";
+import { createAgentCommand } from "./commands/agents/create";
+import { deleteAgentCommand } from "./commands/agents/delete";
+import { agentVersionsCommand } from "./commands/agents/versions";
 import { pullPromptsCommand } from "./commands/prompts/pull";
 import { updatePromptsCommand } from "./commands/prompts/update";
 import { diffPromptsCommand } from "./commands/prompts/diff";
@@ -53,6 +56,9 @@ import { getFlowCommand } from "./commands/flows/get";
 import { createFlowCommand } from "./commands/flows/create";
 import { updateFlowCommand } from "./commands/flows/update";
 import { deleteFlowCommand } from "./commands/flows/delete";
+import { listPhoneNumbersCommand } from "./commands/phone-numbers/list";
+import { getPhoneNumberCommand } from "./commands/phone-numbers/get";
+import { importPhoneNumberCommand } from "./commands/phone-numbers/import";
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -299,6 +305,65 @@ Examples:
     await agentInfoCommand(agentId, {
       fields: options.fields,
     });
+  });
+
+agents
+  .command("create")
+  .description("Create a new agent")
+  .requiredOption("--voice <voice_id>", "Voice ID for the agent")
+  .option("--name <name>", "Agent name")
+  .option("--llm-id <id>", "Retell LLM ID (creates retell-llm response engine)")
+  .option(
+    "--flow-id <id>",
+    "Conversation Flow ID (creates conversation-flow response engine)",
+  )
+  .option("--custom-llm <url>", "Custom LLM WebSocket URL")
+  .option(
+    "-f, --file <path>",
+    "Full agent config from JSON file (overrides other options)",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell agents create --voice 11labs-Adrian --llm-id llm_xxx --name "Test Agent"
+  $ retell agents create --voice 11labs-Adrian --flow-id cf_xxx
+  $ retell agents create --file agent-config.json
+  `,
+  )
+  .action(async (options) => {
+    await createAgentCommand(options);
+  });
+
+agents
+  .command("delete <agent_id>")
+  .description("Delete an agent")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell agents delete agent_123abc
+  `,
+  )
+  .action(async (agentId) => {
+    await deleteAgentCommand(agentId);
+  });
+
+agents
+  .command("versions <agent_id>")
+  .description("List all versions of an agent")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell agents versions agent_123abc
+  $ retell agents versions agent_123abc --fields version,is_published
+  `,
+  )
+  .action(async (agentId, options) => {
+    await agentVersionsCommand(agentId, options);
   });
 
 // Prompts commands (Phase 5)
@@ -1165,6 +1230,67 @@ Examples:
   )
   .action(async (conversationFlowId) => {
     await deleteFlowCommand(conversationFlowId);
+  });
+
+// Phone Numbers commands
+const phoneNumbers = program
+  .command("phone-numbers")
+  .description("Manage phone numbers");
+
+phoneNumbers
+  .command("list")
+  .description("List all phone numbers")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers list
+  $ retell phone-numbers list --fields phone_number,nickname,inbound_agent_id
+  `,
+  )
+  .action(async (options) => {
+    await listPhoneNumbersCommand(options);
+  });
+
+phoneNumbers
+  .command("get <phone_number>")
+  .description("Get phone number details")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers get +14157774444
+  $ retell phone-numbers get +14157774444 --fields phone_number,inbound_agent_id
+  `,
+  )
+  .action(async (phoneNumber, options) => {
+    await getPhoneNumberCommand(phoneNumber, options);
+  });
+
+phoneNumbers
+  .command("import")
+  .description("Import a phone number from custom telephony")
+  .requiredOption("--number <number>", "Phone number in E.164 format")
+  .requiredOption("--termination-uri <uri>", "SIP trunk termination URI")
+  .option("--nickname <name>", "Friendly name for reference")
+  .option("--inbound-agent <id>", "Agent ID for inbound calls")
+  .option("--outbound-agent <id>", "Agent ID for outbound calls")
+  .option("--sip-username <user>", "SIP trunk auth username")
+  .option("--sip-password <pass>", "SIP trunk auth password")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com
+  $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --nickname "Support Line"
+  $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agent agent_xxx
+  `,
+  )
+  .action(async (options) => {
+    await importPhoneNumberCommand(options);
   });
 
 // Parse command line arguments

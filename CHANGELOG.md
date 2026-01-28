@@ -5,6 +5,65 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-27
+
+### Added
+
+#### Agent CRUD Commands
+- **`retell agents create`** - Create new agents with configurable response engines
+  - `--voice` - Voice ID for the agent (required)
+  - `--name` - Agent name
+  - `--llm-id` - Retell LLM ID (creates retell-llm response engine)
+  - `--flow-id` - Conversation Flow ID (creates conversation-flow response engine)
+  - `--custom-llm` - Custom LLM WebSocket URL
+  - `--file` - Full agent config from JSON file
+  - `--fields` - Filter output fields
+  - Validates exactly one response engine type is specified
+
+- **`retell agents delete <agent_id>`** - Delete an agent
+  - Returns success confirmation with deleted agent ID
+
+- **`retell agents versions <agent_id>`** - List all versions of an agent
+  - Shows version number, publish status, agent name, and timestamp
+  - `--fields` - Filter output fields
+
+#### Phone Number Commands
+- **`retell phone-numbers list`** - List all phone numbers
+  - Shows phone number, pretty format, type, nickname, and agent IDs
+  - `--fields` - Filter output fields
+
+- **`retell phone-numbers get <phone_number>`** - Get phone number details
+  - Retrieves full phone number configuration
+  - `--fields` - Filter output fields
+
+- **`retell phone-numbers import`** - Import phone number from custom telephony
+  - `--number` - Phone number in E.164 format (required)
+  - `--termination-uri` - SIP trunk termination URI (required)
+  - `--nickname` - Friendly name for reference
+  - `--inbound-agent` - Agent ID for inbound calls
+  - `--outbound-agent` - Agent ID for outbound calls
+  - `--sip-username` - SIP trunk auth username
+  - `--sip-password` - SIP trunk auth password
+  - `--fields` - Filter output fields
+
+#### Testing
+- Added 32 new unit tests for all new commands
+  - 11 tests for `agents create` (validation, response engines, file loading)
+  - 3 tests for `agents delete` (success, error handling)
+  - 4 tests for `agents versions` (listing, filtering, errors)
+  - 4 tests for `phone-numbers list` (listing, filtering, errors)
+  - 4 tests for `phone-numbers get` (retrieval, filtering, errors)
+  - 6 tests for `phone-numbers import` (options, filtering, errors)
+
+**Total: 138 tests passing** ✅
+
+#### Documentation
+- Updated README.md with complete command documentation
+- Added examples for all new commands
+- Updated features list to include phone number management
+
+---
+
 ## [Unreleased] - v1.0.1
 
 ### Added - Phase 1: Foundation & Utilities

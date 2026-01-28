@@ -8,7 +8,8 @@ Community-built command-line tool for Retell AI - designed to give AI assistants
 ## Features
 
 - **Transcript Management** - List, retrieve, and analyze call transcripts
-- **Agent Management** - View and configure Retell AI agents
+- **Agent Management** - Full CRUD for Retell AI agents (create, list, update, delete, versions)
+- **Phone Number Management** - List, retrieve, and import phone numbers
 - **Prompt Engineering** - Pull, edit, and update agent prompts
 - **Tool Management** - Full CRUD for agent tools (webhooks, custom functions, etc.)
 - **Multi-format Support** - Works with Retell LLM and Conversation Flows
@@ -218,6 +219,55 @@ Get detailed information about a specific agent.
 **Example:**
 ```bash
 retell agents info agent_123abc
+```
+
+#### `retell agents create [options]`
+
+Create a new agent with the specified configuration.
+
+**Options:**
+- `--voice <voice_id>` - Voice ID for the agent (required)
+- `--name <name>` - Agent name
+- `--llm-id <id>` - Retell LLM ID (creates retell-llm response engine)
+- `--flow-id <id>` - Conversation Flow ID (creates conversation-flow response engine)
+- `--custom-llm <url>` - Custom LLM WebSocket URL
+- `-f, --file <path>` - Full agent config from JSON file (overrides other options)
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Note:** You must specify exactly one of `--llm-id`, `--flow-id`, `--custom-llm`, or `--file`.
+
+**Examples:**
+```bash
+# Create agent with Retell LLM
+retell agents create --voice 11labs-Adrian --llm-id llm_xxx --name "Support Agent"
+
+# Create agent with Conversation Flow
+retell agents create --voice 11labs-Adrian --flow-id cf_xxx
+
+# Create agent from JSON config file
+retell agents create --file agent-config.json
+```
+
+#### `retell agents delete <agent_id>`
+
+Delete an agent.
+
+**Example:**
+```bash
+retell agents delete agent_123abc
+```
+
+#### `retell agents versions <agent_id> [options]`
+
+List all versions of an agent.
+
+**Options:**
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Example:**
+```bash
+retell agents versions agent_123abc
+retell agents versions agent_123abc --fields version,is_published
 ```
 
 ### Prompts
@@ -536,6 +586,70 @@ retell tools import agent_123abc --file tools.json --replace
 **Important:** After modifying tools, remember to publish the agent:
 ```bash
 retell agent-publish agent_123abc
+```
+
+### Phone Numbers
+
+Manage phone numbers for your Retell AI agents.
+
+#### `retell phone-numbers list [options]`
+
+List all phone numbers in your account.
+
+**Options:**
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Example:**
+```bash
+retell phone-numbers list
+retell phone-numbers list --fields phone_number,nickname,inbound_agent_id
+```
+
+#### `retell phone-numbers get <phone_number> [options]`
+
+Get details of a specific phone number.
+
+**Options:**
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Example:**
+```bash
+retell phone-numbers get +14157774444
+retell phone-numbers get +14157774444 --fields phone_number,inbound_agent_id
+```
+
+#### `retell phone-numbers import [options]`
+
+Import a phone number from custom telephony (e.g., Twilio, Vonage).
+
+**Options:**
+- `--number <number>` - Phone number in E.164 format (required)
+- `--termination-uri <uri>` - SIP trunk termination URI (required)
+- `--nickname <name>` - Friendly name for reference
+- `--inbound-agent <id>` - Agent ID for inbound calls
+- `--outbound-agent <id>` - Agent ID for outbound calls
+- `--sip-username <user>` - SIP trunk auth username
+- `--sip-password <pass>` - SIP trunk auth password
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Examples:**
+```bash
+# Basic import
+retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com
+
+# Import with nickname and agent assignment
+retell phone-numbers import \
+  --number +14157774444 \
+  --termination-uri someuri.pstn.twilio.com \
+  --nickname "Support Line" \
+  --inbound-agent agent_123abc
+
+# Import with SIP authentication
+retell phone-numbers import \
+  --number +14157774444 \
+  --termination-uri someuri.pstn.twilio.com \
+  --sip-username myuser \
+  --sip-password mypass
 ```
 
 ### Field Selection
