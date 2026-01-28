@@ -23,6 +23,8 @@ import { pullPromptsCommand } from "./commands/prompts/pull";
 import { updatePromptsCommand } from "./commands/prompts/update";
 import { diffPromptsCommand } from "./commands/prompts/diff";
 import { publishAgentCommand } from "./commands/agent/publish";
+import { getAgentCommand } from "./commands/agent/get";
+import { updateAgentCommand } from "./commands/agent/update";
 import { listToolsCommand } from "./commands/tools/list";
 import { getToolCommand } from "./commands/tools/get";
 import { addToolCommand } from "./commands/tools/add";
@@ -380,6 +382,87 @@ Examples:
   )
   .action(async (agentId) => {
     await publishAgentCommand(agentId);
+  });
+
+// Agent commands (for agent-level configuration)
+const agent = program
+  .command("agent")
+  .description(
+    "Manage agent-level configuration (voice, webhooks, post-call analysis, etc.)",
+  );
+
+agent
+  .command("get <agent_id>")
+  .description("Get agent configuration")
+  .option(
+    "--version <number>",
+    "Specific version to retrieve (defaults to latest)",
+  )
+  .option(
+    "--fields <fields>",
+    "Comma-separated list of fields to return (e.g., agent_name,post_call_analysis_data)",
+  )
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell agent get agent_123abc
+  $ retell agent get agent_123abc --version 2
+  $ retell agent get agent_123abc --fields agent_name,post_call_analysis_data
+  $ retell agent get agent_123abc > config.json
+  `,
+  )
+  .action(async (agentId, options) => {
+    await getAgentCommand(agentId, {
+      version: options.version ? parseInt(options.version, 10) : undefined,
+      fields: options.fields,
+    });
+  });
+
+agent
+  .command("update <agent_id>")
+  .description("Update agent configuration from a JSON file")
+  .requiredOption(
+    "-f, --file <path>",
+    "Path to JSON file containing agent configuration updates",
+  )
+  .option("--dry-run", "Preview changes without applying them")
+  .option(
+    "--version <number>",
+    "Specific version to update (defaults to latest draft)",
+  )
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell agent update agent_123abc --file config.json
+  $ retell agent update agent_123abc --file config.json --dry-run
+  $ retell agent update agent_123abc --file analysis.json --version 2
+
+Example JSON for post-call analysis:
+  {
+    "post_call_analysis_model": "claude-4.5-sonnet",
+    "post_call_analysis_data": [
+      {
+        "name": "call_outcome",
+        "type": "enum",
+        "description": "Result of the call",
+        "choices": ["successful", "unsuccessful", "callback_needed"]
+      }
+    ],
+    "analysis_successful_prompt": "Determine if the issue was resolved.",
+    "analysis_summary_prompt": "Summarize the call in 2 sentences."
+  }
+
+Note: Run 'retell agent-publish <agent_id>' after updating to publish changes.
+  `,
+  )
+  .action(async (agentId, options) => {
+    await updateAgentCommand(agentId, {
+      file: options.file,
+      dryRun: options.dryRun,
+      version: options.version ? parseInt(options.version, 10) : undefined,
+    });
   });
 
 // Tools commands

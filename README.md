@@ -305,6 +305,81 @@ Publish a draft agent to make changes live.
 retell agent-publish agent_123abc
 ```
 
+### Agent Configuration
+
+Manage agent-level settings that aren't part of prompts (voice, webhooks, post-call analysis, etc.).
+
+#### `retell agent get <agent_id> [options]`
+
+Get agent configuration including all agent-level settings.
+
+**Options:**
+- `--version <number>` - Specific version to retrieve (defaults to latest)
+- `--fields <fields>` - Comma-separated list of fields to return
+
+**Examples:**
+```bash
+# Get full agent config
+retell agent get agent_123abc
+
+# Get specific version
+retell agent get agent_123abc --version 2
+
+# Get specific fields only
+retell agent get agent_123abc --fields agent_name,post_call_analysis_data
+
+# Save config to file for editing
+retell agent get agent_123abc > config.json
+```
+
+#### `retell agent update <agent_id> [options]`
+
+Update agent configuration from a JSON file. This is useful for updating agent-level fields that aren't accessible through `prompts update`, such as:
+- `post_call_analysis_data` - Custom data extraction from calls
+- `post_call_analysis_model` - Model for analysis
+- `analysis_successful_prompt` - Success criteria prompt
+- `analysis_summary_prompt` - Summary generation prompt
+- Voice settings, language, webhooks, and more
+
+**Options:**
+- `-f, --file <path>` - Path to JSON file containing agent configuration updates (required)
+- `--dry-run` - Preview changes without applying them
+- `--version <number>` - Specific version to update (defaults to latest draft)
+
+**Example JSON for post-call analysis:**
+```json
+{
+  "post_call_analysis_model": "claude-4.5-sonnet",
+  "post_call_analysis_data": [
+    {
+      "name": "call_outcome",
+      "type": "enum",
+      "description": "Result of the call",
+      "choices": ["successful", "unsuccessful", "callback_needed"]
+    },
+    {
+      "name": "customer_sentiment",
+      "type": "string",
+      "description": "Overall customer sentiment"
+    }
+  ],
+  "analysis_successful_prompt": "Determine if the issue was resolved.",
+  "analysis_summary_prompt": "Summarize the call in 2 sentences."
+}
+```
+
+**Examples:**
+```bash
+# Preview changes first (recommended)
+retell agent update agent_123abc --file config.json --dry-run
+
+# Apply changes
+retell agent update agent_123abc --file config.json
+
+# Remember to publish after updating
+retell agent-publish agent_123abc
+```
+
 ### Tools
 
 Manage agent tools (custom functions, webhooks, etc.). Tools are embedded within Retell LLM and Conversation Flow configurations.
