@@ -2,7 +2,7 @@
  * Conversation Flow Update Command
  *
  * Updates an existing conversation flow from a JSON file.
- * Usage: retell flows update <conversation_flow_id> --file <path> [--version <number>]
+ * Usage: retell flows update <conversation_flow_id> --file <path> [--engine-version <number>]
  */
 
 import { readFileSync, existsSync } from "fs";

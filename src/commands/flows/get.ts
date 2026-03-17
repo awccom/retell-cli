@@ -2,7 +2,7 @@
  * Conversation Flow Get Command
  *
  * Gets a specific conversation flow by ID.
- * Usage: retell flows get <conversation_flow_id> [--version <number>] [--fields <fields>]
+ * Usage: retell flows get <conversation_flow_id> [--engine-version <number>] [--fields <fields>]
  */
 
 import { getRetellClient } from "../../services/retell-client";

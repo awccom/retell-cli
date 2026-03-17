@@ -364,7 +364,7 @@ Manage agent-level settings that aren't part of prompts (voice, webhooks, post-c
 Get agent configuration including all agent-level settings.
 
 **Options:**
-- `--version <number>` - Specific version to retrieve (defaults to latest)
+- `--engine-version <number>` - Specific version to retrieve (defaults to latest)
 - `--fields <fields>` - Comma-separated list of fields to return
 
 **Examples:**
@@ -373,7 +373,7 @@ Get agent configuration including all agent-level settings.
 retell agent get agent_123abc
 
 # Get specific version
-retell agent get agent_123abc --version 2
+retell agent get agent_123abc --engine-version 2
 
 # Get specific fields only
 retell agent get agent_123abc --fields agent_name,post_call_analysis_data
@@ -394,7 +394,7 @@ Update agent configuration from a JSON file. This is useful for updating agent-l
 **Options:**
 - `-f, --file <path>` - Path to JSON file containing agent configuration updates (required)
 - `--dry-run` - Preview changes without applying them
-- `--version <number>` - Specific version to update (defaults to latest draft)
+- `--engine-version <number>` - Specific version to update (defaults to latest draft)
 
 **Example JSON for post-call analysis:**
 ```json
