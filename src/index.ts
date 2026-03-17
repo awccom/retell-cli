@@ -460,7 +460,7 @@ agent
   .command("get <agent_id>")
   .description("Get agent configuration")
   .option(
-    "--version <number>",
+    "--engine-version <number>",
     "Specific version to retrieve (defaults to latest)",
   )
   .option(
@@ -472,14 +472,14 @@ agent
     `
 Examples:
   $ retell agent get agent_123abc
-  $ retell agent get agent_123abc --version 2
+  $ retell agent get agent_123abc --engine-version 2
   $ retell agent get agent_123abc --fields agent_name,post_call_analysis_data
   $ retell agent get agent_123abc > config.json
   `,
   )
   .action(async (agentId, options) => {
     await getAgentCommand(agentId, {
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
       fields: options.fields,
     });
   });
@@ -493,7 +493,7 @@ agent
   )
   .option("--dry-run", "Preview changes without applying them")
   .option(
-    "--version <number>",
+    "--engine-version <number>",
     "Specific version to update (defaults to latest draft)",
   )
   .addHelpText(
@@ -502,7 +502,7 @@ agent
 Examples:
   $ retell agent update agent_123abc --file config.json
   $ retell agent update agent_123abc --file config.json --dry-run
-  $ retell agent update agent_123abc --file analysis.json --version 2
+  $ retell agent update agent_123abc --file analysis.json --engine-version 2
 
 Example JSON for post-call analysis:
   {
@@ -526,7 +526,7 @@ Note: Run 'retell agent-publish <agent_id>' after updating to publish changes.
     await updateAgentCommand(agentId, {
       file: options.file,
       dryRun: options.dryRun,
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
     });
   });
 
@@ -792,14 +792,14 @@ testsCases
   )
   .option("--llm-id <id>", "LLM ID (mutually exclusive with --flow-id)")
   .option("--flow-id <id>", "Flow ID (mutually exclusive with --llm-id)")
-  .option("--version <number>", "Version of the LLM or flow (optional)")
+  .option("--engine-version <number>", "Version of the LLM or flow (optional)")
   .addHelpText(
     "after",
     `
 Examples:
   $ retell tests cases create --file test-case.json --llm-id llm_abc123
   $ retell tests cases create --file test-case.json --flow-id cf_abc123
-  $ retell tests cases create --file test-case.json --llm-id llm_abc123 --version 2
+  $ retell tests cases create --file test-case.json --llm-id llm_abc123 --engine-version 2
 
 Test case JSON format:
   {
@@ -815,7 +815,7 @@ Test case JSON format:
       file: options.file,
       llmId: options.llmId,
       flowId: options.flowId,
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
     });
   });
 
@@ -915,14 +915,14 @@ testsBatch
     "--cases <ids>",
     "Comma-separated list of test case definition IDs",
   )
-  .option("--version <number>", "Version of the LLM or flow (optional)")
+  .option("--engine-version <number>", "Version of the LLM or flow (optional)")
   .addHelpText(
     "after",
     `
 Examples:
   $ retell tests batch create --llm-id llm_abc123 --cases tcd_xxx,tcd_yyy,tcd_zzz
   $ retell tests batch create --flow-id cf_abc123 --cases tcd_xxx,tcd_yyy
-  $ retell tests batch create --llm-id llm_abc123 --cases tcd_xxx --version 2
+  $ retell tests batch create --llm-id llm_abc123 --cases tcd_xxx --engine-version 2
   `,
   )
   .action(async (options) => {
@@ -930,7 +930,7 @@ Examples:
       llmId: options.llmId,
       flowId: options.flowId,
       cases: options.cases,
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
     });
   });
 
@@ -1144,7 +1144,7 @@ flows
   .command("get <conversation_flow_id>")
   .description("Get a specific conversation flow")
   .option(
-    "--version <number>",
+    "--engine-version <number>",
     "Specific version to retrieve (defaults to latest)",
   )
   .option("--fields <fields>", "Comma-separated list of fields to return")
@@ -1153,13 +1153,13 @@ flows
     `
 Examples:
   $ retell flows get cf_abc123
-  $ retell flows get cf_abc123 --version 2
+  $ retell flows get cf_abc123 --engine-version 2
   $ retell flows get cf_abc123 --fields conversation_flow_id,nodes,edges
   `,
   )
   .action(async (conversationFlowId, options) => {
     await getFlowCommand(conversationFlowId, {
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
       fields: options.fields,
     });
   });
@@ -1200,7 +1200,7 @@ flows
     "Path to JSON file containing flow updates",
   )
   .option(
-    "--version <number>",
+    "--engine-version <number>",
     "Specific version to update (defaults to latest)",
   )
   .addHelpText(
@@ -1208,13 +1208,13 @@ flows
     `
 Examples:
   $ retell flows update cf_abc123 --file updates.json
-  $ retell flows update cf_abc123 --file updates.json --version 2
+  $ retell flows update cf_abc123 --file updates.json --engine-version 2
   `,
   )
   .action(async (conversationFlowId, options) => {
     await updateFlowCommand(conversationFlowId, {
       file: options.file,
-      version: options.version ? parseInt(options.version, 10) : undefined,
+      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
     });
   });
 
