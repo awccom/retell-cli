@@ -35,8 +35,8 @@ export async function listPhoneNumbersCommand(
       phone_number_pretty: pn.phone_number_pretty,
       phone_number_type: pn.phone_number_type,
       nickname: pn.nickname,
-      inbound_agent_id: pn.inbound_agent_id,
-      outbound_agent_id: pn.outbound_agent_id,
+      inbound_agents: pn.inbound_agents ?? [],
+      outbound_agents: pn.outbound_agents ?? [],
     }));
 
     // Apply field filtering if requested

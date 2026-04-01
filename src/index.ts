@@ -1246,7 +1246,7 @@ phoneNumbers
     `
 Examples:
   $ retell phone-numbers list
-  $ retell phone-numbers list --fields phone_number,nickname,inbound_agent_id
+  $ retell phone-numbers list --fields phone_number,nickname,inbound_agents
   `,
   )
   .action(async (options) => {
@@ -1262,7 +1262,7 @@ phoneNumbers
     `
 Examples:
   $ retell phone-numbers get +14157774444
-  $ retell phone-numbers get +14157774444 --fields phone_number,inbound_agent_id
+  $ retell phone-numbers get +14157774444 --fields phone_number,inbound_agents
   `,
   )
   .action(async (phoneNumber, options) => {
@@ -1275,8 +1275,12 @@ phoneNumbers
   .requiredOption("--number <number>", "Phone number in E.164 format")
   .requiredOption("--termination-uri <uri>", "SIP trunk termination URI")
   .option("--nickname <name>", "Friendly name for reference")
-  .option("--inbound-agent <id>", "Agent ID for inbound calls")
-  .option("--outbound-agent <id>", "Agent ID for outbound calls")
+  .option("--inbound-agent <id>", "Single agent for inbound calls (shorthand for weight 1)")
+  .option("--outbound-agent <id>", "Single agent for outbound calls (shorthand for weight 1)")
+  .option("--inbound-agents <spec>", "Weighted inbound agents (format: id:weight,id:weight)")
+  .option("--outbound-agents <spec>", "Weighted outbound agents (format: id:weight,id:weight)")
+  .option("--inbound-sms-agents <spec>", "Weighted inbound SMS agents (format: id:weight,id:weight)")
+  .option("--outbound-sms-agents <spec>", "Weighted outbound SMS agents (format: id:weight,id:weight)")
   .option("--sip-username <user>", "SIP trunk auth username")
   .option("--sip-password <pass>", "SIP trunk auth password")
   .option("--fields <fields>", "Comma-separated list of fields to return")
@@ -1287,6 +1291,7 @@ Examples:
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --nickname "Support Line"
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agent agent_xxx
+  $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agents "agent_1:0.6,agent_2:0.4"
   `,
   )
   .action(async (options) => {

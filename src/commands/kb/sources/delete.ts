@@ -24,8 +24,8 @@ export async function deleteKnowledgeBaseSourceCommand(
 
     // Delete the source from the knowledge base
     const knowledgeBase = await client.knowledgeBase.deleteSource(
-      knowledgeBaseId,
       sourceId,
+      { knowledge_base_id: knowledgeBaseId },
     );
 
     const output: KnowledgeBaseMutationOutput = {

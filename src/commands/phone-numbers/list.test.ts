@@ -30,8 +30,8 @@ describe("listPhoneNumbersCommand", () => {
       phone_number_pretty: "(415) 777-4444",
       phone_number_type: "twilio",
       nickname: "Support Line",
-      inbound_agent_id: "agent_123",
-      outbound_agent_id: "agent_456",
+      inbound_agents: [{ agent_id: "agent_123", weight: 1 }],
+      outbound_agents: [{ agent_id: "agent_456", weight: 1 }],
       extra_field: "ignored",
     },
     {
@@ -39,8 +39,8 @@ describe("listPhoneNumbersCommand", () => {
       phone_number_pretty: "(415) 777-5555",
       phone_number_type: "custom",
       nickname: null,
-      inbound_agent_id: null,
-      outbound_agent_id: null,
+      inbound_agents: null,
+      outbound_agents: null,
       extra_field: "also ignored",
     },
   ];
@@ -68,16 +68,16 @@ describe("listPhoneNumbersCommand", () => {
           phone_number_pretty: "(415) 777-4444",
           phone_number_type: "twilio",
           nickname: "Support Line",
-          inbound_agent_id: "agent_123",
-          outbound_agent_id: "agent_456",
+          inbound_agents: [{ agent_id: "agent_123", weight: 1 }],
+          outbound_agents: [{ agent_id: "agent_456", weight: 1 }],
         },
         {
           phone_number: "+14157775555",
           phone_number_pretty: "(415) 777-5555",
           phone_number_type: "custom",
           nickname: null,
-          inbound_agent_id: null,
-          outbound_agent_id: null,
+          inbound_agents: [],
+          outbound_agents: [],
         },
       ]);
     });

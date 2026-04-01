@@ -29,8 +29,8 @@ describe("getPhoneNumberCommand", () => {
     phone_number_pretty: "(415) 777-4444",
     phone_number_type: "twilio",
     nickname: "Support Line",
-    inbound_agent_id: "agent_123",
-    outbound_agent_id: "agent_456",
+    inbound_agents: [{ agent_id: "agent_123", weight: 1 }],
+    outbound_agents: [{ agent_id: "agent_456", weight: 1 }],
     termination_uri: null,
     sip_trunk_auth_username: null,
   };
@@ -61,12 +61,12 @@ describe("getPhoneNumberCommand", () => {
   describe("field filtering", () => {
     it("should apply field filtering when --fields is specified", async () => {
       await getPhoneNumberCommand("+14157774444", {
-        fields: "phone_number,inbound_agent_id",
+        fields: "phone_number,inbound_agents",
       });
 
       expect(outputFormatter.filterFields).toHaveBeenCalledWith(
         mockPhoneNumber,
-        ["phone_number", "inbound_agent_id"],
+        ["phone_number", "inbound_agents"],
       );
     });
   });
