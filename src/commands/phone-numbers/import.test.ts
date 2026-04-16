@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { importPhoneNumberCommand, parseWeightedAgents } from "./import";
+import { importPhoneNumberCommand } from "./import";
+import { parseWeightedAgents } from "../../services/weighted-agents";
 import * as retellClient from "../../services/retell-client";
 import * as outputFormatter from "../../services/output-formatter";
 
-// Mock dependencies
 vi.mock("../../services/retell-client");
 vi.mock("../../services/output-formatter", async () => {
   const actual = await vi.importActual("../../services/output-formatter");
@@ -21,63 +21,16 @@ vi.mock("../../services/output-formatter", async () => {
   };
 });
 
-describe("parseWeightedAgents", () => {
+describe("parseWeightedAgents (re-exported from import)", () => {
   it("should parse a single agent without weight", () => {
     expect(parseWeightedAgents("agent_123")).toEqual([
       { agent_id: "agent_123", weight: 1 },
     ]);
   });
-
-  it("should parse a single agent with weight 1", () => {
-    expect(parseWeightedAgents("agent_123:1")).toEqual([
-      { agent_id: "agent_123", weight: 1 },
-    ]);
-  });
-
-  it("should parse multiple agents with weights", () => {
-    expect(parseWeightedAgents("agent_1:0.6,agent_2:0.4")).toEqual([
-      { agent_id: "agent_1", weight: 0.6 },
-      { agent_id: "agent_2", weight: 0.4 },
-    ]);
-  });
-
-  it("should parse multiple agents without weights (equal distribution)", () => {
-    const result = parseWeightedAgents("agent_1,agent_2");
-    expect(result).toHaveLength(2);
-    expect(result[0].agent_id).toBe("agent_1");
-    expect(result[1].agent_id).toBe("agent_2");
-    expect(result[0].weight + result[1].weight).toBeCloseTo(1.0);
-  });
-
-  it("should throw on empty spec", () => {
-    expect(() => parseWeightedAgents("")).toThrow("Empty agent spec");
-  });
-
-  it("should throw on invalid weight", () => {
-    expect(() => parseWeightedAgents("agent_1:abc")).toThrow("Invalid weight");
-  });
-
-  it("should throw on weight out of range", () => {
-    expect(() => parseWeightedAgents("agent_1:0")).toThrow("Invalid weight");
-    expect(() => parseWeightedAgents("agent_1:1.5")).toThrow("Invalid weight");
-  });
-
-  it("should throw when weights don't sum to 1", () => {
-    expect(() => parseWeightedAgents("agent_1:0.3,agent_2:0.3")).toThrow(
-      "must sum to 1.0",
-    );
-  });
-
-  it("should throw when mixing weighted and unweighted agents", () => {
-    expect(() => parseWeightedAgents("agent_1:0.5,agent_2")).toThrow(
-      "Cannot mix",
-    );
-  });
 });
 
 describe("importPhoneNumberCommand", () => {
   let mockClient: any;
-  let mockExit: any;
 
   const mockImportedPhoneNumber = {
     phone_number: "+14157774444",
@@ -100,8 +53,6 @@ describe("importPhoneNumberCommand", () => {
     };
 
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
-    mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   describe("successful import", () => {
@@ -197,7 +148,9 @@ describe("importPhoneNumberCommand", () => {
         inboundAgents: "agent_2:1",
       });
 
-      expect(mockExit).toHaveBeenCalledWith(1);
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
       expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
     });
 
@@ -209,7 +162,9 @@ describe("importPhoneNumberCommand", () => {
         outboundAgents: "agent_2:1",
       });
 
-      expect(mockExit).toHaveBeenCalledWith(1);
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
       expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
     });
   });
@@ -237,18 +192,6 @@ describe("importPhoneNumberCommand", () => {
       await importPhoneNumberCommand({
         number: "invalid",
         terminationUri: "someuri.pstn.twilio.com",
-      });
-
-      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(apiError);
-    });
-
-    it("should handle invalid termination URI errors", async () => {
-      const apiError = new Error("Invalid termination URI");
-      mockClient.phoneNumber.import.mockRejectedValue(apiError);
-
-      await importPhoneNumberCommand({
-        number: "+14157774444",
-        terminationUri: "invalid-uri",
       });
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(apiError);

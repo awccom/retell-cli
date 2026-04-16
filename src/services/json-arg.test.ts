@@ -1,0 +1,93 @@
+/**
+ * Unit tests for json-arg service
+ */
+
+import { describe, it, expect, afterEach } from "vitest";
+import { writeFileSync, unlinkSync, existsSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import { loadJsonArg, readJsonFile } from "./json-arg";
+
+describe("loadJsonArg", () => {
+  const tmpPath = join(
+    tmpdir(),
+    `retell-cli-json-arg-test-${process.pid}.json`,
+  );
+
+  afterEach(() => {
+    if (existsSync(tmpPath)) unlinkSync(tmpPath);
+  });
+
+  it("returns undefined when value is undefined", () => {
+    expect(loadJsonArg(undefined, "--metadata")).toBeUndefined();
+  });
+
+  it("returns undefined when value is empty string", () => {
+    expect(loadJsonArg("", "--metadata")).toBeUndefined();
+  });
+
+  it("parses inline JSON object", () => {
+    expect(loadJsonArg('{"a":1,"b":"two"}', "--metadata")).toEqual({
+      a: 1,
+      b: "two",
+    });
+  });
+
+  it("parses inline JSON array", () => {
+    expect(loadJsonArg("[1,2,3]", "--tasks")).toEqual([1, 2, 3]);
+  });
+
+  it("reads JSON from @path", () => {
+    writeFileSync(tmpPath, JSON.stringify({ hello: "world" }));
+    expect(loadJsonArg("@" + tmpPath, "--metadata")).toEqual({
+      hello: "world",
+    });
+  });
+
+  it("throws ValidationError on invalid inline JSON", () => {
+    try {
+      loadJsonArg("{bad json}", "--metadata");
+      expect.fail("expected throw");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/--metadata: invalid JSON/);
+    }
+  });
+
+  it("throws ValidationError when @path does not exist", () => {
+    try {
+      loadJsonArg("@/nonexistent-path-xyz.json", "--metadata");
+      expect.fail("expected throw");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/file not found/);
+    }
+  });
+});
+
+describe("readJsonFile", () => {
+  const tmpPath = join(
+    tmpdir(),
+    `retell-cli-json-arg-file-test-${process.pid}.json`,
+  );
+
+  afterEach(() => {
+    if (existsSync(tmpPath)) unlinkSync(tmpPath);
+  });
+
+  it("reads and parses JSON file", () => {
+    writeFileSync(tmpPath, JSON.stringify({ a: 1 }));
+    expect(readJsonFile(tmpPath, "--file")).toEqual({ a: 1 });
+  });
+
+  it("throws ValidationError when file does not exist", () => {
+    expect(() => readJsonFile("/nonexistent-xyz.json", "--file")).toThrow(
+      /file not found/,
+    );
+  });
+
+  it("throws ValidationError on malformed JSON", () => {
+    writeFileSync(tmpPath, "{ not json");
+    expect(() => readJsonFile(tmpPath, "--file")).toThrow(/invalid JSON/);
+  });
+});

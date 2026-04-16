@@ -5,6 +5,65 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-16
+
+Bulk addition of CLI surface for Retell SDK resources that were previously unwrapped or partially wrapped. Bumped `retell-sdk` dependency to `^5.12.0`.
+
+### Added
+
+#### Calls (`calls`)
+- `calls create-phone` — create an outbound phone call (supports `--agent-override`, `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--override-agent-id`, `--ignore-e164-validation`).
+- `calls create-web` — create a web call for browser-based agents.
+- `calls register-phone` — register a call for custom telephony.
+- `calls update <call_id>` — update metadata, custom attributes, dynamic variables, and data-storage setting.
+- `calls delete <call_id>` — delete a call and its data.
+- Note: `calls list` / `calls get` are intentionally omitted; use `transcripts list` / `transcripts get` / `transcripts search`.
+
+#### Batch Calls (`batch-calls`)
+- `batch-calls create` — schedule a batch of outbound calls from a JSON tasks file with optional `--call-time-window`, `--reserved-concurrency`, `--trigger-timestamp`.
+
+#### LLMs (`llms`)
+- `llms list`, `llms get <llm_id>`, `llms delete <llm_id>`.
+- `llms create` — via simple flags (`--general-prompt`, `--model`, `--s2s-model`, `--start-speaker`, `--begin-message`) or full `--file` body.
+- `llms update <llm_id> --file <path>` — full body update.
+
+#### Voices (`voices`)
+- `voices list`, `voices get <voice_id>`, `voices search`.
+- `voices add-resource` — add a community voice to the account library.
+- `voices clone` — clone a voice from one or more audio files (repeatable `--file`).
+
+#### Chats (`chats`) and Chat Agents (`chat-agents`)
+- `chats create`, `chats get`, `chats list`, `chats update`, `chats end`.
+- `chats complete` — send a user message to an existing chat and receive the agent's completion.
+- `chats sms` — create an SMS-backed chat session.
+- `chat-agents list/get/create/update/delete/versions/publish` — full chat agent lifecycle.
+
+#### Phone Numbers (CRUD gap filled)
+- `phone-numbers create` — purchase a new number and bind agents (reuses weighted-agent flags from `import`).
+- `phone-numbers update <phone_number>` — update bound agents, nickname, SIP auth (note: SDK uses `auth_username`/`auth_password` on update vs `sip_trunk_auth_username`/`sip_trunk_auth_password` on import; CLI flag `--sip-username/--sip-password` translates correctly), country allow-lists, webhook URLs.
+- `phone-numbers delete <phone_number>` — release a phone number.
+
+#### Flow Components (`flow-components`)
+- `flow-components list/get/create/update/delete` — CRUD for reusable conversation-flow components (create/update bodies via `--file`).
+
+#### Concurrency and MCP Tools
+- `concurrency get` — view the org's current call concurrency and limits.
+- `agents mcp-tools <agent_id> --mcp-id <id>` — list MCP tools available to an agent from a specific MCP server.
+
+### Changed
+
+- Bumped `retell-sdk` from `^5.10.3` to `^5.12.0`.
+- Extracted weighted-agent parsing from `phone-numbers/import.ts` into a shared `src/services/weighted-agents.ts` so `import`, `create`, and `update` can share a single implementation. Behavior of `phone-numbers import` is unchanged; its mutual-exclusion errors now flow through `handleSdkError` as `ValidationError` rather than via an inline `process.exit(1)`, giving consistent error shape with other commands.
+- Added a small `src/services/json-arg.ts` helper for flags that accept inline JSON or `@path` file references (`--metadata`, `--dynamic-variables`, `--custom-sip-headers`, etc.).
+
+### Tests
+
+- Added ~80 new test cases covering happy paths, flag parsing, validation errors, and SDK error passthrough for every new command, plus a dedicated test file for the weighted-agents service and json-arg helper.
+
+### Known gaps
+
+- Knowledge-base `update` is still not exposed by the SDK (only `create/retrieve/list/delete/addSources/deleteSource`), so no CLI command was added there.
+
 ## [1.4.0] - 2026-01-27
 
 ### Added

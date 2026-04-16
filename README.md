@@ -8,10 +8,15 @@ Community-built command-line tool for Retell AI - designed to give AI assistants
 ## Features
 
 - **Transcript Management** - List, retrieve, and analyze call transcripts
-- **Agent Management** - Full CRUD for Retell AI agents (create, list, update, delete, versions)
-- **Phone Number Management** - List, retrieve, and import phone numbers
+- **Agent Management** - Full CRUD for Retell AI agents (create, list, update, delete, versions, MCP tools)
+- **Call Creation** - Launch phone, web, and SMS-chat calls; register custom-telephony calls; schedule batch calls
+- **Phone Number Management** - Purchase, import, list, update, and release phone numbers (with weighted agent routing)
+- **Chat Sessions** - Create and manage chat sessions, chat agents, SMS chats, and LLM completions
+- **LLM + Voice Resources** - CRUD Retell LLMs; browse, search, add, and clone voice resources
 - **Prompt Engineering** - Pull, edit, and update agent prompts
 - **Tool Management** - Full CRUD for agent tools (webhooks, custom functions, etc.)
+- **Flow Components** - Reusable conversation-flow components (CRUD)
+- **Concurrency Monitoring** - Check org-wide call concurrency and limits
 - **Multi-format Support** - Works with Retell LLM and Conversation Flows
 - **AI-Friendly** - JSON output by default for AI coding assistants
 - **Cross-Shell** - Works in bash, fish, zsh, and more
@@ -779,6 +784,130 @@ retell transcripts search --status error --since 2025-11-08 --fields call_id
 retell transcripts analyze <call_id> --hotspots-only
 
 # 3. No jq or grep needed - direct JSON parsing!
+```
+
+### Calls (create / update / delete)
+
+Call listing and retrieval stay under `transcripts`. Use `calls` to create and mutate calls.
+
+```bash
+# Outbound phone call
+retell calls create-phone --from-number +14157774444 --to-number +12137774445
+
+# Web call (browser-based agent)
+retell calls create-web --agent-id agent_xxx --metadata '{"session_id":"s1"}'
+
+# Register a call for custom telephony
+retell calls register-phone --agent-id agent_xxx --direction outbound
+
+# Update metadata / data storage on an existing call
+retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
+  --data-storage-setting everything_except_pii
+
+# Delete a call and its data
+retell calls delete call_abc123
+```
+
+Flags on `create-phone` / `create-web` / `register-phone`: `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--override-agent-id`, `--override-agent-version`.
+
+### Batch Calls
+
+```bash
+# Schedule a batch of outbound calls from a JSON tasks file
+retell batch-calls create \
+  --from-number +14157774444 \
+  --tasks tasks.json \
+  --name "April outreach" \
+  --reserved-concurrency 10
+
+# Optional: restrict calling windows
+retell batch-calls create --from-number +1 --tasks tasks.json \
+  --call-time-window window.json
+```
+
+### LLMs
+
+```bash
+retell llms list --fields llm_id,is_published
+retell llms get llm_abc
+retell llms create --general-prompt "You are a helpful agent." --model gpt-4.1
+retell llms create --file my-llm.json
+retell llms update llm_abc --file updates.json
+retell llms delete llm_abc
+```
+
+### Voices
+
+```bash
+retell voices list --fields voice_id,voice_name,provider
+retell voices get voice_abc
+retell voices search --search-query "warm female" --voice-provider elevenlabs
+retell voices add-resource --provider-voice-id pv_1 --voice-name "Allie"
+retell voices clone --voice-name "Dev Clone" --voice-provider elevenlabs --file sample.wav
+```
+
+### Chats
+
+```bash
+retell chats create --agent-id agent_xxx
+retell chats list --limit 10 --sort-order descending
+retell chats get chat_abc
+retell chats complete --chat-id chat_abc --content "What's the status?"
+retell chats sms --from-number +14157774444 --to-number +12137774445
+retell chats update chat_abc --metadata '{"k":"v"}'
+retell chats end chat_abc
+```
+
+### Chat Agents
+
+```bash
+retell chat-agents list
+retell chat-agents create --llm-id llm_abc --name "Support Chat"
+retell chat-agents get ca_abc --version 2
+retell chat-agents update ca_abc --file updates.json
+retell chat-agents versions ca_abc
+retell chat-agents publish ca_abc
+retell chat-agents delete ca_abc
+```
+
+### Phone Numbers (Full CRUD)
+
+```bash
+# Purchase a new number
+retell phone-numbers create --area-code 415 --nickname "Frontdesk" \
+  --inbound-agent agent_xxx
+
+# Update a purchased number (weighted agents + SIP)
+retell phone-numbers update +14157774444 \
+  --inbound-agents "agent_1:0.6,agent_2:0.4" \
+  --nickname "Support"
+
+# Release a number
+retell phone-numbers delete +14157774444
+```
+
+### Flow Components
+
+```bash
+retell flow-components list
+retell flow-components get comp_abc
+retell flow-components create --file component.json
+retell flow-components update comp_abc --file updates.json
+retell flow-components delete comp_abc
+```
+
+### Concurrency
+
+```bash
+retell concurrency get
+retell concurrency get --fields concurrency_limit,current_concurrency
+```
+
+### Agent MCP Tools
+
+```bash
+retell agents mcp-tools agent_abc --mcp-id mcp_1
+retell agents mcp-tools agent_abc --mcp-id mcp_1 --component-id comp_1 --version 3
 ```
 
 ## Common Workflows
