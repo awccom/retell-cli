@@ -12,6 +12,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { applyWeightedAgents } from "../../services/weighted-agents";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { PhoneNumberUpdateParams } from "retell-sdk/resources/phone-number";
 
 const VALID_TRANSPORTS = ["TLS", "TCP", "UDP"] as const;
@@ -55,9 +56,21 @@ export async function updatePhoneNumberCommand(
 
     if (options.nickname !== undefined)
       params.nickname = options.nickname === "" ? null : options.nickname;
-    if (options.terminationUri) params.termination_uri = options.terminationUri;
-    if (options.sipUsername) params.auth_username = options.sipUsername;
-    if (options.sipPassword) params.auth_password = options.sipPassword;
+    if (options.terminationUri !== undefined)
+      params.termination_uri = requireNonEmpty(
+        options.terminationUri,
+        "--termination-uri",
+      );
+    if (options.sipUsername !== undefined)
+      params.auth_username = requireNonEmpty(
+        options.sipUsername,
+        "--sip-username",
+      );
+    if (options.sipPassword !== undefined)
+      params.auth_password = requireNonEmpty(
+        options.sipPassword,
+        "--sip-password",
+      );
     if (options.transport !== undefined)
       params.transport = options.transport === "" ? null : options.transport;
     if (options.inboundWebhookUrl !== undefined)
@@ -71,16 +84,22 @@ export async function updatePhoneNumberCommand(
     if (options.fallbackNumber !== undefined)
       params.fallback_number =
         options.fallbackNumber === "" ? null : options.fallbackNumber;
-    if (options.allowedInboundCountryList)
-      params.allowed_inbound_country_list = options.allowedInboundCountryList
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    if (options.allowedOutboundCountryList)
-      params.allowed_outbound_country_list = options.allowedOutboundCountryList
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (options.allowedInboundCountryList !== undefined)
+      params.allowed_inbound_country_list =
+        options.allowedInboundCountryList === ""
+          ? null
+          : options.allowedInboundCountryList
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+    if (options.allowedOutboundCountryList !== undefined)
+      params.allowed_outbound_country_list =
+        options.allowedOutboundCountryList === ""
+          ? null
+          : options.allowedOutboundCountryList
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
 
     applyWeightedAgents(
       params as unknown as Record<string, unknown>,

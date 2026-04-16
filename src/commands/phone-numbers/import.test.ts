@@ -6,7 +6,6 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { importPhoneNumberCommand } from "./import";
-import { parseWeightedAgents } from "../../services/weighted-agents";
 import * as retellClient from "../../services/retell-client";
 import * as outputFormatter from "../../services/output-formatter";
 
@@ -19,14 +18,6 @@ vi.mock("../../services/output-formatter", async () => {
     handleSdkError: vi.fn(),
     filterFields: vi.fn((data, _fields) => data),
   };
-});
-
-describe("parseWeightedAgents (re-exported from import)", () => {
-  it("should parse a single agent without weight", () => {
-    expect(parseWeightedAgents("agent_123")).toEqual([
-      { agent_id: "agent_123", weight: 1 },
-    ]);
-  });
 });
 
 describe("importPhoneNumberCommand", () => {

@@ -42,4 +42,20 @@ describe("chatCompleteCommand", () => {
     await chatCompleteCommand({ chatId: "chat_1", content: "Hi" });
     expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
+
+  it("rejects empty-string --chat-id", async () => {
+    await chatCompleteCommand({ chatId: "", content: "Hi" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.createChatCompletion).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --content", async () => {
+    await chatCompleteCommand({ chatId: "chat_1", content: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.createChatCompletion).not.toHaveBeenCalled();
+  });
 });

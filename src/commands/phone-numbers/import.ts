@@ -11,14 +11,9 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import {
-  parseWeightedAgents,
-  applyWeightedAgents,
-} from "../../services/weighted-agents";
+import { applyWeightedAgents } from "../../services/weighted-agents";
 import { requireNonEmpty } from "../../services/flag-guards";
 import type { PhoneNumberImportParams } from "retell-sdk/resources/phone-number";
-
-export { parseWeightedAgents };
 
 export interface ImportPhoneNumberOptions {
   number: string;

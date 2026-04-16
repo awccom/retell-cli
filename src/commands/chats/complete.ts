@@ -10,6 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { requireNonEmpty } from "../../services/flag-guards";
 
 export interface ChatCompleteOptions {
   chatId: string;
@@ -23,8 +24,8 @@ export async function chatCompleteCommand(
   try {
     const client = getRetellClient();
     const result = await client.chat.createChatCompletion({
-      chat_id: options.chatId,
-      content: options.content,
+      chat_id: requireNonEmpty(options.chatId, "--chat-id"),
+      content: requireNonEmpty(options.content, "--content"),
     });
 
     const output = options.fields

@@ -83,6 +83,8 @@ describe("updatePhoneNumberCommand", () => {
       inboundWebhookUrl: "",
       inboundSmsWebhookUrl: "",
       transport: "",
+      allowedInboundCountryList: "",
+      allowedOutboundCountryList: "",
     });
     expect(mockClient.phoneNumber.update).toHaveBeenCalledWith("+14157774444", {
       nickname: null,
@@ -90,7 +92,21 @@ describe("updatePhoneNumberCommand", () => {
       inbound_webhook_url: null,
       inbound_sms_webhook_url: null,
       transport: null,
+      allowed_inbound_country_list: null,
+      allowed_outbound_country_list: null,
     });
+  });
+
+  it.each([
+    ["--termination-uri", "terminationUri"],
+    ["--sip-username", "sipUsername"],
+    ["--sip-password", "sipPassword"],
+  ] as const)("rejects empty-string %s", async (_, key) => {
+    await updatePhoneNumberCommand("+14157774444", { [key]: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.phoneNumber.update).not.toHaveBeenCalled();
   });
 
   it("passes non-empty nullable fields through unchanged", async () => {

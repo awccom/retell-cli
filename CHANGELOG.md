@@ -80,6 +80,13 @@ Bulk addition of CLI surface for Retell SDK resources that were previously unwra
 - Pre-existing numeric flag call sites in `src/index.ts` (`transcripts list/analyze/search`, `agents list/get/update`, `tests cases/batches create`, `flows list/get/update` — `--limit`, `--engine-version`, `--latency-threshold`, `--silence-threshold`) migrated to the centralized `parseNumericFlag`. Invalid or whitespace-only values now produce a clear error instead of silently becoming `NaN`.
 - Weighted-agents parser now rejects empty `agent_id` (e.g. `:0.5`, `agent_1:0.5,:0.5`) with a clear error instead of emitting `{agent_id: "", weight: 0.5}`.
 
+### Fixed (fourth review pass)
+
+- `chats complete` now rejects empty `--chat-id` / `--content` via `requireNonEmpty` (was missed in the third-pass rollout). Commander treats `--flag ""` as a defined string, so the empty values would otherwise reach the SDK and surface as an opaque 400.
+- `applyWeightedAgents` now rejects empty-string agent flags (`--inbound-agent ""`, `--outbound-agent ""`, `--inbound-agents ""`, `--outbound-agents ""`, `--inbound-sms-agents ""`, `--outbound-sms-agents ""`) with a clear `VALIDATION_ERROR` instead of silently dropping the binding. Closes a hole where `phone-numbers create/update/import --inbound-agent ""` would ship with no inbound binding the user thought they'd set.
+- `phone-numbers update --termination-uri ""` / `--sip-username ""` / `--sip-password ""` now reject (these SDK fields are not nullable). `--allowed-inbound-country-list ""` / `--allowed-outbound-country-list ""` now clear the list (map to `null`) — matching the nullable-clearing pattern applied to the other update fields in the second pass.
+- Removed dead `parseWeightedAgents` re-export from `phone-numbers/import.ts` and the single test that only exercised the re-export (not behavior).
+
 ### Known gaps
 
 - Knowledge-base `update` is still not exposed by the SDK (only `create/retrieve/list/delete/addSources/deleteSource`), so no CLI command was added there.

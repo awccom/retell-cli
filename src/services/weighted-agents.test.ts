@@ -231,4 +231,26 @@ describe("applyWeightedAgents", () => {
       );
     }
   });
+
+  it("rejects empty-string single-agent flags as ValidationError", () => {
+    for (const [flag, key] of [
+      ["--inbound-agent", "inboundAgent"],
+      ["--outbound-agent", "outboundAgent"],
+      ["--inbound-agents", "inboundAgents"],
+      ["--outbound-agents", "outboundAgents"],
+      ["--inbound-sms-agents", "inboundSmsAgents"],
+      ["--outbound-sms-agents", "outboundSmsAgents"],
+    ] as const) {
+      const params: Record<string, unknown> = {};
+      try {
+        applyWeightedAgents(params, { [key]: "" });
+        expect.fail(`Expected error for empty ${flag}`);
+      } catch (err) {
+        expect((err as Error).name).toBe("ValidationError");
+        expect((err as Error).message).toMatch(
+          new RegExp(`${flag} must not be empty`),
+        );
+      }
+    }
+  });
 });

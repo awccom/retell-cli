@@ -99,6 +99,19 @@ export function applyWeightedAgents(
   flags: WeightedAgentFlags,
   options: ApplyWeightedAgentsOptions = { allowSms: true },
 ): void {
+  for (const [flagName, val] of [
+    ["--inbound-agent", flags.inboundAgent],
+    ["--outbound-agent", flags.outboundAgent],
+    ["--inbound-agents", flags.inboundAgents],
+    ["--outbound-agents", flags.outboundAgents],
+    ["--inbound-sms-agents", flags.inboundSmsAgents],
+    ["--outbound-sms-agents", flags.outboundSmsAgents],
+  ] as const) {
+    if (val !== undefined && val.trim() === "") {
+      throwValidation(`${flagName} must not be empty`);
+    }
+  }
+
   if (flags.inboundAgent && flags.inboundAgents) {
     throwValidation(
       "--inbound-agent and --inbound-agents are mutually exclusive. Use one or the other.",

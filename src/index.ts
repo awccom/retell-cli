@@ -1446,11 +1446,11 @@ phoneNumbers
   )
   .option(
     "--allowed-inbound-country-list <csv>",
-    "Comma-separated ISO-2 country codes",
+    "Comma-separated ISO-2 country codes (use empty string to clear)",
   )
   .option(
     "--allowed-outbound-country-list <csv>",
-    "Comma-separated ISO-2 country codes",
+    "Comma-separated ISO-2 country codes (use empty string to clear)",
   )
   .option(
     "--inbound-agent <id>",
