@@ -21,10 +21,15 @@ export async function updateFlowComponentCommand(
   options: UpdateFlowComponentOptions,
 ): Promise<void> {
   try {
-    const body = readJsonObjectFile(
-      options.file,
-      "--file",
-    ) as unknown as ConversationFlowComponentUpdateParams;
+    const rawBody = readJsonObjectFile(options.file, "--file");
+    if (Object.keys(rawBody).length === 0) {
+      const err = new Error(
+        "--file body is empty. Pass at least one mutation field.",
+      );
+      err.name = "ValidationError";
+      throw err;
+    }
+    const body = rawBody as unknown as ConversationFlowComponentUpdateParams;
 
     const client = getRetellClient();
     const component = await client.conversationFlowComponent.update(

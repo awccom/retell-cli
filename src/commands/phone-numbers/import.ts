@@ -27,8 +27,6 @@ export interface ImportPhoneNumberOptions {
   outboundAgent?: string;
   inboundAgents?: string;
   outboundAgents?: string;
-  inboundSmsAgents?: string;
-  outboundSmsAgents?: string;
   sipUsername?: string;
   sipPassword?: string;
   fields?: string;
@@ -47,14 +45,26 @@ export async function importPhoneNumberCommand(
       importParams.nickname = options.nickname;
     }
 
-    applyWeightedAgents(importParams as unknown as Record<string, unknown>, {
-      inboundAgent: options.inboundAgent,
-      outboundAgent: options.outboundAgent,
-      inboundAgents: options.inboundAgents,
-      outboundAgents: options.outboundAgents,
-      inboundSmsAgents: options.inboundSmsAgents,
-      outboundSmsAgents: options.outboundSmsAgents,
-    });
+    const weightedFlags = options as unknown as {
+      inboundAgent?: string;
+      outboundAgent?: string;
+      inboundAgents?: string;
+      outboundAgents?: string;
+      inboundSmsAgents?: string;
+      outboundSmsAgents?: string;
+    };
+    applyWeightedAgents(
+      importParams as unknown as Record<string, unknown>,
+      {
+        inboundAgent: weightedFlags.inboundAgent,
+        outboundAgent: weightedFlags.outboundAgent,
+        inboundAgents: weightedFlags.inboundAgents,
+        outboundAgents: weightedFlags.outboundAgents,
+        inboundSmsAgents: weightedFlags.inboundSmsAgents,
+        outboundSmsAgents: weightedFlags.outboundSmsAgents,
+      },
+      { allowSms: false },
+    );
 
     if (options.sipUsername) {
       importParams.sip_trunk_auth_username = options.sipUsername;

@@ -23,10 +23,15 @@ export async function updateChatAgentCommand(
   options: UpdateChatAgentOptions,
 ): Promise<void> {
   try {
-    const body = readJsonObjectFile(
-      options.file,
-      "--file",
-    ) as unknown as ChatAgentUpdateParams;
+    const rawBody = readJsonObjectFile(options.file, "--file");
+    if (Object.keys(rawBody).length === 0) {
+      const err = new Error(
+        "--file body is empty. Pass at least one mutation field (e.g. agent_name, response_engine).",
+      );
+      err.name = "ValidationError";
+      throw err;
+    }
+    const body = rawBody as unknown as ChatAgentUpdateParams;
 
     const client = getRetellClient();
     const agent = await client.chatAgent.update(agentId, body);

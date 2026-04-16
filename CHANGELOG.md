@@ -67,8 +67,18 @@ Bulk addition of CLI surface for Retell SDK resources that were previously unwra
 - `calls update`, `chats update`, and `phone-numbers update` now require at least one mutation flag instead of silently sending an empty body to the SDK.
 - Body-as-file flags (`llms create/update`, `chat-agents create/update`, `flow-components create/update`, `calls create-phone/create-web --agent-override`, `batch-calls create --call-time-window`) now reject non-object JSON (arrays, null, scalars) with a clear `ValidationError` via new `readJsonObjectFile` helper.
 - README: per-command flag lists for `calls create-phone / create-web / register-phone` now reflect the actual supported flags on each command.
-- `phone-numbers create` help no longer claims `--country-code` defaults to US or `--number-provider` defaults to twilio (the CLI does not set these defaults).
+- `phone-numbers create` help no longer claims `--country-code` defaults to US or `--number-provider` defaults to twilio (the CLI does not set these defaults); the SDK still applies those server-side.
 - `loadJsonArg` now throws a descriptive error for a bare `@` with no path.
+
+### Fixed (second review pass)
+
+- `chat-agents create` / `llms create` now reject `--file` combined with simple flags (previously the simple flags were silently ignored).
+- `phone-numbers update` can now clear nullable fields with an explicit empty string (`--nickname ""`, `--fallback-number ""`, `--inbound-webhook-url ""`, `--inbound-sms-webhook-url ""`, `--transport ""` map to `null` in the SDK request). Previously these were silently dropped.
+- `phone-numbers create` / `update` now validate `--transport` against `TLS`/`TCP`/`UDP` before the SDK call (previously typos passed through and produced opaque 400s).
+- `llms update` / `chat-agents update` / `flow-components update` now reject an empty `--file` body object, matching the empty-body guard already in place on `calls update` / `chats update` / `phone-numbers update`.
+- `phone-numbers import` no longer advertises `--inbound-sms-agents` / `--outbound-sms-agents`; SMS agent bindings are not supported on import per the SDK. Use `phone-numbers update` after import to bind SMS agents.
+- Pre-existing numeric flag call sites in `src/index.ts` (`transcripts list/analyze/search`, `agents list/get/update`, `tests cases/batches create`, `flows list/get/update` — `--limit`, `--engine-version`, `--latency-threshold`, `--silence-threshold`) migrated to the centralized `parseNumericFlag`. Invalid or whitespace-only values now produce a clear error instead of silently becoming `NaN`.
+- Weighted-agents parser now rejects empty `agent_id` (e.g. `:0.5`, `agent_1:0.5,:0.5`) with a clear error instead of emitting `{agent_id: "", weight: 0.5}`.
 
 ### Known gaps
 

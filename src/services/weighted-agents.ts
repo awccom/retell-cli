@@ -28,21 +28,25 @@ export function parseWeightedAgents(spec: string): WeightedAgent[] {
 
   const agents: WeightedAgent[] = entries.map((entry) => {
     const parts = entry.split(":");
+    if (parts.length > 2) {
+      throw new Error(
+        `Invalid agent spec "${entry}". Expected format: agent_id or agent_id:weight`,
+      );
+    }
+    const agentId = parts[0].trim();
+    if (!agentId) {
+      throw new Error(`Invalid agent spec "${entry}". Agent ID is empty.`);
+    }
     if (parts.length === 1) {
-      return { agent_id: parts[0], weight: -1 };
+      return { agent_id: agentId, weight: -1 };
     }
-    if (parts.length === 2) {
-      const weight = Number(parts[1]);
-      if (isNaN(weight) || weight <= 0 || weight > 1) {
-        throw new Error(
-          `Invalid weight "${parts[1]}" for agent "${parts[0]}". Weight must be a number between 0 (exclusive) and 1 (inclusive).`,
-        );
-      }
-      return { agent_id: parts[0], weight };
+    const weight = Number(parts[1]);
+    if (isNaN(weight) || weight <= 0 || weight > 1) {
+      throw new Error(
+        `Invalid weight "${parts[1]}" for agent "${agentId}". Weight must be a number between 0 (exclusive) and 1 (inclusive).`,
+      );
     }
-    throw new Error(
-      `Invalid agent spec "${entry}". Expected format: agent_id or agent_id:weight`,
-    );
+    return { agent_id: agentId, weight };
   });
 
   const allDefault = agents.every((a) => a.weight === -1);

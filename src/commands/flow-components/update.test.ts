@@ -63,4 +63,13 @@ describe("updateFlowComponentCommand", () => {
     await updateFlowComponentCommand("c_1", { file: tmpFile });
     expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
+
+  it("rejects empty body file", async () => {
+    writeFileSync(tmpFile, JSON.stringify({}));
+    await updateFlowComponentCommand("c_1", { file: tmpFile });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.conversationFlowComponent.update).not.toHaveBeenCalled();
+  });
 });

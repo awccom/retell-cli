@@ -26,10 +26,15 @@ export async function updateLlmCommand(
   options: UpdateLlmOptions,
 ): Promise<void> {
   try {
-    const body = readJsonObjectFile(
-      options.file,
-      "--file",
-    ) as unknown as LlmUpdateParams;
+    const rawBody = readJsonObjectFile(options.file, "--file");
+    if (Object.keys(rawBody).length === 0) {
+      const err = new Error(
+        "--file body is empty. Pass at least one mutation field (e.g. general_prompt, model).",
+      );
+      err.name = "ValidationError";
+      throw err;
+    }
+    const body = rawBody as unknown as LlmUpdateParams;
 
     if (options.version !== undefined) {
       body.query_version = parseNumericFlag(options.version, "--version");

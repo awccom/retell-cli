@@ -38,6 +38,7 @@ export interface CreatePhoneNumberOptions {
 
 const VALID_COUNTRIES = ["US", "CA"] as const;
 const VALID_PROVIDERS = ["twilio", "telnyx"] as const;
+const VALID_TRANSPORTS = ["TLS", "TCP", "UDP"] as const;
 
 export async function createPhoneNumberCommand(
   options: CreatePhoneNumberOptions = {},
@@ -57,6 +58,14 @@ export async function createPhoneNumberCommand(
     ) {
       throwValidation(
         `--number-provider must be one of: ${VALID_PROVIDERS.join(", ")}`,
+      );
+    }
+    if (
+      options.transport &&
+      !VALID_TRANSPORTS.includes(options.transport as never)
+    ) {
+      throwValidation(
+        `--transport must be one of: ${VALID_TRANSPORTS.join(", ")}`,
       );
     }
 

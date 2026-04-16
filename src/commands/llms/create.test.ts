@@ -64,4 +64,13 @@ describe("createLlmCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects --file combined with simple flags", async () => {
+    writeFileSync(tmpFile, JSON.stringify({ general_prompt: "body" }));
+    await createLlmCommand({ file: tmpFile, generalPrompt: "override" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.llm.create).not.toHaveBeenCalled();
+  });
 });

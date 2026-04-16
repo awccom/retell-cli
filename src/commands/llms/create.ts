@@ -31,6 +31,18 @@ export async function createLlmCommand(
     let params: LlmCreateParams;
 
     if (options.file) {
+      const simpleFlags = [
+        options.generalPrompt !== undefined && "--general-prompt",
+        options.model !== undefined && "--model",
+        options.s2sModel !== undefined && "--s2s-model",
+        options.startSpeaker !== undefined && "--start-speaker",
+        options.beginMessage !== undefined && "--begin-message",
+      ].filter(Boolean);
+      if (simpleFlags.length > 0) {
+        throwValidation(
+          `--file is mutually exclusive with ${simpleFlags.join(", ")}. Put all fields in the JSON body.`,
+        );
+      }
       params = readJsonObjectFile(
         options.file,
         "--file",

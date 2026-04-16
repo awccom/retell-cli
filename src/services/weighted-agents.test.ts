@@ -74,6 +74,25 @@ describe("parseWeightedAgents", () => {
       /Invalid agent spec/,
     );
   });
+
+  it("rejects trailing colon (empty weight)", () => {
+    expect(() => parseWeightedAgents("agent_1:")).toThrow(/Invalid weight/);
+  });
+
+  it("rejects whitespace-only spec", () => {
+    expect(() => parseWeightedAgents("   ")).toThrow("Empty agent spec");
+    expect(() => parseWeightedAgents(" , ")).toThrow("Empty agent spec");
+  });
+
+  it("rejects empty agent_id with weight", () => {
+    expect(() => parseWeightedAgents(":0.5")).toThrow(/Agent ID is empty/);
+  });
+
+  it("rejects empty agent_id inside a weighted list", () => {
+    expect(() => parseWeightedAgents("agent_1:0.5,:0.5")).toThrow(
+      /Agent ID is empty/,
+    );
+  });
 });
 
 describe("applyWeightedAgents", () => {

@@ -74,4 +74,16 @@ describe("createChatAgentCommand", () => {
     await createChatAgentCommand({ file: tmpFile });
     expect(mockClient.chatAgent.create).toHaveBeenCalledWith(body);
   });
+
+  it("rejects --file combined with simple flags", async () => {
+    const body = {
+      response_engine: { type: "retell-llm", llm_id: "llm_file" },
+    };
+    writeFileSync(tmpFile, JSON.stringify(body));
+    await createChatAgentCommand({ file: tmpFile, llmId: "llm_override" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chatAgent.create).not.toHaveBeenCalled();
+  });
 });

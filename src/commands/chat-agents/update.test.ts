@@ -47,4 +47,13 @@ describe("updateChatAgentCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty body file", async () => {
+    writeFileSync(tmpFile, JSON.stringify({}));
+    await updateChatAgentCommand("ca_1", { file: tmpFile });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chatAgent.update).not.toHaveBeenCalled();
+  });
 });

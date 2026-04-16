@@ -99,11 +99,25 @@ import { updateFlowComponentCommand } from "./commands/flow-components/update";
 import { deleteFlowComponentCommand } from "./commands/flow-components/delete";
 import { getConcurrencyCommand } from "./commands/concurrency/get";
 import { agentMcpToolsCommand } from "./commands/agents/mcp-tools";
+import { parseNumericFlag } from "./services/numeric-flag";
 
 // Read package.json for version
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, "../package.json"), "utf-8"),
 );
+
+function parseFlagOrExit(
+  value: string | undefined,
+  flagName: string,
+): number | undefined {
+  if (value === undefined) return undefined;
+  try {
+    return parseNumericFlag(value, flagName);
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
 
 // Create main program
 const program = new Command();
@@ -163,9 +177,9 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1) {
-      console.error("Error: limit must be a positive number");
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1) {
+      console.error("Error: --limit must be a positive number");
       process.exit(1);
     }
     await listTranscriptsCommand({
@@ -242,12 +256,14 @@ Examples:
       fields: options.fields,
       raw: options.raw,
       hotspotsOnly: options.hotspotsOnly,
-      latencyThreshold: options.latencyThreshold
-        ? parseInt(options.latencyThreshold)
-        : undefined,
-      silenceThreshold: options.silenceThreshold
-        ? parseInt(options.silenceThreshold)
-        : undefined,
+      latencyThreshold: parseFlagOrExit(
+        options.latencyThreshold,
+        "--latency-threshold",
+      ),
+      silenceThreshold: parseFlagOrExit(
+        options.silenceThreshold,
+        "--silence-threshold",
+      ),
     });
   });
 
@@ -283,7 +299,7 @@ Examples:
       agentId: options.agentId,
       since: options.since,
       until: options.until,
-      limit: options.limit ? Number(options.limit) : undefined,
+      limit: parseFlagOrExit(options.limit, "--limit"),
       fields: options.fields,
     });
   });
@@ -314,9 +330,9 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1) {
-      console.error("Error: limit must be a positive number");
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1) {
+      console.error("Error: --limit must be a positive number");
       process.exit(1);
     }
     await listAgentsCommand({
@@ -519,9 +535,7 @@ Examples:
   )
   .action(async (agentId, options) => {
     await getAgentCommand(agentId, {
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
       fields: options.fields,
     });
   });
@@ -568,9 +582,7 @@ Note: Run 'retell agent-publish <agent_id>' after updating to publish changes.
     await updateAgentCommand(agentId, {
       file: options.file,
       dryRun: options.dryRun,
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -859,9 +871,7 @@ Test case JSON format:
       file: options.file,
       llmId: options.llmId,
       flowId: options.flowId,
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -976,9 +986,7 @@ Examples:
       llmId: options.llmId,
       flowId: options.flowId,
       cases: options.cases,
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -1175,10 +1183,10 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1 || limit > 1000) {
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1 || limit > 1000) {
       console.error(
-        "Error: limit must be a positive number between 1 and 1000",
+        "Error: --limit must be a positive number between 1 and 1000",
       );
       process.exit(1);
     }
@@ -1207,9 +1215,7 @@ Examples:
   )
   .action(async (conversationFlowId, options) => {
     await getFlowCommand(conversationFlowId, {
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
       fields: options.fields,
     });
   });
@@ -1264,9 +1270,7 @@ Examples:
   .action(async (conversationFlowId, options) => {
     await updateFlowCommand(conversationFlowId, {
       file: options.file,
-      version: options.engineVersion
-        ? parseInt(options.engineVersion, 10)
-        : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -1343,14 +1347,6 @@ phoneNumbers
     "--outbound-agents <spec>",
     "Weighted outbound agents (format: id:weight,id:weight)",
   )
-  .option(
-    "--inbound-sms-agents <spec>",
-    "Weighted inbound SMS agents (format: id:weight,id:weight)",
-  )
-  .option(
-    "--outbound-sms-agents <spec>",
-    "Weighted outbound SMS agents (format: id:weight,id:weight)",
-  )
   .option("--sip-username <user>", "SIP trunk auth username")
   .option("--sip-password <pass>", "SIP trunk auth password")
   .option("--fields <fields>", "Comma-separated list of fields to return")
@@ -1362,6 +1358,8 @@ Examples:
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --nickname "Support Line"
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agent agent_xxx
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agents "agent_1:0.6,agent_2:0.4"
+
+SMS agent bindings are not supported on import. Use \`phone-numbers update\` after import to bind SMS agents.
   `,
   )
   .action(async (options) => {
@@ -1433,12 +1431,21 @@ phoneNumbers
   )
   .option("--sip-username <user>", "SIP trunk auth username")
   .option("--sip-password <pass>", "SIP trunk auth password")
-  .option("--transport <proto>", "SIP transport: TLS, TCP, or UDP")
-  .option("--inbound-webhook-url <url>", "Inbound call webhook URL")
-  .option("--inbound-sms-webhook-url <url>", "Inbound SMS webhook URL")
+  .option(
+    "--transport <proto>",
+    "SIP transport: TLS, TCP, or UDP (use empty string to clear)",
+  )
+  .option(
+    "--inbound-webhook-url <url>",
+    "Inbound call webhook URL (use empty string to clear)",
+  )
+  .option(
+    "--inbound-sms-webhook-url <url>",
+    "Inbound SMS webhook URL (use empty string to clear)",
+  )
   .option(
     "--fallback-number <number>",
-    "Enterprise: fallback destination during outage",
+    "Enterprise: fallback destination during outage (use empty string to clear)",
   )
   .option(
     "--allowed-inbound-country-list <csv>",
@@ -1473,6 +1480,7 @@ phoneNumbers
 Examples:
   $ retell phone-numbers update +14157774444 --inbound-agent agent_new
   $ retell phone-numbers update +14157774444 --inbound-agents "a:0.7,b:0.3" --nickname Support
+  $ retell phone-numbers update +14157774444 --fallback-number "" (clear)
     `,
   )
   .action(async (phoneNumber, options) => {

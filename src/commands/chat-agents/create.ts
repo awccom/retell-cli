@@ -30,6 +30,17 @@ export async function createChatAgentCommand(
     let params: ChatAgentCreateParams;
 
     if (options.file) {
+      const simpleFlags = [
+        options.name !== undefined && "--name",
+        options.llmId !== undefined && "--llm-id",
+        options.flowId !== undefined && "--flow-id",
+        options.customLlm !== undefined && "--custom-llm",
+      ].filter(Boolean);
+      if (simpleFlags.length > 0) {
+        throwValidation(
+          `--file is mutually exclusive with ${simpleFlags.join(", ")}. Put all fields in the JSON body.`,
+        );
+      }
       params = readJsonObjectFile(
         options.file,
         "--file",

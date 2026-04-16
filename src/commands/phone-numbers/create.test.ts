@@ -83,4 +83,47 @@ describe("createPhoneNumberCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects invalid --transport value", async () => {
+    await createPhoneNumberCommand({ areaCode: "415", transport: "tls" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.phoneNumber.create).not.toHaveBeenCalled();
+  });
+
+  it("maps scalar flags to snake_case SDK fields", async () => {
+    await createPhoneNumberCommand({
+      numberProvider: "twilio",
+      tollFree: true,
+      phoneNumber: "+14155550101",
+      fallbackNumber: "+14155550202",
+      inboundWebhookUrl: "https://example.com/hook",
+      transport: "TLS",
+    });
+    expect(mockClient.phoneNumber.create).toHaveBeenCalledWith({
+      number_provider: "twilio",
+      toll_free: true,
+      phone_number: "+14155550101",
+      fallback_number: "+14155550202",
+      inbound_webhook_url: "https://example.com/hook",
+      transport: "TLS",
+    });
+  });
+
+  it("parses comma-separated allowed-outbound-country-list", async () => {
+    await createPhoneNumberCommand({
+      allowedOutboundCountryList: "US, CA, MX",
+    });
+    expect(mockClient.phoneNumber.create).toHaveBeenCalledWith({
+      allowed_outbound_country_list: ["US", "CA", "MX"],
+    });
+  });
+
+  it("maps --outbound-agent to outbound_agents single-entry array", async () => {
+    await createPhoneNumberCommand({ outboundAgent: "agent_solo" });
+    expect(mockClient.phoneNumber.create).toHaveBeenCalledWith({
+      outbound_agents: [{ agent_id: "agent_solo", weight: 1 }],
+    });
+  });
 });

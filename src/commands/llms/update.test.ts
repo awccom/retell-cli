@@ -42,11 +42,20 @@ describe("updateLlmCommand", () => {
   });
 
   it("rejects non-numeric --version", async () => {
-    writeFileSync(tmpFile, JSON.stringify({}));
+    writeFileSync(tmpFile, JSON.stringify({ general_prompt: "p" }));
     await updateLlmCommand("llm_1", { file: tmpFile, version: "latest" });
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
       expect.objectContaining({ name: "ValidationError" }),
     );
+  });
+
+  it("rejects empty body file even when --version is provided", async () => {
+    writeFileSync(tmpFile, JSON.stringify({}));
+    await updateLlmCommand("llm_1", { file: tmpFile, version: "1" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.llm.update).not.toHaveBeenCalled();
   });
 
   it("passes --version as query_version (not as body.version)", async () => {

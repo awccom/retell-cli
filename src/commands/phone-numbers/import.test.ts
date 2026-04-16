@@ -167,6 +167,32 @@ describe("importPhoneNumberCommand", () => {
       );
       expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
     });
+
+    it("rejects --inbound-sms-agents (SMS fields not on ImportParams)", async () => {
+      await importPhoneNumberCommand({
+        number: "+14157774444",
+        terminationUri: "someuri.pstn.twilio.com",
+        inboundSmsAgents: "agent_sms",
+      } as never);
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+      expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
+    });
+
+    it("rejects --outbound-sms-agents (SMS fields not on ImportParams)", async () => {
+      await importPhoneNumberCommand({
+        number: "+14157774444",
+        terminationUri: "someuri.pstn.twilio.com",
+        outboundSmsAgents: "agent_sms",
+      } as never);
+
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+      expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
+    });
   });
 
   describe("field filtering", () => {

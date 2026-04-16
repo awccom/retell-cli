@@ -116,4 +116,50 @@ describe("createPhoneCallCommand", () => {
     await createPhoneCallCommand({ fromNumber: "+1", toNumber: "+2" });
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(err);
   });
+
+  it("maps --ignore-e164-validation to ignore_e164_validation", async () => {
+    await createPhoneCallCommand({
+      fromNumber: "+1",
+      toNumber: "+2",
+      ignoreE164Validation: true,
+    });
+    expect(mockClient.call.createPhoneCall).toHaveBeenCalledWith(
+      expect.objectContaining({ ignore_e164_validation: true }),
+    );
+  });
+
+  it("maps --custom-sip-headers to custom_sip_headers", async () => {
+    await createPhoneCallCommand({
+      fromNumber: "+1",
+      toNumber: "+2",
+      customSipHeaders: '{"X-Retell-Custom":"true"}',
+    });
+    expect(mockClient.call.createPhoneCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        custom_sip_headers: { "X-Retell-Custom": "true" },
+      }),
+    );
+  });
+
+  it("maps --dynamic-variables to retell_llm_dynamic_variables (NOT override_dynamic_variables)", async () => {
+    await createPhoneCallCommand({
+      fromNumber: "+1",
+      toNumber: "+2",
+      dynamicVariables: '{"user_name":"Alice"}',
+    });
+    const call = mockClient.call.createPhoneCall.mock.calls[0][0];
+    expect(call.retell_llm_dynamic_variables).toEqual({ user_name: "Alice" });
+    expect(call.override_dynamic_variables).toBeUndefined();
+  });
+
+  it("maps --override-agent-version to override_agent_version as a number", async () => {
+    await createPhoneCallCommand({
+      fromNumber: "+1",
+      toNumber: "+2",
+      overrideAgentVersion: "3",
+    });
+    expect(mockClient.call.createPhoneCall).toHaveBeenCalledWith(
+      expect.objectContaining({ override_agent_version: 3 }),
+    );
+  });
 });

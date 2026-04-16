@@ -14,6 +14,8 @@ import {
 import { applyWeightedAgents } from "../../services/weighted-agents";
 import type { PhoneNumberUpdateParams } from "retell-sdk/resources/phone-number";
 
+const VALID_TRANSPORTS = ["TLS", "TCP", "UDP"] as const;
+
 export interface UpdatePhoneNumberOptions {
   nickname?: string;
   inboundAgent?: string;
@@ -39,18 +41,36 @@ export async function updatePhoneNumberCommand(
   options: UpdatePhoneNumberOptions,
 ): Promise<void> {
   try {
+    if (
+      options.transport !== undefined &&
+      options.transport !== "" &&
+      !VALID_TRANSPORTS.includes(options.transport as never)
+    ) {
+      throwValidation(
+        `--transport must be one of: ${VALID_TRANSPORTS.join(", ")}`,
+      );
+    }
+
     const params: PhoneNumberUpdateParams = {};
 
-    if (options.nickname !== undefined) params.nickname = options.nickname;
+    if (options.nickname !== undefined)
+      params.nickname = options.nickname === "" ? null : options.nickname;
     if (options.terminationUri) params.termination_uri = options.terminationUri;
     if (options.sipUsername) params.auth_username = options.sipUsername;
     if (options.sipPassword) params.auth_password = options.sipPassword;
-    if (options.transport) params.transport = options.transport;
-    if (options.inboundWebhookUrl)
-      params.inbound_webhook_url = options.inboundWebhookUrl;
-    if (options.inboundSmsWebhookUrl)
-      params.inbound_sms_webhook_url = options.inboundSmsWebhookUrl;
-    if (options.fallbackNumber) params.fallback_number = options.fallbackNumber;
+    if (options.transport !== undefined)
+      params.transport = options.transport === "" ? null : options.transport;
+    if (options.inboundWebhookUrl !== undefined)
+      params.inbound_webhook_url =
+        options.inboundWebhookUrl === "" ? null : options.inboundWebhookUrl;
+    if (options.inboundSmsWebhookUrl !== undefined)
+      params.inbound_sms_webhook_url =
+        options.inboundSmsWebhookUrl === ""
+          ? null
+          : options.inboundSmsWebhookUrl;
+    if (options.fallbackNumber !== undefined)
+      params.fallback_number =
+        options.fallbackNumber === "" ? null : options.fallbackNumber;
     if (options.allowedInboundCountryList)
       params.allowed_inbound_country_list = options.allowedInboundCountryList
         .split(",")
