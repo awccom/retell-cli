@@ -75,6 +75,12 @@ export async function updatePhoneNumberCommand(
       { allowSms: true },
     );
 
+    if (Object.keys(params).length === 0) {
+      throwValidation(
+        "No mutation flags provided. Pass at least one flag such as --nickname, --inbound-agent, --termination-uri, etc.",
+      );
+    }
+
     const client = getRetellClient();
     const pn = await client.phoneNumber.update(phoneNumber, params);
 
@@ -89,4 +95,10 @@ export async function updatePhoneNumberCommand(
   } catch (error) {
     handleSdkError(error);
   }
+}
+
+function throwValidation(message: string): never {
+  const err = new Error(message);
+  err.name = "ValidationError";
+  throw err;
 }

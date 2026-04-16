@@ -38,4 +38,12 @@ describe("updateChatCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects when no mutation flags provided", async () => {
+    await updateChatCommand("chat_1", {});
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
 });

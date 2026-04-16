@@ -11,7 +11,8 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg, readJsonFile } from "../../services/json-arg";
+import { loadJsonArg, readJsonObjectFile } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { CallCreateWebCallParams } from "retell-sdk/resources/call";
 
 export interface CreateWebCallOptions {
@@ -34,9 +35,10 @@ export async function createWebCallCommand(
     };
 
     if (options.agentVersion !== undefined) {
-      const v = Number(options.agentVersion);
-      if (isNaN(v)) throwValidation("--agent-version must be a number");
-      params.agent_version = v;
+      params.agent_version = parseNumericFlag(
+        options.agentVersion,
+        "--agent-version",
+      );
     }
     if (options.currentNodeId !== undefined)
       params.current_node_id = options.currentNodeId;
@@ -51,8 +53,12 @@ export async function createWebCallCommand(
       params.retell_llm_dynamic_variables = dv as Record<string, unknown>;
 
     if (options.agentOverride) {
-      const override = readJsonFile(options.agentOverride, "--agent-override");
-      params.agent_override = override as CallCreateWebCallParams.AgentOverride;
+      const override = readJsonObjectFile(
+        options.agentOverride,
+        "--agent-override",
+      );
+      params.agent_override =
+        override as unknown as CallCreateWebCallParams.AgentOverride;
     }
 
     const client = getRetellClient();
@@ -69,10 +75,4 @@ export async function createWebCallCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

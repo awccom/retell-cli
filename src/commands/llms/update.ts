@@ -11,7 +11,8 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonObjectFile } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { LlmUpdateParams } from "retell-sdk/resources/llm";
 
 export interface UpdateLlmOptions {
@@ -25,12 +26,13 @@ export async function updateLlmCommand(
   options: UpdateLlmOptions,
 ): Promise<void> {
   try {
-    const body = readJsonFile(options.file, "--file") as LlmUpdateParams;
+    const body = readJsonObjectFile(
+      options.file,
+      "--file",
+    ) as unknown as LlmUpdateParams;
 
     if (options.version !== undefined) {
-      const v = Number(options.version);
-      if (isNaN(v)) throwValidation("--version must be a number");
-      (body as unknown as Record<string, number>).version = v;
+      body.query_version = parseNumericFlag(options.version, "--version");
     }
 
     const client = getRetellClient();
@@ -47,10 +49,4 @@ export async function updateLlmCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

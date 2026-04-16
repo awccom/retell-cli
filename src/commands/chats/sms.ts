@@ -11,6 +11,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatCreateSMSChatParams } from "retell-sdk/resources/chat";
 
 export interface CreateSmsChatOptions {
@@ -35,10 +36,10 @@ export async function createSmsChatCommand(
     if (options.overrideAgentId)
       params.override_agent_id = options.overrideAgentId;
     if (options.overrideAgentVersion !== undefined) {
-      const v = Number(options.overrideAgentVersion);
-      if (isNaN(v))
-        throwValidation("--override-agent-version must be a number");
-      params.override_agent_version = v;
+      params.override_agent_version = parseNumericFlag(
+        options.overrideAgentVersion,
+        "--override-agent-version",
+      );
     }
 
     const metadata = loadJsonArg(options.metadata, "--metadata");
@@ -62,10 +63,4 @@ export async function createSmsChatCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

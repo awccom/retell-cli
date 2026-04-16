@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { chatCompleteCommand } from "./complete";
 import * as retellClient from "../../services/retell-client";
+import * as outputFormatter from "../../services/output-formatter";
 
 vi.mock("../../services/retell-client");
 vi.mock("../../services/output-formatter", async () => {
@@ -34,5 +35,11 @@ describe("chatCompleteCommand", () => {
       chat_id: "chat_1",
       content: "Hi",
     });
+  });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    mockClient.chat.createChatCompletion.mockRejectedValue(new Error("api"));
+    await chatCompleteCommand({ chatId: "chat_1", content: "Hi" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { parseNumericFlag } from "../../services/numeric-flag";
 
 export interface GetChatAgentOptions {
   version?: string;
@@ -21,9 +22,7 @@ export async function getChatAgentCommand(
   try {
     const query: { version?: number } = {};
     if (options.version !== undefined) {
-      const v = Number(options.version);
-      if (isNaN(v)) throwValidation("--version must be a number");
-      query.version = v;
+      query.version = parseNumericFlag(options.version, "--version");
     }
 
     const client = getRetellClient();
@@ -40,10 +39,4 @@ export async function getChatAgentCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

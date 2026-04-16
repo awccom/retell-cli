@@ -11,6 +11,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatCreateParams } from "retell-sdk/resources/chat";
 
 export interface CreateChatOptions {
@@ -28,9 +29,10 @@ export async function createChatCommand(
     const params: ChatCreateParams = { agent_id: options.agentId };
 
     if (options.agentVersion !== undefined) {
-      const v = Number(options.agentVersion);
-      if (isNaN(v)) throwValidation("--agent-version must be a number");
-      params.agent_version = v;
+      params.agent_version = parseNumericFlag(
+        options.agentVersion,
+        "--agent-version",
+      );
     }
 
     const metadata = loadJsonArg(options.metadata, "--metadata");
@@ -54,10 +56,4 @@ export async function createChatCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

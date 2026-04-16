@@ -11,7 +11,8 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg, readJsonFile } from "../../services/json-arg";
+import { loadJsonArg, readJsonObjectFile } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { CallCreatePhoneCallParams } from "retell-sdk/resources/call";
 
 export interface CreatePhoneCallOptions {
@@ -39,10 +40,10 @@ export async function createPhoneCallCommand(
     if (options.overrideAgentId)
       params.override_agent_id = options.overrideAgentId;
     if (options.overrideAgentVersion !== undefined) {
-      const v = Number(options.overrideAgentVersion);
-      if (isNaN(v))
-        throwValidation("--override-agent-version must be a number");
-      params.override_agent_version = v;
+      params.override_agent_version = parseNumericFlag(
+        options.overrideAgentVersion,
+        "--override-agent-version",
+      );
     }
     if (options.ignoreE164Validation) params.ignore_e164_validation = true;
 
@@ -61,9 +62,12 @@ export async function createPhoneCallCommand(
       params.custom_sip_headers = headers as Record<string, string>;
 
     if (options.agentOverride) {
-      const override = readJsonFile(options.agentOverride, "--agent-override");
+      const override = readJsonObjectFile(
+        options.agentOverride,
+        "--agent-override",
+      );
       params.agent_override =
-        override as CallCreatePhoneCallParams.AgentOverride;
+        override as unknown as CallCreatePhoneCallParams.AgentOverride;
     }
 
     const client = getRetellClient();
@@ -80,10 +84,4 @@ export async function createPhoneCallCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

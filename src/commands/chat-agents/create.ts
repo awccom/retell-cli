@@ -11,7 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonObjectFile } from "../../services/json-arg";
 import type { ChatAgentCreateParams } from "retell-sdk/resources/chat-agent";
 
 export interface CreateChatAgentOptions {
@@ -30,7 +30,10 @@ export async function createChatAgentCommand(
     let params: ChatAgentCreateParams;
 
     if (options.file) {
-      params = readJsonFile(options.file, "--file") as ChatAgentCreateParams;
+      params = readJsonObjectFile(
+        options.file,
+        "--file",
+      ) as unknown as ChatAgentCreateParams;
     } else {
       const engineCount = [
         options.llmId,

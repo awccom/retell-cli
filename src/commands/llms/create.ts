@@ -11,7 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonObjectFile } from "../../services/json-arg";
 import type { LlmCreateParams } from "retell-sdk/resources/llm";
 
 export interface CreateLlmOptions {
@@ -31,7 +31,10 @@ export async function createLlmCommand(
     let params: LlmCreateParams;
 
     if (options.file) {
-      params = readJsonFile(options.file, "--file") as LlmCreateParams;
+      params = readJsonObjectFile(
+        options.file,
+        "--file",
+      ) as unknown as LlmCreateParams;
     } else {
       params = {};
       if (options.generalPrompt !== undefined)

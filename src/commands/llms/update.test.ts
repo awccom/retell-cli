@@ -48,4 +48,13 @@ describe("updateLlmCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("passes --version as query_version (not as body.version)", async () => {
+    writeFileSync(tmpFile, JSON.stringify({ general_prompt: "p" }));
+    await updateLlmCommand("llm_1", { file: tmpFile, version: "3" });
+    expect(mockClient.llm.update).toHaveBeenCalledWith("llm_1", {
+      general_prompt: "p",
+      query_version: 3,
+    });
+  });
 });

@@ -10,7 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonObjectFile } from "../../services/json-arg";
 import type { ChatAgentUpdateParams } from "retell-sdk/resources/chat-agent";
 
 export interface UpdateChatAgentOptions {
@@ -23,7 +23,10 @@ export async function updateChatAgentCommand(
   options: UpdateChatAgentOptions,
 ): Promise<void> {
   try {
-    const body = readJsonFile(options.file, "--file") as ChatAgentUpdateParams;
+    const body = readJsonObjectFile(
+      options.file,
+      "--file",
+    ) as unknown as ChatAgentUpdateParams;
 
     const client = getRetellClient();
     const agent = await client.chatAgent.update(agentId, body);

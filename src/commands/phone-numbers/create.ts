@@ -12,6 +12,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { applyWeightedAgents } from "../../services/weighted-agents";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { PhoneNumberCreateParams } from "retell-sdk/resources/phone-number";
 
 export interface CreatePhoneNumberOptions {
@@ -64,9 +65,7 @@ export async function createPhoneNumberCommand(
     if (options.countryCode)
       params.country_code = options.countryCode as "US" | "CA";
     if (options.areaCode !== undefined) {
-      const v = Number(options.areaCode);
-      if (isNaN(v)) throwValidation("--area-code must be a number");
-      params.area_code = v;
+      params.area_code = parseNumericFlag(options.areaCode, "--area-code");
     }
     if (options.numberProvider)
       params.number_provider = options.numberProvider as "twilio" | "telnyx";

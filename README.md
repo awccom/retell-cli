@@ -808,7 +808,11 @@ retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
 retell calls delete call_abc123
 ```
 
-Flags on `create-phone` / `create-web` / `register-phone`: `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--override-agent-id`, `--override-agent-version`.
+Shared on all three: `--metadata`, `--dynamic-variables`, `--fields`.
+
+- `create-phone` also: `--override-agent-id`, `--override-agent-version`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--ignore-e164-validation`.
+- `create-web` also: `--agent-version`, `--agent-override <path>`, `--current-node-id`, `--current-state`.
+- `register-phone` also: `--agent-version`, `--direction`, `--from-number`, `--to-number`.
 
 ### Batch Calls
 

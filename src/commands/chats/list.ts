@@ -8,6 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatListParams } from "retell-sdk/resources/chat";
 
 export interface ListChatsOptions {
@@ -23,9 +24,7 @@ export async function listChatsCommand(
   try {
     const query: ChatListParams = {};
     if (options.limit !== undefined) {
-      const v = Number(options.limit);
-      if (isNaN(v)) throwValidation("--limit must be a number");
-      query.limit = v;
+      query.limit = parseNumericFlag(options.limit, "--limit");
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
     if (options.sortOrder) {

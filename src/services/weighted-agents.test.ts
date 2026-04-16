@@ -55,6 +55,25 @@ describe("parseWeightedAgents", () => {
       "Cannot mix",
     );
   });
+
+  it("accepts three-way split at the tolerance edge (0.333 x 3)", () => {
+    const result = parseWeightedAgents(
+      "agent_1:0.333,agent_2:0.333,agent_3:0.334",
+    );
+    expect(result).toHaveLength(3);
+  });
+
+  it("accepts floating-point sum within tolerance (0.1 + 0.2 + 0.7)", () => {
+    expect(() =>
+      parseWeightedAgents("agent_1:0.1,agent_2:0.2,agent_3:0.7"),
+    ).not.toThrow();
+  });
+
+  it("rejects entries with more than one colon", () => {
+    expect(() => parseWeightedAgents("agent_1:0.5:extra")).toThrow(
+      /Invalid agent spec/,
+    );
+  });
 });
 
 describe("applyWeightedAgents", () => {

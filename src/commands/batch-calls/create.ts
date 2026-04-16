@@ -11,7 +11,8 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonFile, readJsonObjectFile } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { BatchCallCreateBatchCallParams } from "retell-sdk/resources/batch-call";
 
 export interface CreateBatchCallOptions {
@@ -41,24 +42,26 @@ export async function createBatchCallCommand(
     if (options.name) params.name = options.name;
 
     if (options.reservedConcurrency !== undefined) {
-      const v = Number(options.reservedConcurrency);
-      if (isNaN(v)) throwValidation("--reserved-concurrency must be a number");
-      params.reserved_concurrency = v;
+      params.reserved_concurrency = parseNumericFlag(
+        options.reservedConcurrency,
+        "--reserved-concurrency",
+      );
     }
 
     if (options.triggerTimestamp !== undefined) {
-      const v = Number(options.triggerTimestamp);
-      if (isNaN(v))
-        throwValidation(
-          "--trigger-timestamp must be a number (ms since epoch)",
-        );
-      params.trigger_timestamp = v;
+      params.trigger_timestamp = parseNumericFlag(
+        options.triggerTimestamp,
+        "--trigger-timestamp",
+      );
     }
 
     if (options.callTimeWindow) {
-      const window = readJsonFile(options.callTimeWindow, "--call-time-window");
+      const window = readJsonObjectFile(
+        options.callTimeWindow,
+        "--call-time-window",
+      );
       params.call_time_window =
-        window as BatchCallCreateBatchCallParams.CallTimeWindow;
+        window as unknown as BatchCallCreateBatchCallParams.CallTimeWindow;
     }
 
     const client = getRetellClient();

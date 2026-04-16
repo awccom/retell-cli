@@ -59,4 +59,12 @@ describe("updateCallCommand", () => {
       override_dynamic_variables: { name: "Jane" },
     });
   });
+
+  it("rejects when no mutation flags provided", async () => {
+    await updateCallCommand("call_1", {});
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.update).not.toHaveBeenCalled();
+  });
 });

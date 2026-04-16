@@ -1371,9 +1371,9 @@ Examples:
 phoneNumbers
   .command("create")
   .description("Purchase a new phone number and bind agents")
-  .option("--country-code <code>", "Country code: US or CA (default US)")
+  .option("--country-code <code>", "Country code: US or CA")
   .option("--area-code <code>", "3-digit US area code")
-  .option("--number-provider <provider>", "twilio or telnyx (default twilio)")
+  .option("--number-provider <provider>", "twilio or telnyx")
   .option("--toll-free", "Purchase a toll-free number")
   .option("--nickname <name>", "Friendly name for reference")
   .option("--phone-number <number>", "Specific E.164 number to purchase")

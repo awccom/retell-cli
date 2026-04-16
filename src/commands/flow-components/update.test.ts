@@ -4,6 +4,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { updateFlowComponentCommand } from "./update";
 import * as retellClient from "../../services/retell-client";
+import * as outputFormatter from "../../services/output-formatter";
 
 vi.mock("../../services/retell-client");
 vi.mock("../../services/output-formatter", async () => {
@@ -43,5 +44,23 @@ describe("updateFlowComponentCommand", () => {
       "c_1",
       { name: "new name" },
     );
+  });
+
+  it("rejects a non-object JSON file body", async () => {
+    writeFileSync(tmpFile, JSON.stringify([1, 2, 3]));
+    await updateFlowComponentCommand("c_1", { file: tmpFile });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.conversationFlowComponent.update).not.toHaveBeenCalled();
+  });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    writeFileSync(tmpFile, JSON.stringify({ name: "x" }));
+    mockClient.conversationFlowComponent.update.mockRejectedValue(
+      new Error("api"),
+    );
+    await updateFlowComponentCommand("c_1", { file: tmpFile });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
 });

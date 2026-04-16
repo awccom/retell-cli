@@ -31,4 +31,10 @@ describe("publishChatAgentCommand", () => {
       expect.objectContaining({ agent_id: "ca_1", operation: "publish" }),
     );
   });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    mockClient.chatAgent.publish.mockRejectedValue(new Error("api"));
+    await publishChatAgentCommand("ca_1");
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+  });
 });

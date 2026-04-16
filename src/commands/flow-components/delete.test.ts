@@ -38,4 +38,12 @@ describe("deleteFlowComponentCommand", () => {
       }),
     );
   });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    mockClient.conversationFlowComponent.delete.mockRejectedValue(
+      new Error("api"),
+    );
+    await deleteFlowComponentCommand("c_1");
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+  });
 });

@@ -67,4 +67,12 @@ describe("updatePhoneNumberCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects when no mutation flags provided", async () => {
+    await updatePhoneNumberCommand("+14157774444", {});
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.phoneNumber.update).not.toHaveBeenCalled();
+  });
 });

@@ -11,6 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { McpToolGetMcpToolsParams } from "retell-sdk/resources/mcp-tool";
 
 export interface AgentMcpToolsOptions {
@@ -28,9 +29,7 @@ export async function agentMcpToolsCommand(
     const query: McpToolGetMcpToolsParams = { mcp_id: options.mcpId };
     if (options.componentId) query.component_id = options.componentId;
     if (options.version !== undefined) {
-      const v = Number(options.version);
-      if (isNaN(v)) throwValidation("--version must be a number");
-      query.version = v;
+      query.version = parseNumericFlag(options.version, "--version");
     }
 
     const client = getRetellClient();
@@ -47,10 +46,4 @@ export async function agentMcpToolsCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

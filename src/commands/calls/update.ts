@@ -61,6 +61,12 @@ export async function updateCallCommand(
         options.dataStorageSetting as CallUpdateParams["data_storage_setting"];
     }
 
+    if (Object.keys(params).length === 0) {
+      throwValidation(
+        "No mutation flags provided. Pass at least one of --metadata, --custom-attributes, --dynamic-variables, --data-storage-setting.",
+      );
+    }
+
     const client = getRetellClient();
     const result = await client.call.update(callId, params);
 

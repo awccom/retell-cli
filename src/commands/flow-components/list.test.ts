@@ -30,4 +30,12 @@ describe("listFlowComponentsCommand", () => {
     expect(mockClient.conversationFlowComponent.list).toHaveBeenCalled();
     expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
   });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    mockClient.conversationFlowComponent.list.mockRejectedValue(
+      new Error("api"),
+    );
+    await listFlowComponentsCommand();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+  });
 });

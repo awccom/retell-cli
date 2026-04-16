@@ -6,7 +6,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { writeFileSync, unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { loadJsonArg, readJsonFile } from "./json-arg";
+import { loadJsonArg, readJsonFile, readJsonObjectFile } from "./json-arg";
 
 describe("loadJsonArg", () => {
   const tmpPath = join(
@@ -63,6 +63,16 @@ describe("loadJsonArg", () => {
       expect((err as Error).message).toMatch(/file not found/);
     }
   });
+
+  it("throws ValidationError when @ has no path", () => {
+    try {
+      loadJsonArg("@", "--metadata");
+      expect.fail("expected throw");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/--metadata: empty path after @/);
+    }
+  });
 });
 
 describe("readJsonFile", () => {
@@ -89,5 +99,49 @@ describe("readJsonFile", () => {
   it("throws ValidationError on malformed JSON", () => {
     writeFileSync(tmpPath, "{ not json");
     expect(() => readJsonFile(tmpPath, "--file")).toThrow(/invalid JSON/);
+  });
+});
+
+describe("readJsonObjectFile", () => {
+  const tmpPath = join(
+    tmpdir(),
+    `retell-cli-json-object-test-${process.pid}.json`,
+  );
+
+  afterEach(() => {
+    if (existsSync(tmpPath)) unlinkSync(tmpPath);
+  });
+
+  it("returns parsed object", () => {
+    writeFileSync(tmpPath, JSON.stringify({ a: 1 }));
+    expect(readJsonObjectFile(tmpPath, "--file")).toEqual({ a: 1 });
+  });
+
+  it("rejects a JSON array", () => {
+    writeFileSync(tmpPath, JSON.stringify([1, 2, 3]));
+    expect(() => readJsonObjectFile(tmpPath, "--file")).toThrow(
+      /must contain a JSON object, not an array/,
+    );
+  });
+
+  it("rejects a JSON null", () => {
+    writeFileSync(tmpPath, "null");
+    expect(() => readJsonObjectFile(tmpPath, "--file")).toThrow(
+      /must contain a JSON object, not null/,
+    );
+  });
+
+  it("rejects a JSON scalar (string)", () => {
+    writeFileSync(tmpPath, JSON.stringify("oops"));
+    expect(() => readJsonObjectFile(tmpPath, "--file")).toThrow(
+      /must contain a JSON object, not a string/,
+    );
+  });
+
+  it("rejects a JSON scalar (number)", () => {
+    writeFileSync(tmpPath, "42");
+    expect(() => readJsonObjectFile(tmpPath, "--file")).toThrow(
+      /must contain a JSON object, not a number/,
+    );
   });
 });

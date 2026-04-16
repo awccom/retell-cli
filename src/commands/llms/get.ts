@@ -10,6 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { parseNumericFlag } from "../../services/numeric-flag";
 
 export interface GetLlmOptions {
   version?: string;
@@ -23,9 +24,7 @@ export async function getLlmCommand(
   try {
     const query: { version?: number } = {};
     if (options.version !== undefined) {
-      const v = Number(options.version);
-      if (isNaN(v)) throwValidation("--version must be a number");
-      query.version = v;
+      query.version = parseNumericFlag(options.version, "--version");
     }
 
     const client = getRetellClient();
@@ -42,10 +41,4 @@ export async function getLlmCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

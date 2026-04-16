@@ -10,6 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { LlmListParams } from "retell-sdk/resources/llm";
 
 export interface ListLlmsOptions {
@@ -25,16 +26,14 @@ export async function listLlmsCommand(
   try {
     const query: LlmListParams = {};
     if (options.limit !== undefined) {
-      const v = Number(options.limit);
-      if (isNaN(v)) throwValidation("--limit must be a number");
-      query.limit = v;
+      query.limit = parseNumericFlag(options.limit, "--limit");
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
     if (options.paginationKeyVersion !== undefined) {
-      const v = Number(options.paginationKeyVersion);
-      if (isNaN(v))
-        throwValidation("--pagination-key-version must be a number");
-      query.pagination_key_version = v;
+      query.pagination_key_version = parseNumericFlag(
+        options.paginationKeyVersion,
+        "--pagination-key-version",
+      );
     }
 
     const client = getRetellClient();
@@ -51,10 +50,4 @@ export async function listLlmsCommand(
   } catch (error) {
     handleSdkError(error);
   }
-}
-
-function throwValidation(message: string): never {
-  const err = new Error(message);
-  err.name = "ValidationError";
-  throw err;
 }

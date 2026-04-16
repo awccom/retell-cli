@@ -60,6 +60,16 @@ Bulk addition of CLI surface for Retell SDK resources that were previously unwra
 
 - Added ~80 new test cases covering happy paths, flag parsing, validation errors, and SDK error passthrough for every new command, plus a dedicated test file for the weighted-agents service and json-arg helper.
 
+### Fixed (post-review)
+
+- `llms update --version` now sets `query_version` on the request params instead of a nonexistent body `version` field — the flag previously had no effect.
+- Numeric flag parsing (`--version`, `--limit`, `--area-code`, `--trigger-timestamp`, etc.) now rejects empty and whitespace-only strings. Centralized via `src/services/numeric-flag.ts`.
+- `calls update`, `chats update`, and `phone-numbers update` now require at least one mutation flag instead of silently sending an empty body to the SDK.
+- Body-as-file flags (`llms create/update`, `chat-agents create/update`, `flow-components create/update`, `calls create-phone/create-web --agent-override`, `batch-calls create --call-time-window`) now reject non-object JSON (arrays, null, scalars) with a clear `ValidationError` via new `readJsonObjectFile` helper.
+- README: per-command flag lists for `calls create-phone / create-web / register-phone` now reflect the actual supported flags on each command.
+- `phone-numbers create` help no longer claims `--country-code` defaults to US or `--number-provider` defaults to twilio (the CLI does not set these defaults).
+- `loadJsonArg` now throws a descriptive error for a bare `@` with no path.
+
 ### Known gaps
 
 - Knowledge-base `update` is still not exposed by the SDK (only `create/retrieve/list/delete/addSources/deleteSource`), so no CLI command was added there.

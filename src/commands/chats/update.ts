@@ -56,6 +56,12 @@ export async function updateChatCommand(
         options.dataStorageSetting as ChatUpdateParams["data_storage_setting"];
     }
 
+    if (Object.keys(params).length === 0) {
+      throwValidation(
+        "No mutation flags provided. Pass at least one of --metadata, --custom-attributes, --dynamic-variables, --data-storage-setting.",
+      );
+    }
+
     const client = getRetellClient();
     const chat = await client.chat.update(chatId, params);
 

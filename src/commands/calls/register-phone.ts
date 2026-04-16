@@ -12,6 +12,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
+import { parseNumericFlag } from "../../services/numeric-flag";
 import type { CallRegisterPhoneCallParams } from "retell-sdk/resources/call";
 
 export interface RegisterPhoneCallOptions {
@@ -41,9 +42,10 @@ export async function registerPhoneCallCommand(
     };
 
     if (options.agentVersion !== undefined) {
-      const v = Number(options.agentVersion);
-      if (isNaN(v)) throwValidation("--agent-version must be a number");
-      params.agent_version = v;
+      params.agent_version = parseNumericFlag(
+        options.agentVersion,
+        "--agent-version",
+      );
     }
     if (options.direction)
       params.direction = options.direction as "inbound" | "outbound";

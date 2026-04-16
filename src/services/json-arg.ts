@@ -28,6 +28,9 @@ export function loadJsonArg(
 
   if (value.startsWith("@")) {
     const path = value.slice(1);
+    if (path === "") {
+      throwValidation(`${flagName}: empty path after @`);
+    }
     if (!existsSync(path)) {
       throwValidation(`${flagName}: file not found: ${path}`);
     }
@@ -77,6 +80,29 @@ export function readJsonFile(path: string, flagName: string): unknown {
       `${flagName}: invalid JSON in ${path}: ${(err as Error).message}`,
     );
   }
+}
+
+/**
+ * Read a JSON file and assert it parses to a plain object (not an array, null,
+ * or scalar). For body-as-file flags whose SDK params are object-shaped.
+ */
+export function readJsonObjectFile(
+  path: string,
+  flagName: string,
+): Record<string, unknown> {
+  const parsed = readJsonFile(path, flagName);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throwValidation(
+      `${flagName}: ${path} must contain a JSON object, not ${jsonKind(parsed)}`,
+    );
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function jsonKind(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
 }
 
 function throwValidation(message: string): never {

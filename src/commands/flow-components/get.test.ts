@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getFlowComponentCommand } from "./get";
 import * as retellClient from "../../services/retell-client";
+import * as outputFormatter from "../../services/output-formatter";
 
 vi.mock("../../services/retell-client");
 vi.mock("../../services/output-formatter", async () => {
@@ -33,5 +34,13 @@ describe("getFlowComponentCommand", () => {
     expect(mockClient.conversationFlowComponent.retrieve).toHaveBeenCalledWith(
       "c_1",
     );
+  });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    mockClient.conversationFlowComponent.retrieve.mockRejectedValue(
+      new Error("api"),
+    );
+    await getFlowComponentCommand("c_1");
+    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
 });

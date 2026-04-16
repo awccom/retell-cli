@@ -8,7 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { readJsonFile } from "../../services/json-arg";
+import { readJsonObjectFile } from "../../services/json-arg";
 import type { ConversationFlowComponentUpdateParams } from "retell-sdk/resources/conversation-flow-component";
 
 export interface UpdateFlowComponentOptions {
@@ -21,10 +21,10 @@ export async function updateFlowComponentCommand(
   options: UpdateFlowComponentOptions,
 ): Promise<void> {
   try {
-    const body = readJsonFile(
+    const body = readJsonObjectFile(
       options.file,
       "--file",
-    ) as ConversationFlowComponentUpdateParams;
+    ) as unknown as ConversationFlowComponentUpdateParams;
 
     const client = getRetellClient();
     const component = await client.conversationFlowComponent.update(
