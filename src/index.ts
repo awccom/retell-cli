@@ -59,11 +59,65 @@ import { deleteFlowCommand } from "./commands/flows/delete";
 import { listPhoneNumbersCommand } from "./commands/phone-numbers/list";
 import { getPhoneNumberCommand } from "./commands/phone-numbers/get";
 import { importPhoneNumberCommand } from "./commands/phone-numbers/import";
+import { createPhoneNumberCommand } from "./commands/phone-numbers/create";
+import { updatePhoneNumberCommand } from "./commands/phone-numbers/update";
+import { deletePhoneNumberCommand } from "./commands/phone-numbers/delete";
+import { createPhoneCallCommand } from "./commands/calls/create-phone";
+import { createWebCallCommand } from "./commands/calls/create-web";
+import { registerPhoneCallCommand } from "./commands/calls/register-phone";
+import { updateCallCommand } from "./commands/calls/update";
+import { deleteCallCommand } from "./commands/calls/delete";
+import { createBatchCallCommand } from "./commands/batch-calls/create";
+import { listLlmsCommand } from "./commands/llms/list";
+import { getLlmCommand } from "./commands/llms/get";
+import { createLlmCommand } from "./commands/llms/create";
+import { updateLlmCommand } from "./commands/llms/update";
+import { deleteLlmCommand } from "./commands/llms/delete";
+import { listVoicesCommand } from "./commands/voices/list";
+import { getVoiceCommand } from "./commands/voices/get";
+import { addVoiceResourceCommand } from "./commands/voices/add-resource";
+import { cloneVoiceCommand } from "./commands/voices/clone";
+import { searchVoicesCommand } from "./commands/voices/search";
+import { createChatCommand } from "./commands/chats/create";
+import { getChatCommand } from "./commands/chats/get";
+import { listChatsCommand } from "./commands/chats/list";
+import { updateChatCommand } from "./commands/chats/update";
+import { chatCompleteCommand } from "./commands/chats/complete";
+import { createSmsChatCommand } from "./commands/chats/sms";
+import { endChatCommand } from "./commands/chats/end";
+import { createChatAgentCommand } from "./commands/chat-agents/create";
+import { getChatAgentCommand } from "./commands/chat-agents/get";
+import { updateChatAgentCommand } from "./commands/chat-agents/update";
+import { listChatAgentsCommand } from "./commands/chat-agents/list";
+import { deleteChatAgentCommand } from "./commands/chat-agents/delete";
+import { chatAgentVersionsCommand } from "./commands/chat-agents/versions";
+import { publishChatAgentCommand } from "./commands/chat-agents/publish";
+import { listFlowComponentsCommand } from "./commands/flow-components/list";
+import { getFlowComponentCommand } from "./commands/flow-components/get";
+import { createFlowComponentCommand } from "./commands/flow-components/create";
+import { updateFlowComponentCommand } from "./commands/flow-components/update";
+import { deleteFlowComponentCommand } from "./commands/flow-components/delete";
+import { getConcurrencyCommand } from "./commands/concurrency/get";
+import { agentMcpToolsCommand } from "./commands/agents/mcp-tools";
+import { parseNumericFlag } from "./services/numeric-flag";
 
 // Read package.json for version
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, "../package.json"), "utf-8"),
 );
+
+function parseFlagOrExit(
+  value: string | undefined,
+  flagName: string,
+): number | undefined {
+  if (value === undefined) return undefined;
+  try {
+    return parseNumericFlag(value, flagName);
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
 
 // Create main program
 const program = new Command();
@@ -75,10 +129,7 @@ program
   .helpOption("-h, --help", "Display help for command")
   .option("--json", "Output as JSON (default)", true);
 
-// ===== PLACEHOLDER COMMANDS =====
-// These will be implemented in subsequent phases
-
-// Login command (Phase 2)
+// Login command
 program
   .command("login")
   .description("Authenticate with Retell AI")
@@ -95,7 +146,7 @@ Examples:
     await loginCommand();
   });
 
-// Transcripts commands (Phase 3)
+// Transcripts commands
 const transcripts = program
   .command("transcripts")
   .description("Manage call transcripts");
@@ -123,9 +174,9 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1) {
-      console.error("Error: limit must be a positive number");
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1) {
+      console.error("Error: --limit must be a positive number");
       process.exit(1);
     }
     await listTranscriptsCommand({
@@ -202,12 +253,14 @@ Examples:
       fields: options.fields,
       raw: options.raw,
       hotspotsOnly: options.hotspotsOnly,
-      latencyThreshold: options.latencyThreshold
-        ? parseInt(options.latencyThreshold)
-        : undefined,
-      silenceThreshold: options.silenceThreshold
-        ? parseInt(options.silenceThreshold)
-        : undefined,
+      latencyThreshold: parseFlagOrExit(
+        options.latencyThreshold,
+        "--latency-threshold",
+      ),
+      silenceThreshold: parseFlagOrExit(
+        options.silenceThreshold,
+        "--silence-threshold",
+      ),
     });
   });
 
@@ -243,12 +296,12 @@ Examples:
       agentId: options.agentId,
       since: options.since,
       until: options.until,
-      limit: options.limit ? Number(options.limit) : undefined,
+      limit: parseFlagOrExit(options.limit, "--limit"),
       fields: options.fields,
     });
   });
 
-// Agents commands (Phase 4)
+// Agents commands
 const agents = program.command("agents").description("Manage agents");
 
 agents
@@ -274,9 +327,9 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1) {
-      console.error("Error: limit must be a positive number");
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1) {
+      console.error("Error: --limit must be a positive number");
       process.exit(1);
     }
     await listAgentsCommand({
@@ -366,7 +419,7 @@ Examples:
     await agentVersionsCommand(agentId, options);
   });
 
-// Prompts commands (Phase 5)
+// Prompts commands
 const prompts = program.command("prompts").description("Manage agent prompts");
 
 prompts
@@ -433,7 +486,7 @@ Examples:
     await updatePromptsCommand(agentId, options);
   });
 
-// Agent publish command (Phase 5)
+// Agent publish command
 program
   .command("agent-publish <agent_id>")
   .description("Publish a draft agent to make changes live")
@@ -479,7 +532,7 @@ Examples:
   )
   .action(async (agentId, options) => {
     await getAgentCommand(agentId, {
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
       fields: options.fields,
     });
   });
@@ -526,7 +579,7 @@ Note: Run 'retell agent-publish <agent_id>' after updating to publish changes.
     await updateAgentCommand(agentId, {
       file: options.file,
       dryRun: options.dryRun,
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -815,7 +868,7 @@ Test case JSON format:
       file: options.file,
       llmId: options.llmId,
       flowId: options.flowId,
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -930,7 +983,7 @@ Examples:
       llmId: options.llmId,
       flowId: options.flowId,
       cases: options.cases,
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -1127,10 +1180,10 @@ Examples:
   `,
   )
   .action(async (options) => {
-    const limit = parseInt(options.limit, 10);
-    if (isNaN(limit) || limit < 1 || limit > 1000) {
+    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
+    if (limit < 1 || limit > 1000) {
       console.error(
-        "Error: limit must be a positive number between 1 and 1000",
+        "Error: --limit must be a positive number between 1 and 1000",
       );
       process.exit(1);
     }
@@ -1159,7 +1212,7 @@ Examples:
   )
   .action(async (conversationFlowId, options) => {
     await getFlowCommand(conversationFlowId, {
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
       fields: options.fields,
     });
   });
@@ -1214,7 +1267,7 @@ Examples:
   .action(async (conversationFlowId, options) => {
     await updateFlowCommand(conversationFlowId, {
       file: options.file,
-      version: options.engineVersion ? parseInt(options.engineVersion, 10) : undefined,
+      version: parseFlagOrExit(options.engineVersion, "--engine-version"),
     });
   });
 
@@ -1275,12 +1328,22 @@ phoneNumbers
   .requiredOption("--number <number>", "Phone number in E.164 format")
   .requiredOption("--termination-uri <uri>", "SIP trunk termination URI")
   .option("--nickname <name>", "Friendly name for reference")
-  .option("--inbound-agent <id>", "Single agent for inbound calls (shorthand for weight 1)")
-  .option("--outbound-agent <id>", "Single agent for outbound calls (shorthand for weight 1)")
-  .option("--inbound-agents <spec>", "Weighted inbound agents (format: id:weight,id:weight)")
-  .option("--outbound-agents <spec>", "Weighted outbound agents (format: id:weight,id:weight)")
-  .option("--inbound-sms-agents <spec>", "Weighted inbound SMS agents (format: id:weight,id:weight)")
-  .option("--outbound-sms-agents <spec>", "Weighted outbound SMS agents (format: id:weight,id:weight)")
+  .option(
+    "--inbound-agent <id>",
+    "Single agent for inbound calls (shorthand for weight 1)",
+  )
+  .option(
+    "--outbound-agent <id>",
+    "Single agent for outbound calls (shorthand for weight 1)",
+  )
+  .option(
+    "--inbound-agents <spec>",
+    "Weighted inbound agents (format: id:weight,id:weight)",
+  )
+  .option(
+    "--outbound-agents <spec>",
+    "Weighted outbound agents (format: id:weight,id:weight)",
+  )
   .option("--sip-username <user>", "SIP trunk auth username")
   .option("--sip-password <pass>", "SIP trunk auth password")
   .option("--fields <fields>", "Comma-separated list of fields to return")
@@ -1292,10 +1355,680 @@ Examples:
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --nickname "Support Line"
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agent agent_xxx
   $ retell phone-numbers import --number +14157774444 --termination-uri someuri.pstn.twilio.com --inbound-agents "agent_1:0.6,agent_2:0.4"
+
+SMS agent bindings are not supported on import. Use \`phone-numbers update\` after import to bind SMS agents.
   `,
   )
   .action(async (options) => {
     await importPhoneNumberCommand(options);
+  });
+
+phoneNumbers
+  .command("create")
+  .description("Purchase a new phone number and bind agents")
+  .option("--country-code <code>", "Country code: US or CA")
+  .option("--area-code <code>", "3-digit US area code")
+  .option("--number-provider <provider>", "twilio or telnyx")
+  .option("--toll-free", "Purchase a toll-free number")
+  .option("--nickname <name>", "Friendly name for reference")
+  .option("--phone-number <number>", "Specific E.164 number to purchase")
+  .option(
+    "--fallback-number <number>",
+    "Enterprise: fallback destination during outage",
+  )
+  .option("--inbound-webhook-url <url>", "Inbound call webhook URL")
+  .option("--transport <proto>", "SIP transport: TLS, TCP, or UDP")
+  .option(
+    "--inbound-agent <id>",
+    "Single inbound agent (shorthand for weight 1)",
+  )
+  .option(
+    "--outbound-agent <id>",
+    "Single outbound agent (shorthand for weight 1)",
+  )
+  .option(
+    "--inbound-agents <spec>",
+    "Weighted inbound agents (format: id:weight,id:weight)",
+  )
+  .option(
+    "--outbound-agents <spec>",
+    "Weighted outbound agents (format: id:weight,id:weight)",
+  )
+  .option(
+    "--allowed-inbound-country-list <csv>",
+    "Comma-separated ISO-2 country codes",
+  )
+  .option(
+    "--allowed-outbound-country-list <csv>",
+    "Comma-separated ISO-2 country codes",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers create --area-code 415 --nickname "Frontdesk"
+  $ retell phone-numbers create --country-code US --toll-free --inbound-agent agent_xxx
+    `,
+  )
+  .action(async (options) => {
+    await createPhoneNumberCommand(options);
+  });
+
+phoneNumbers
+  .command("update <phone_number>")
+  .description("Update agents and settings bound to a phone number")
+  .option(
+    "--nickname <name>",
+    "Friendly name for reference (use empty string to clear)",
+  )
+  .option(
+    "--termination-uri <uri>",
+    "SIP trunk termination URI (custom telephony)",
+  )
+  .option("--sip-username <user>", "SIP trunk auth username")
+  .option("--sip-password <pass>", "SIP trunk auth password")
+  .option(
+    "--transport <proto>",
+    "SIP transport: TLS, TCP, or UDP (use empty string to clear)",
+  )
+  .option(
+    "--inbound-webhook-url <url>",
+    "Inbound call webhook URL (use empty string to clear)",
+  )
+  .option(
+    "--inbound-sms-webhook-url <url>",
+    "Inbound SMS webhook URL (use empty string to clear)",
+  )
+  .option(
+    "--fallback-number <number>",
+    "Enterprise: fallback destination during outage (use empty string to clear)",
+  )
+  .option(
+    "--allowed-inbound-country-list <csv>",
+    "Comma-separated ISO-2 country codes (use empty string to clear)",
+  )
+  .option(
+    "--allowed-outbound-country-list <csv>",
+    "Comma-separated ISO-2 country codes (use empty string to clear)",
+  )
+  .option(
+    "--inbound-agent <id>",
+    "Single inbound agent (shorthand for weight 1)",
+  )
+  .option(
+    "--outbound-agent <id>",
+    "Single outbound agent (shorthand for weight 1)",
+  )
+  .option(
+    "--inbound-agents <spec>",
+    "Weighted inbound agents (format: id:weight,id:weight)",
+  )
+  .option(
+    "--outbound-agents <spec>",
+    "Weighted outbound agents (format: id:weight,id:weight)",
+  )
+  .option("--inbound-sms-agents <spec>", "Weighted inbound SMS agents")
+  .option("--outbound-sms-agents <spec>", "Weighted outbound SMS agents")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers update +14157774444 --inbound-agent agent_new
+  $ retell phone-numbers update +14157774444 --inbound-agents "a:0.7,b:0.3" --nickname Support
+  $ retell phone-numbers update +14157774444 --fallback-number "" (clear)
+    `,
+  )
+  .action(async (phoneNumber, options) => {
+    await updatePhoneNumberCommand(phoneNumber, options);
+  });
+
+phoneNumbers
+  .command("delete <phone_number>")
+  .description("Release an existing phone number")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell phone-numbers delete +14157774444
+    `,
+  )
+  .action(async (phoneNumber) => {
+    await deletePhoneNumberCommand(phoneNumber);
+  });
+
+// Calls commands (create/update/delete; list and get stay under `transcripts`)
+const calls = program
+  .command("calls")
+  .description("Create and manage calls (list/get are under `transcripts`)");
+
+calls
+  .command("create-phone")
+  .description("Create a new outbound phone call")
+  .requiredOption("--from-number <number>", "Caller number in E.164 format")
+  .requiredOption("--to-number <number>", "Callee number in E.164 format")
+  .option("--override-agent-id <id>", "One-time agent override for this call")
+  .option(
+    "--override-agent-version <n>",
+    "Override agent version for this call",
+  )
+  .option("--metadata <json>", "Inline JSON or @path for call metadata")
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path for dynamic variables",
+  )
+  .option(
+    "--custom-sip-headers <json>",
+    "Inline JSON or @path for custom SIP headers",
+  )
+  .option(
+    "--agent-override <path>",
+    "Path to JSON file with agent_override block",
+  )
+  .option(
+    "--ignore-e164-validation",
+    "Skip E.164 validation for from-number (custom telephony)",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell calls create-phone --from-number +14157774444 --to-number +12137774445
+  $ retell calls create-phone --from-number +1 --to-number +1 --metadata '{"customer_id":"c_1"}'
+    `,
+  )
+  .action(async (options) => {
+    await createPhoneCallCommand(options);
+  });
+
+calls
+  .command("create-web")
+  .description("Create a new web call for a browser-based agent")
+  .requiredOption("--agent-id <id>", "Agent to use for this web call")
+  .option("--agent-version <n>", "Specific agent version")
+  .option("--metadata <json>", "Inline JSON or @path for call metadata")
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path for dynamic variables",
+  )
+  .option(
+    "--agent-override <path>",
+    "Path to JSON file with agent_override block",
+  )
+  .option("--current-node-id <id>", "Start at this conversation-flow node")
+  .option("--current-state <name>", "Start at this Retell-LLM state")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createWebCallCommand(options);
+  });
+
+calls
+  .command("register-phone")
+  .description("Register a phone call for custom telephony (you dial)")
+  .requiredOption("--agent-id <id>", "Agent to use for this call")
+  .option("--agent-version <n>", "Specific agent version")
+  .option("--direction <dir>", "inbound or outbound")
+  .option("--from-number <n>", "Tracking from-number")
+  .option("--to-number <n>", "Tracking to-number")
+  .option("--metadata <json>", "Inline JSON or @path for call metadata")
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path for dynamic variables",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await registerPhoneCallCommand(options);
+  });
+
+calls
+  .command("update <call_id>")
+  .description("Update metadata and storage settings on an existing call")
+  .option("--metadata <json>", "Inline JSON or @path for call metadata")
+  .option(
+    "--custom-attributes <json>",
+    "Inline JSON or @path for custom attributes",
+  )
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path overriding dynamic variables",
+  )
+  .option(
+    "--data-storage-setting <value>",
+    "everything | everything_except_pii | basic_attributes_only",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (callId, options) => {
+    await updateCallCommand(callId, options);
+  });
+
+calls
+  .command("delete <call_id>")
+  .description("Delete a call and its associated data")
+  .action(async (callId) => {
+    await deleteCallCommand(callId);
+  });
+
+// Batch Calls commands
+const batchCalls = program
+  .command("batch-calls")
+  .description("Schedule bulk outbound calls");
+
+batchCalls
+  .command("create")
+  .description("Create a new batch call")
+  .requiredOption("--from-number <number>", "Caller number in E.164 format")
+  .requiredOption(
+    "--tasks <path>",
+    "Path to JSON array of task objects ({to_number, ...})",
+  )
+  .option("--name <name>", "Friendly name for your reference")
+  .option(
+    "--reserved-concurrency <n>",
+    "Concurrency reserved for non-batch calls",
+  )
+  .option("--trigger-timestamp <ms>", "Scheduled send time (unix ms)")
+  .option(
+    "--call-time-window <path>",
+    "Path to JSON file with call_time_window object",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell batch-calls create --from-number +14157774444 --tasks tasks.json
+  $ retell batch-calls create --from-number +1 --tasks tasks.json --name "Outreach Apr"
+    `,
+  )
+  .action(async (options) => {
+    await createBatchCallCommand(options);
+  });
+
+// LLM commands
+const llms = program
+  .command("llms")
+  .description("Manage Retell LLM response engines");
+
+llms
+  .command("list")
+  .description("List Retell LLMs")
+  .option("-l, --limit <n>", "Maximum number to return")
+  .option("--pagination-key <key>", "LLM id to start from")
+  .option(
+    "--pagination-key-version <n>",
+    "Version paired with --pagination-key",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await listLlmsCommand(options);
+  });
+
+llms
+  .command("get <llm_id>")
+  .description("Get a specific Retell LLM")
+  .option("--version <n>", "Specific version to retrieve (defaults to latest)")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (llmId, options) => {
+    await getLlmCommand(llmId, options);
+  });
+
+llms
+  .command("create")
+  .description("Create a new Retell LLM (simple flags or full --file)")
+  .option("-f, --file <path>", "Path to JSON file with the full LLM body")
+  .option("--general-prompt <text>", "General system prompt")
+  .option("--model <model>", "Text LLM model (e.g. gpt-4.1)")
+  .option("--s2s-model <model>", "Speech-to-speech model")
+  .option("--start-speaker <who>", "'user' or 'agent'")
+  .option("--begin-message <msg>", "First agent utterance")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createLlmCommand(options);
+  });
+
+llms
+  .command("update <llm_id>")
+  .description("Update a Retell LLM (body via --file)")
+  .requiredOption("-f, --file <path>", "Path to JSON file with LLM update body")
+  .option("--version <n>", "Specific version to update")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (llmId, options) => {
+    await updateLlmCommand(llmId, options);
+  });
+
+llms
+  .command("delete <llm_id>")
+  .description("Delete a Retell LLM")
+  .action(async (llmId) => {
+    await deleteLlmCommand(llmId);
+  });
+
+// Voices commands
+const voices = program
+  .command("voices")
+  .description("Manage and search voice resources");
+
+voices
+  .command("list")
+  .description("List all voices available to this account")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await listVoicesCommand(options);
+  });
+
+voices
+  .command("get <voice_id>")
+  .description("Get a specific voice")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (voiceId, options) => {
+    await getVoiceCommand(voiceId, options);
+  });
+
+voices
+  .command("add-resource")
+  .description("Add a community voice to the account's library")
+  .requiredOption(
+    "--provider-voice-id <id>",
+    "Voice id assigned by the provider",
+  )
+  .requiredOption("--voice-name <name>", "Custom name for the voice")
+  .option(
+    "--voice-provider <p>",
+    "elevenlabs, cartesia, minimax, or fish_audio",
+  )
+  .option(
+    "--public-user-id <id>",
+    "ElevenLabs only: public user id of the owner",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await addVoiceResourceCommand(options);
+  });
+
+voices
+  .command("clone")
+  .description("Clone a voice from one or more audio files")
+  .requiredOption("--voice-name <name>", "Name for the cloned voice")
+  .requiredOption(
+    "--voice-provider <p>",
+    "elevenlabs, cartesia, minimax, fish_audio, or platform",
+  )
+  .option(
+    "--file <path>",
+    "Audio file to use for cloning (repeat for multiple files)",
+    (value: string, previous: string[] = []) => [...previous, value],
+    [] as string[],
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell voices clone --voice-name "Dev Clone" --voice-provider elevenlabs --file sample.wav
+  $ retell voices clone --voice-name "Multi" --voice-provider elevenlabs --file one.wav --file two.wav
+    `,
+  )
+  .action(async (options) => {
+    await cloneVoiceCommand(options);
+  });
+
+voices
+  .command("search")
+  .description("Search community voices from a provider")
+  .requiredOption(
+    "--search-query <query>",
+    "Search query (name, description, or id)",
+  )
+  .option(
+    "--voice-provider <p>",
+    "elevenlabs, cartesia, minimax, or fish_audio",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await searchVoicesCommand(options);
+  });
+
+// Chats commands
+const chats = program
+  .command("chats")
+  .description("Manage chat sessions with chat agents");
+
+chats
+  .command("create")
+  .description("Start a new chat session")
+  .requiredOption("--agent-id <id>", "Chat agent id")
+  .option("--agent-version <n>", "Specific chat agent version")
+  .option("--metadata <json>", "Inline JSON or @path for chat metadata")
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path for dynamic variables",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createChatCommand(options);
+  });
+
+chats
+  .command("get <chat_id>")
+  .description("Get a chat by id")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (chatId, options) => {
+    await getChatCommand(chatId, options);
+  });
+
+chats
+  .command("list")
+  .description("List chats")
+  .option("-l, --limit <n>", "Maximum number to return")
+  .option("--pagination-key <key>", "Chat id to start from")
+  .option("--sort-order <order>", "ascending or descending")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await listChatsCommand(options);
+  });
+
+chats
+  .command("update <chat_id>")
+  .description("Update metadata and storage settings on a chat")
+  .option("--metadata <json>", "Inline JSON or @path for chat metadata")
+  .option(
+    "--custom-attributes <json>",
+    "Inline JSON or @path for custom attributes",
+  )
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path overriding dynamic variables",
+  )
+  .option(
+    "--data-storage-setting <value>",
+    "everything | basic_attributes_only",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (chatId, options) => {
+    await updateChatCommand(chatId, options);
+  });
+
+chats
+  .command("complete")
+  .description("Send a user message and get the agent's completion")
+  .requiredOption("--chat-id <id>", "Chat id")
+  .requiredOption("--content <text>", "User message content")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await chatCompleteCommand(options);
+  });
+
+chats
+  .command("sms")
+  .description("Create an SMS-backed chat session")
+  .requiredOption(
+    "--from-number <number>",
+    "Sender number (must be SMS-capable)",
+  )
+  .requiredOption("--to-number <number>", "Recipient number")
+  .option("--override-agent-id <id>", "One-time agent override")
+  .option("--override-agent-version <n>", "Override agent version")
+  .option("--metadata <json>", "Inline JSON or @path for chat metadata")
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON or @path for dynamic variables",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createSmsChatCommand(options);
+  });
+
+chats
+  .command("end <chat_id>")
+  .description("End an active chat session")
+  .action(async (chatId) => {
+    await endChatCommand(chatId);
+  });
+
+// Chat Agents commands
+const chatAgents = program
+  .command("chat-agents")
+  .description("Manage chat agents (text/SMS mode)");
+
+chatAgents
+  .command("list")
+  .description("List chat agents")
+  .option("-l, --limit <n>", "Maximum number to return")
+  .option("--pagination-key <key>", "Chat agent id to start from")
+  .option(
+    "--pagination-key-version <n>",
+    "Version paired with --pagination-key",
+  )
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await listChatAgentsCommand(options);
+  });
+
+chatAgents
+  .command("get <agent_id>")
+  .description("Get a chat agent")
+  .option("--version <n>", "Specific version to retrieve")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (agentId, options) => {
+    await getChatAgentCommand(agentId, options);
+  });
+
+chatAgents
+  .command("create")
+  .description("Create a new chat agent")
+  .option("-f, --file <path>", "Path to JSON file with full agent body")
+  .option("--name <name>", "Agent name")
+  .option("--llm-id <id>", "Attach a retell-llm response engine")
+  .option("--flow-id <id>", "Attach a conversation-flow response engine")
+  .option("--custom-llm <url>", "Custom-LLM websocket URL")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createChatAgentCommand(options);
+  });
+
+chatAgents
+  .command("update <agent_id>")
+  .description("Update a chat agent (body via --file)")
+  .requiredOption("-f, --file <path>", "Path to JSON file with update body")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (agentId, options) => {
+    await updateChatAgentCommand(agentId, options);
+  });
+
+chatAgents
+  .command("delete <agent_id>")
+  .description("Delete a chat agent")
+  .action(async (agentId) => {
+    await deleteChatAgentCommand(agentId);
+  });
+
+chatAgents
+  .command("versions <agent_id>")
+  .description("List all versions of a chat agent")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (agentId, options) => {
+    await chatAgentVersionsCommand(agentId, options);
+  });
+
+chatAgents
+  .command("publish <agent_id>")
+  .description("Publish the draft configuration of a chat agent")
+  .action(async (agentId) => {
+    await publishChatAgentCommand(agentId);
+  });
+
+// Flow Components commands
+const flowComponents = program
+  .command("flow-components")
+  .description("Manage reusable conversation-flow components");
+
+flowComponents
+  .command("list")
+  .description("List flow components")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await listFlowComponentsCommand(options);
+  });
+
+flowComponents
+  .command("get <component_id>")
+  .description("Get a flow component")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (componentId, options) => {
+    await getFlowComponentCommand(componentId, options);
+  });
+
+flowComponents
+  .command("create")
+  .description("Create a new flow component (body via --file)")
+  .requiredOption("-f, --file <path>", "Path to JSON file with the full body")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await createFlowComponentCommand(options);
+  });
+
+flowComponents
+  .command("update <component_id>")
+  .description("Update a flow component (body via --file)")
+  .requiredOption("-f, --file <path>", "Path to JSON file with update body")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (componentId, options) => {
+    await updateFlowComponentCommand(componentId, options);
+  });
+
+flowComponents
+  .command("delete <component_id>")
+  .description("Delete a flow component")
+  .action(async (componentId) => {
+    await deleteFlowComponentCommand(componentId);
+  });
+
+// Concurrency commands
+const concurrency = program
+  .command("concurrency")
+  .description("View the org's call concurrency and limits");
+
+concurrency
+  .command("get")
+  .description("Get current call concurrency and limits")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (options) => {
+    await getConcurrencyCommand(options);
+  });
+
+// Agents: MCP tools sub-command
+program.commands
+  .find((c) => c.name() === "agents")!
+  .command("mcp-tools <agent_id>")
+  .description("List the MCP tools available to an agent")
+  .requiredOption("--mcp-id <id>", "ID of the MCP server")
+  .option("--component-id <id>", "Component id (if MCP is under a component)")
+  .option("--version <n>", "Agent version (defaults to latest)")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (agentId, options) => {
+    await agentMcpToolsCommand(agentId, options);
   });
 
 // Parse command line arguments

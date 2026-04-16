@@ -23,10 +23,9 @@ export async function deleteKnowledgeBaseSourceCommand(
     const client = getRetellClient();
 
     // Delete the source from the knowledge base
-    const knowledgeBase = await client.knowledgeBase.deleteSource(
-      sourceId,
-      { knowledge_base_id: knowledgeBaseId },
-    );
+    const knowledgeBase = await client.knowledgeBase.deleteSource(sourceId, {
+      knowledge_base_id: knowledgeBaseId,
+    });
 
     const output: KnowledgeBaseMutationOutput = {
       message: "Source deleted successfully",

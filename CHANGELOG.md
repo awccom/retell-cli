@@ -5,6 +5,92 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-16
+
+Bulk addition of CLI surface for Retell SDK resources that were previously unwrapped or partially wrapped. Bumped `retell-sdk` dependency to `^5.12.0`.
+
+### Added
+
+#### Calls (`calls`)
+- `calls create-phone` — create an outbound phone call (supports `--agent-override`, `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--override-agent-id`, `--override-agent-version`, `--ignore-e164-validation`).
+- `calls create-web` — create a web call for browser-based agents.
+- `calls register-phone` — register a call for custom telephony.
+- `calls update <call_id>` — update metadata, custom attributes, dynamic variables, and data-storage setting.
+- `calls delete <call_id>` — delete a call and its data.
+- Note: `calls list` / `calls get` are intentionally omitted; use `transcripts list` / `transcripts get` / `transcripts search`.
+
+#### Batch Calls (`batch-calls`)
+- `batch-calls create` — schedule a batch of outbound calls from a JSON tasks file with optional `--call-time-window`, `--reserved-concurrency`, `--trigger-timestamp`.
+
+#### LLMs (`llms`)
+- `llms list`, `llms get <llm_id>`, `llms delete <llm_id>`.
+- `llms create` — via simple flags (`--general-prompt`, `--model`, `--s2s-model`, `--start-speaker`, `--begin-message`) or full `--file` body.
+- `llms update <llm_id> --file <path>` — full body update.
+
+#### Voices (`voices`)
+- `voices list`, `voices get <voice_id>`, `voices search`.
+- `voices add-resource` — add a community voice to the account library.
+- `voices clone` — clone a voice from one or more audio files (repeatable `--file`).
+
+#### Chats (`chats`) and Chat Agents (`chat-agents`)
+- `chats create`, `chats get`, `chats list`, `chats update`, `chats end`.
+- `chats complete` — send a user message to an existing chat and receive the agent's completion.
+- `chats sms` — create an SMS-backed chat session.
+- `chat-agents list/get/create/update/delete/versions/publish` — full chat agent lifecycle.
+
+#### Phone Numbers (CRUD gap filled)
+- `phone-numbers create` — purchase a new number and bind agents (reuses weighted-agent flags from `import`).
+- `phone-numbers update <phone_number>` — update bound agents, nickname, SIP auth (note: SDK uses `auth_username`/`auth_password` on update vs `sip_trunk_auth_username`/`sip_trunk_auth_password` on import; CLI flag `--sip-username/--sip-password` translates correctly), country allow-lists, webhook URLs.
+- `phone-numbers delete <phone_number>` — release a phone number.
+
+#### Flow Components (`flow-components`)
+- `flow-components list/get/create/update/delete` — CRUD for reusable conversation-flow components (create/update bodies via `--file`).
+
+#### Concurrency and MCP Tools
+- `concurrency get` — view the org's current call concurrency and limits.
+- `agents mcp-tools <agent_id> --mcp-id <id>` — list MCP tools available to an agent from a specific MCP server.
+
+### Changed
+
+- Bumped `retell-sdk` from `^5.10.3` to `^5.12.0`.
+- Extracted weighted-agent parsing from `phone-numbers/import.ts` into a shared `src/services/weighted-agents.ts` so `import`, `create`, and `update` can share a single implementation. Behavior of `phone-numbers import` is unchanged; its mutual-exclusion errors now flow through `handleSdkError` as `ValidationError` rather than via an inline `process.exit(1)`, giving consistent error shape with other commands.
+- Added a small `src/services/json-arg.ts` helper for flags that accept inline JSON or `@path` file references (`--metadata`, `--dynamic-variables`, `--custom-sip-headers`, etc.).
+
+### Tests
+
+- Added ~80 new test cases covering happy paths, flag parsing, validation errors, and SDK error passthrough for every new command, plus a dedicated test file for the weighted-agents service and json-arg helper.
+
+### Fixed (post-review)
+
+- `llms update --version` now sets `query_version` on the request params instead of a nonexistent body `version` field — the flag previously had no effect.
+- Numeric flag parsing (`--version`, `--limit`, `--area-code`, `--trigger-timestamp`, etc.) now rejects empty and whitespace-only strings. Centralized via `src/services/numeric-flag.ts`.
+- `calls update`, `chats update`, and `phone-numbers update` now require at least one mutation flag instead of silently sending an empty body to the SDK.
+- Body-as-file flags (`llms create/update`, `chat-agents create/update`, `flow-components create/update`, `calls create-phone/create-web --agent-override`, `batch-calls create --call-time-window`) now reject non-object JSON (arrays, null, scalars) with a clear `ValidationError` via new `readJsonObjectFile` helper.
+- README: per-command flag lists for `calls create-phone / create-web / register-phone` now reflect the actual supported flags on each command.
+- `phone-numbers create` help no longer claims `--country-code` defaults to US or `--number-provider` defaults to twilio (the CLI does not set these defaults); the SDK still applies those server-side.
+- `loadJsonArg` now throws a descriptive error for a bare `@` with no path.
+
+### Fixed (second review pass)
+
+- `chat-agents create` / `llms create` now reject `--file` combined with simple flags (previously the simple flags were silently ignored).
+- `phone-numbers update` can now clear nullable fields with an explicit empty string (`--nickname ""`, `--fallback-number ""`, `--inbound-webhook-url ""`, `--inbound-sms-webhook-url ""`, `--transport ""` map to `null` in the SDK request). Previously these were silently dropped.
+- `phone-numbers create` / `update` now validate `--transport` against `TLS`/`TCP`/`UDP` before the SDK call (previously typos passed through and produced opaque 400s).
+- `llms update` / `chat-agents update` / `flow-components update` now reject an empty `--file` body object, matching the empty-body guard already in place on `calls update` / `chats update` / `phone-numbers update`.
+- `phone-numbers import` no longer advertises `--inbound-sms-agents` / `--outbound-sms-agents`; SMS agent bindings are not supported on import per the SDK. Use `phone-numbers update` after import to bind SMS agents.
+- Pre-existing numeric flag call sites in `src/index.ts` (`transcripts list/analyze/search`, `agents list/get/update`, `tests cases/batches create`, `flows list/get/update` — `--limit`, `--engine-version`, `--latency-threshold`, `--silence-threshold`) migrated to the centralized `parseNumericFlag`. Invalid or whitespace-only values now produce a clear error instead of silently becoming `NaN`.
+- Weighted-agents parser now rejects empty `agent_id` (e.g. `:0.5`, `agent_1:0.5,:0.5`) with a clear error instead of emitting `{agent_id: "", weight: 0.5}`.
+
+### Fixed (fourth review pass)
+
+- `chats complete` now rejects empty `--chat-id` / `--content` via `requireNonEmpty` (was missed in the third-pass rollout). Commander treats `--flag ""` as a defined string, so the empty values would otherwise reach the SDK and surface as an opaque 400.
+- `applyWeightedAgents` now rejects empty-string agent flags (`--inbound-agent ""`, `--outbound-agent ""`, `--inbound-agents ""`, `--outbound-agents ""`, `--inbound-sms-agents ""`, `--outbound-sms-agents ""`) with a clear `VALIDATION_ERROR` instead of silently dropping the binding. Closes a hole where `phone-numbers create/update/import --inbound-agent ""` would ship with no inbound binding the user thought they'd set.
+- `phone-numbers update --termination-uri ""` / `--sip-username ""` / `--sip-password ""` now reject (these SDK fields are not nullable). `--allowed-inbound-country-list ""` / `--allowed-outbound-country-list ""` now clear the list (map to `null`) — matching the nullable-clearing pattern applied to the other update fields in the second pass.
+- Removed dead `parseWeightedAgents` re-export from `phone-numbers/import.ts` and the single test that only exercised the re-export (not behavior).
+
+### Known gaps
+
+- Knowledge-base `update` is still not exposed by the SDK (only `create/retrieve/list/delete/addSources/deleteSource`), so no CLI command was added there.
+
 ## [1.4.0] - 2026-01-27
 
 ### Added
