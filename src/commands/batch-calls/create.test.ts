@@ -97,4 +97,13 @@ describe("createBatchCallCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --from-number", async () => {
+    writeFileSync(tasksPath, JSON.stringify([{ to_number: "+1" }]));
+    await createBatchCallCommand({ fromNumber: "", tasks: tasksPath });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.batchCall.createBatchCall).not.toHaveBeenCalled();
+  });
 });

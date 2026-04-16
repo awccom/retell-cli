@@ -61,4 +61,20 @@ describe("addVoiceResourceCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --provider-voice-id", async () => {
+    await addVoiceResourceCommand({ providerVoiceId: "", voiceName: "n" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.voice.addResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --voice-name", async () => {
+    await addVoiceResourceCommand({ providerVoiceId: "p", voiceName: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.voice.addResource).not.toHaveBeenCalled();
+  });
 });

@@ -75,6 +75,22 @@ describe("createPhoneCallCommand", () => {
     }
   });
 
+  it("rejects empty-string --from-number", async () => {
+    await createPhoneCallCommand({ fromNumber: "", toNumber: "+12137774445" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.createPhoneCall).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --to-number", async () => {
+    await createPhoneCallCommand({ fromNumber: "+14157774444", toNumber: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.createPhoneCall).not.toHaveBeenCalled();
+  });
+
   it("rejects non-numeric --override-agent-version", async () => {
     await createPhoneCallCommand({
       fromNumber: "+1",

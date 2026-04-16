@@ -54,4 +54,12 @@ describe("agentMcpToolsCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --mcp-id", async () => {
+    await agentMcpToolsCommand("agent_1", { mcpId: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.mcpTool.getMcpTools).not.toHaveBeenCalled();
+  });
 });

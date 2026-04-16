@@ -31,29 +31,56 @@ describe("parseWeightedAgents", () => {
     expect(result[0].weight + result[1].weight).toBeCloseTo(1.0);
   });
 
-  it("throws on empty spec", () => {
-    expect(() => parseWeightedAgents("")).toThrow("Empty agent spec");
+  it("throws ValidationError on empty spec", () => {
+    try {
+      parseWeightedAgents("");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Empty agent spec/);
+    }
   });
 
-  it("throws on non-numeric weight", () => {
-    expect(() => parseWeightedAgents("agent_1:abc")).toThrow("Invalid weight");
+  it("throws ValidationError on non-numeric weight", () => {
+    try {
+      parseWeightedAgents("agent_1:abc");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Invalid weight/);
+    }
   });
 
-  it("throws on weight out of range", () => {
-    expect(() => parseWeightedAgents("agent_1:0")).toThrow("Invalid weight");
-    expect(() => parseWeightedAgents("agent_1:1.5")).toThrow("Invalid weight");
+  it("throws ValidationError on weight out of range", () => {
+    for (const spec of ["agent_1:0", "agent_1:1.5"]) {
+      try {
+        parseWeightedAgents(spec);
+        expect.fail(`Expected error for spec "${spec}"`);
+      } catch (err) {
+        expect((err as Error).name).toBe("ValidationError");
+        expect((err as Error).message).toMatch(/Invalid weight/);
+      }
+    }
   });
 
-  it("throws when weights don't sum to 1.0", () => {
-    expect(() => parseWeightedAgents("agent_1:0.3,agent_2:0.3")).toThrow(
-      "must sum to 1.0",
-    );
+  it("throws ValidationError when weights don't sum to 1.0", () => {
+    try {
+      parseWeightedAgents("agent_1:0.3,agent_2:0.3");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/must sum to 1\.0/);
+    }
   });
 
-  it("throws when mixing weighted and unweighted agents", () => {
-    expect(() => parseWeightedAgents("agent_1:0.5,agent_2")).toThrow(
-      "Cannot mix",
-    );
+  it("throws ValidationError when mixing weighted and unweighted agents", () => {
+    try {
+      parseWeightedAgents("agent_1:0.5,agent_2");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Cannot mix/);
+    }
   });
 
   it("accepts three-way split at the tolerance edge (0.333 x 3)", () => {
@@ -69,29 +96,56 @@ describe("parseWeightedAgents", () => {
     ).not.toThrow();
   });
 
-  it("rejects entries with more than one colon", () => {
-    expect(() => parseWeightedAgents("agent_1:0.5:extra")).toThrow(
-      /Invalid agent spec/,
-    );
+  it("rejects entries with more than one colon as ValidationError", () => {
+    try {
+      parseWeightedAgents("agent_1:0.5:extra");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Invalid agent spec/);
+    }
   });
 
-  it("rejects trailing colon (empty weight)", () => {
-    expect(() => parseWeightedAgents("agent_1:")).toThrow(/Invalid weight/);
+  it("rejects trailing colon (empty weight) as ValidationError", () => {
+    try {
+      parseWeightedAgents("agent_1:");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Invalid weight/);
+    }
   });
 
-  it("rejects whitespace-only spec", () => {
-    expect(() => parseWeightedAgents("   ")).toThrow("Empty agent spec");
-    expect(() => parseWeightedAgents(" , ")).toThrow("Empty agent spec");
+  it("rejects whitespace-only spec as ValidationError", () => {
+    for (const spec of ["   ", " , "]) {
+      try {
+        parseWeightedAgents(spec);
+        expect.fail(`Expected error for spec "${spec}"`);
+      } catch (err) {
+        expect((err as Error).name).toBe("ValidationError");
+        expect((err as Error).message).toMatch(/Empty agent spec/);
+      }
+    }
   });
 
-  it("rejects empty agent_id with weight", () => {
-    expect(() => parseWeightedAgents(":0.5")).toThrow(/Agent ID is empty/);
+  it("rejects empty agent_id with weight as ValidationError", () => {
+    try {
+      parseWeightedAgents(":0.5");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Agent ID is empty/);
+    }
   });
 
-  it("rejects empty agent_id inside a weighted list", () => {
-    expect(() => parseWeightedAgents("agent_1:0.5,:0.5")).toThrow(
-      /Agent ID is empty/,
-    );
+  it("rejects empty agent_id inside a weighted list as ValidationError", () => {
+    try {
+      parseWeightedAgents("agent_1:0.5,:0.5");
+      expect.fail("Expected error to be thrown");
+    } catch (err) {
+      expect((err as Error).name).toBe("ValidationError");
+      expect((err as Error).message).toMatch(/Agent ID is empty/);
+    }
   });
 });
 

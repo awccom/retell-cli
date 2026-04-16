@@ -13,6 +13,7 @@ import {
 } from "../../services/output-formatter";
 import { readJsonFile, readJsonObjectFile } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { BatchCallCreateBatchCallParams } from "retell-sdk/resources/batch-call";
 
 export interface CreateBatchCallOptions {
@@ -35,7 +36,7 @@ export async function createBatchCallCommand(
     }
 
     const params: BatchCallCreateBatchCallParams = {
-      from_number: options.fromNumber,
+      from_number: requireNonEmpty(options.fromNumber, "--from-number"),
       tasks: tasks as BatchCallCreateBatchCallParams["tasks"],
     };
 

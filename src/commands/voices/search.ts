@@ -10,6 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { VoiceSearchParams } from "retell-sdk/resources/voice";
 
 const VALID_PROVIDERS = [
@@ -38,7 +39,9 @@ export async function searchVoicesCommand(
       );
     }
 
-    const params: VoiceSearchParams = { search_query: options.searchQuery };
+    const params: VoiceSearchParams = {
+      search_query: requireNonEmpty(options.searchQuery, "--search-query"),
+    };
     if (options.voiceProvider) {
       params.voice_provider =
         options.voiceProvider as VoiceSearchParams["voice_provider"];

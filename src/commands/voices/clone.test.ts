@@ -91,4 +91,16 @@ describe("cloneVoiceCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --voice-name", async () => {
+    await cloneVoiceCommand({
+      voiceName: "",
+      voiceProvider: "elevenlabs",
+      file: ["/ok/one.wav"],
+    });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.voice.clone).not.toHaveBeenCalled();
+  });
 });

@@ -51,4 +51,12 @@ describe("createChatCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --agent-id", async () => {
+    await createChatCommand({ agentId: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.create).not.toHaveBeenCalled();
+  });
 });

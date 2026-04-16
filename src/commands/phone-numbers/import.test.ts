@@ -195,6 +195,30 @@ describe("importPhoneNumberCommand", () => {
     });
   });
 
+  describe("required flag guards", () => {
+    it("rejects empty-string --number", async () => {
+      await importPhoneNumberCommand({
+        number: "",
+        terminationUri: "someuri.pstn.twilio.com",
+      });
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+      expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
+    });
+
+    it("rejects empty-string --termination-uri", async () => {
+      await importPhoneNumberCommand({
+        number: "+14157774444",
+        terminationUri: "",
+      });
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+      expect(mockClient.phoneNumber.import).not.toHaveBeenCalled();
+    });
+  });
+
   describe("field filtering", () => {
     it("should apply field filtering when --fields is specified", async () => {
       await importPhoneNumberCommand({

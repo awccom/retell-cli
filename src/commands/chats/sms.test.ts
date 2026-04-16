@@ -46,4 +46,20 @@ describe("createSmsChatCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --from-number", async () => {
+    await createSmsChatCommand({ fromNumber: "", toNumber: "+2" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.createSMSChat).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --to-number", async () => {
+    await createSmsChatCommand({ fromNumber: "+1", toNumber: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.chat.createSMSChat).not.toHaveBeenCalled();
+  });
 });

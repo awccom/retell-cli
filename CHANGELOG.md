@@ -12,7 +12,7 @@ Bulk addition of CLI surface for Retell SDK resources that were previously unwra
 ### Added
 
 #### Calls (`calls`)
-- `calls create-phone` — create an outbound phone call (supports `--agent-override`, `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--override-agent-id`, `--ignore-e164-validation`).
+- `calls create-phone` — create an outbound phone call (supports `--agent-override`, `--metadata`, `--dynamic-variables`, `--custom-sip-headers`, `--override-agent-id`, `--override-agent-version`, `--ignore-e164-validation`).
 - `calls create-web` — create a web call for browser-based agents.
 - `calls register-phone` — register a call for custom telephony.
 - `calls update <call_id>` — update metadata, custom attributes, dynamic variables, and data-storage setting.

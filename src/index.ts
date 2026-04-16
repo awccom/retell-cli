@@ -129,10 +129,7 @@ program
   .helpOption("-h, --help", "Display help for command")
   .option("--json", "Output as JSON (default)", true);
 
-// ===== PLACEHOLDER COMMANDS =====
-// These will be implemented in subsequent phases
-
-// Login command (Phase 2)
+// Login command
 program
   .command("login")
   .description("Authenticate with Retell AI")
@@ -149,7 +146,7 @@ Examples:
     await loginCommand();
   });
 
-// Transcripts commands (Phase 3)
+// Transcripts commands
 const transcripts = program
   .command("transcripts")
   .description("Manage call transcripts");
@@ -304,7 +301,7 @@ Examples:
     });
   });
 
-// Agents commands (Phase 4)
+// Agents commands
 const agents = program.command("agents").description("Manage agents");
 
 agents
@@ -422,7 +419,7 @@ Examples:
     await agentVersionsCommand(agentId, options);
   });
 
-// Prompts commands (Phase 5)
+// Prompts commands
 const prompts = program.command("prompts").description("Manage agent prompts");
 
 prompts
@@ -489,7 +486,7 @@ Examples:
     await updatePromptsCommand(agentId, options);
   });
 
-// Agent publish command (Phase 5)
+// Agent publish command
 program
   .command("agent-publish <agent_id>")
   .description("Publish a draft agent to make changes live")
@@ -2021,9 +2018,7 @@ concurrency
     await getConcurrencyCommand(options);
   });
 
-// Agents: MCP tools sub-command (lives under the existing `agents` group).
-// Wired here rather than alongside the other agents subcommands to keep the
-// diff contained during the 1.6.0 SDK expansion.
+// Agents: MCP tools sub-command
 program.commands
   .find((c) => c.name() === "agents")!
   .command("mcp-tools <agent_id>")

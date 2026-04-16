@@ -13,6 +13,7 @@ import {
 } from "../../services/output-formatter";
 import { loadJsonArg, readJsonObjectFile } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { CallCreatePhoneCallParams } from "retell-sdk/resources/call";
 
 export interface CreatePhoneCallOptions {
@@ -33,8 +34,8 @@ export async function createPhoneCallCommand(
 ): Promise<void> {
   try {
     const params: CallCreatePhoneCallParams = {
-      from_number: options.fromNumber,
-      to_number: options.toNumber,
+      from_number: requireNonEmpty(options.fromNumber, "--from-number"),
+      to_number: requireNonEmpty(options.toNumber, "--to-number"),
     };
 
     if (options.overrideAgentId)

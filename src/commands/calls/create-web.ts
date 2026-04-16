@@ -13,6 +13,7 @@ import {
 } from "../../services/output-formatter";
 import { loadJsonArg, readJsonObjectFile } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { CallCreateWebCallParams } from "retell-sdk/resources/call";
 
 export interface CreateWebCallOptions {
@@ -31,7 +32,7 @@ export async function createWebCallCommand(
 ): Promise<void> {
   try {
     const params: CallCreateWebCallParams = {
-      agent_id: options.agentId,
+      agent_id: requireNonEmpty(options.agentId, "--agent-id"),
     };
 
     if (options.agentVersion !== undefined) {

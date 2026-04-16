@@ -12,6 +12,7 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { McpToolGetMcpToolsParams } from "retell-sdk/resources/mcp-tool";
 
 export interface AgentMcpToolsOptions {
@@ -26,7 +27,9 @@ export async function agentMcpToolsCommand(
   options: AgentMcpToolsOptions,
 ): Promise<void> {
   try {
-    const query: McpToolGetMcpToolsParams = { mcp_id: options.mcpId };
+    const query: McpToolGetMcpToolsParams = {
+      mcp_id: requireNonEmpty(options.mcpId, "--mcp-id"),
+    };
     if (options.componentId) query.component_id = options.componentId;
     if (options.version !== undefined) {
       query.version = parseNumericFlag(options.version, "--version");

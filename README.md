@@ -607,7 +607,7 @@ List all phone numbers in your account.
 **Example:**
 ```bash
 retell phone-numbers list
-retell phone-numbers list --fields phone_number,nickname,inbound_agent_id
+retell phone-numbers list --fields phone_number,nickname,inbound_agents,outbound_agents
 ```
 
 #### `retell phone-numbers get <phone_number> [options]`
@@ -620,7 +620,7 @@ Get details of a specific phone number.
 **Example:**
 ```bash
 retell phone-numbers get +14157774444
-retell phone-numbers get +14157774444 --fields phone_number,inbound_agent_id
+retell phone-numbers get +14157774444 --fields phone_number,inbound_agents,outbound_agents
 ```
 
 #### `retell phone-numbers import [options]`
@@ -633,6 +633,8 @@ Import a phone number from custom telephony (e.g., Twilio, Vonage).
 - `--nickname <name>` - Friendly name for reference
 - `--inbound-agent <id>` - Agent ID for inbound calls
 - `--outbound-agent <id>` - Agent ID for outbound calls
+- `--inbound-agents <spec>` - Weighted inbound agents, e.g. `agent_1:0.6,agent_2:0.4` (mutually exclusive with `--inbound-agent`)
+- `--outbound-agents <spec>` - Weighted outbound agents (same spec format as `--inbound-agents`)
 - `--sip-username <user>` - SIP trunk auth username
 - `--sip-password <pass>` - SIP trunk auth password
 - `--fields <fields>` - Comma-separated list of fields to return

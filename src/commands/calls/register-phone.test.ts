@@ -57,4 +57,28 @@ describe("registerPhoneCallCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --agent-id", async () => {
+    await registerPhoneCallCommand({ agentId: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.registerPhoneCall).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --from-number instead of silently dropping it", async () => {
+    await registerPhoneCallCommand({ agentId: "agent_1", fromNumber: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.registerPhoneCall).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty-string --to-number instead of silently dropping it", async () => {
+    await registerPhoneCallCommand({ agentId: "agent_1", toNumber: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.registerPhoneCall).not.toHaveBeenCalled();
+  });
 });

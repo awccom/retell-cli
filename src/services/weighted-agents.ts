@@ -16,6 +16,10 @@ export interface WeightedAgent {
  * Formats:
  *   "agent_1"              -> [{ agent_id: "agent_1", weight: 1 }]
  *   "agent_1:0.6,agent_2:0.4" -> [{ agent_id: "agent_1", weight: 0.6 }, { agent_id: "agent_2", weight: 0.4 }]
+ *
+ * Throws a `ValidationError` (Error with name="ValidationError") for empty
+ * specs, malformed entries, out-of-range weights, mixed weighted/unweighted,
+ * and sums that don't total 1.0.
  */
 export function parseWeightedAgents(spec: string): WeightedAgent[] {
   const entries = spec
@@ -23,26 +27,26 @@ export function parseWeightedAgents(spec: string): WeightedAgent[] {
     .map((s) => s.trim())
     .filter(Boolean);
   if (entries.length === 0) {
-    throw new Error("Empty agent spec. Provide at least one agent ID.");
+    throwValidation("Empty agent spec. Provide at least one agent ID.");
   }
 
   const agents: WeightedAgent[] = entries.map((entry) => {
     const parts = entry.split(":");
     if (parts.length > 2) {
-      throw new Error(
+      throwValidation(
         `Invalid agent spec "${entry}". Expected format: agent_id or agent_id:weight`,
       );
     }
     const agentId = parts[0].trim();
     if (!agentId) {
-      throw new Error(`Invalid agent spec "${entry}". Agent ID is empty.`);
+      throwValidation(`Invalid agent spec "${entry}". Agent ID is empty.`);
     }
     if (parts.length === 1) {
       return { agent_id: agentId, weight: -1 };
     }
     const weight = Number(parts[1]);
     if (isNaN(weight) || weight <= 0 || weight > 1) {
-      throw new Error(
+      throwValidation(
         `Invalid weight "${parts[1]}" for agent "${agentId}". Weight must be a number between 0 (exclusive) and 1 (inclusive).`,
       );
     }
@@ -54,14 +58,14 @@ export function parseWeightedAgents(spec: string): WeightedAgent[] {
     const w = 1 / agents.length;
     for (const a of agents) a.weight = w;
   } else if (agents.some((a) => a.weight === -1)) {
-    throw new Error(
+    throwValidation(
       "Cannot mix agents with and without weights. Either specify weights for all agents or none.",
     );
   }
 
   const sum = agents.reduce((s, a) => s + a.weight, 0);
   if (Math.abs(sum - 1.0) > 0.001) {
-    throw new Error(
+    throwValidation(
       `Agent weights must sum to 1.0, but got ${sum.toFixed(4)}.`,
     );
   }

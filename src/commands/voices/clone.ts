@@ -12,6 +12,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { VoiceCloneParams } from "retell-sdk/resources/voice";
 
 const VALID_PROVIDERS = [
@@ -51,7 +52,7 @@ export async function cloneVoiceCommand(
     }
 
     const params: VoiceCloneParams = {
-      voice_name: options.voiceName,
+      voice_name: requireNonEmpty(options.voiceName, "--voice-name"),
       voice_provider:
         options.voiceProvider as VoiceCloneParams["voice_provider"],
       files: files.map((p) => createReadStream(p)),

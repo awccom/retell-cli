@@ -15,6 +15,7 @@ import {
   parseWeightedAgents,
   applyWeightedAgents,
 } from "../../services/weighted-agents";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { PhoneNumberImportParams } from "retell-sdk/resources/phone-number";
 
 export { parseWeightedAgents };
@@ -37,8 +38,11 @@ export async function importPhoneNumberCommand(
 ): Promise<void> {
   try {
     const importParams: PhoneNumberImportParams = {
-      phone_number: options.number,
-      termination_uri: options.terminationUri,
+      phone_number: requireNonEmpty(options.number, "--number"),
+      termination_uri: requireNonEmpty(
+        options.terminationUri,
+        "--termination-uri",
+      ),
     };
 
     if (options.nickname) {

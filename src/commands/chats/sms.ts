@@ -12,6 +12,7 @@ import {
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { ChatCreateSMSChatParams } from "retell-sdk/resources/chat";
 
 export interface CreateSmsChatOptions {
@@ -29,8 +30,8 @@ export async function createSmsChatCommand(
 ): Promise<void> {
   try {
     const params: ChatCreateSMSChatParams = {
-      from_number: options.fromNumber,
-      to_number: options.toNumber,
+      from_number: requireNonEmpty(options.fromNumber, "--from-number"),
+      to_number: requireNonEmpty(options.toNumber, "--to-number"),
     };
 
     if (options.overrideAgentId)

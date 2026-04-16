@@ -12,6 +12,7 @@ import {
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { ChatCreateParams } from "retell-sdk/resources/chat";
 
 export interface CreateChatOptions {
@@ -26,7 +27,9 @@ export async function createChatCommand(
   options: CreateChatOptions,
 ): Promise<void> {
   try {
-    const params: ChatCreateParams = { agent_id: options.agentId };
+    const params: ChatCreateParams = {
+      agent_id: requireNonEmpty(options.agentId, "--agent-id"),
+    };
 
     if (options.agentVersion !== undefined) {
       params.agent_version = parseNumericFlag(

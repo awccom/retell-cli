@@ -52,4 +52,12 @@ describe("searchVoicesCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it("rejects empty-string --search-query", async () => {
+    await searchVoicesCommand({ searchQuery: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.voice.search).not.toHaveBeenCalled();
+  });
 });

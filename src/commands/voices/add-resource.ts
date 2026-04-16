@@ -10,6 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { VoiceAddResourceParams } from "retell-sdk/resources/voice";
 
 export interface AddVoiceResourceOptions {
@@ -41,8 +42,11 @@ export async function addVoiceResourceCommand(
     }
 
     const params: VoiceAddResourceParams = {
-      provider_voice_id: options.providerVoiceId,
-      voice_name: options.voiceName,
+      provider_voice_id: requireNonEmpty(
+        options.providerVoiceId,
+        "--provider-voice-id",
+      ),
+      voice_name: requireNonEmpty(options.voiceName, "--voice-name"),
     };
     if (options.voiceProvider)
       params.voice_provider =

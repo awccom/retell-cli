@@ -57,6 +57,14 @@ describe("createWebCallCommand", () => {
     });
   });
 
+  it("rejects empty-string --agent-id", async () => {
+    await createWebCallCommand({ agentId: "" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+    expect(mockClient.call.createWebCall).not.toHaveBeenCalled();
+  });
+
   it("rejects non-numeric --agent-version", async () => {
     await createWebCallCommand({
       agentId: "agent_1",

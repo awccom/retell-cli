@@ -13,6 +13,7 @@ import {
 } from "../../services/output-formatter";
 import { loadJsonArg } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import { requireNonEmpty } from "../../services/flag-guards";
 import type { CallRegisterPhoneCallParams } from "retell-sdk/resources/call";
 
 export interface RegisterPhoneCallOptions {
@@ -38,7 +39,7 @@ export async function registerPhoneCallCommand(
     }
 
     const params: CallRegisterPhoneCallParams = {
-      agent_id: options.agentId,
+      agent_id: requireNonEmpty(options.agentId, "--agent-id"),
     };
 
     if (options.agentVersion !== undefined) {
@@ -49,8 +50,12 @@ export async function registerPhoneCallCommand(
     }
     if (options.direction)
       params.direction = options.direction as "inbound" | "outbound";
-    if (options.fromNumber) params.from_number = options.fromNumber;
-    if (options.toNumber) params.to_number = options.toNumber;
+    if (options.fromNumber !== undefined) {
+      params.from_number = requireNonEmpty(options.fromNumber, "--from-number");
+    }
+    if (options.toNumber !== undefined) {
+      params.to_number = requireNonEmpty(options.toNumber, "--to-number");
+    }
 
     const metadata = loadJsonArg(options.metadata, "--metadata");
     if (metadata !== undefined) params.metadata = metadata;
