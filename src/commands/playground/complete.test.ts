@@ -79,6 +79,7 @@ describe("playgroundCompleteCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
     expect(mockClient.playground.completion).not.toHaveBeenCalled();
+    expect(outputFormatter.outputJson).not.toHaveBeenCalled();
   });
 
   it("filters fields when requested", async () => {
@@ -88,6 +89,17 @@ describe("playgroundCompleteCommand", () => {
     });
     expect(outputFormatter.filterFields).toHaveBeenCalledWith(mockResponse, [
       "messages.0.content",
+    ]);
+  });
+
+  it("omits empty field tokens", async () => {
+    await playgroundCompleteCommand("agent_1", {
+      messages: '[{"role":"user","content":"Hi"}]',
+      fields: "messages.0.content,,current_state,",
+    });
+    expect(outputFormatter.filterFields).toHaveBeenCalledWith(mockResponse, [
+      "messages.0.content",
+      "current_state",
     ]);
   });
 });

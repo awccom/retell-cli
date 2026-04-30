@@ -56,10 +56,35 @@ describe("listExportRequestsCommand", () => {
     expect(mockClient.exportRequest.list).not.toHaveBeenCalled();
   });
 
+  it("rejects non-positive or fractional --limit values", async () => {
+    await listExportRequestsCommand({ limit: "0" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "ValidationError",
+        message: "--limit must be a positive integer",
+      }),
+    );
+    expect(mockClient.exportRequest.list).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    await listExportRequestsCommand({ limit: "2.5" });
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "ValidationError",
+        message: "--limit must be a positive integer",
+      }),
+    );
+    expect(mockClient.exportRequest.list).not.toHaveBeenCalled();
+  });
+
   it("filters fields when requested", async () => {
+    const filtered = { items: [{ export_request_id: "exp_1" }] };
+    vi.mocked(outputFormatter.filterFields).mockReturnValue(filtered);
+
     await listExportRequestsCommand({ fields: "items.0.export_request_id" });
     expect(outputFormatter.filterFields).toHaveBeenCalledWith(mockResponse, [
       "items.0.export_request_id",
     ]);
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith(filtered);
   });
 });

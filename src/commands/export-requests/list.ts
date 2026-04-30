@@ -30,7 +30,11 @@ export async function listExportRequestsCommand(
     const query: ExportRequestListParams = {};
 
     if (options.limit !== undefined) {
-      query.limit = parseNumericFlag(options.limit, "--limit");
+      const limit = parseNumericFlag(options.limit, "--limit");
+      if (!Number.isInteger(limit) || limit < 1) {
+        throwValidation("--limit must be a positive integer");
+      }
+      query.limit = limit;
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
     if (options.sortOrder !== undefined) {

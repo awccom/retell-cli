@@ -80,7 +80,10 @@ export async function playgroundCompleteCommand(
     const output = options.fields
       ? filterFields(
           result,
-          options.fields.split(",").map((f) => f.trim()),
+          options.fields
+            .split(",")
+            .map((f) => f.trim())
+            .filter((f) => f.length > 0),
         )
       : result;
 
