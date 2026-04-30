@@ -1,11 +1,12 @@
 /**
  * Test API Service
  *
- * Direct API calls for test-related endpoints that aren't fully
- * supported in the SDK yet.
+ * SDK-backed wrappers for test-related endpoints. The SDK currently marks
+ * list helpers as deprecated upstream; these wrappers preserve the CLI's
+ * existing output shapes while keeping authentication and errors centralized.
  */
 
-import { getConfig } from "./config";
+import { getRetellClient } from "./retell-client";
 import type {
   ResponseEngine,
   TestCaseDefinition,
@@ -15,54 +16,6 @@ import type {
   LlmModel,
 } from "../types/tests";
 
-const BASE_URL = "https://api.retellai.com";
-
-/**
- * Make an authenticated API request
- */
-async function apiRequest<T>(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<T> {
-  const config = getConfig();
-
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    let errorMessage = `API error: ${response.status} ${response.statusText}`;
-    try {
-      const errorJson = JSON.parse(errorBody);
-      if (errorJson.message) {
-        errorMessage = errorJson.message;
-      } else if (errorJson.error) {
-        errorMessage = errorJson.error;
-      }
-    } catch {
-      if (errorBody) {
-        errorMessage = errorBody;
-      }
-    }
-    throw new Error(errorMessage);
-  }
-
-  // Handle empty responses (like DELETE)
-  const text = await response.text();
-  if (!text) {
-    return {} as T;
-  }
-
-  return JSON.parse(text) as T;
-}
-
 // ===== TEST CASE DEFINITIONS =====
 
 /**
@@ -71,20 +24,10 @@ async function apiRequest<T>(
 export async function listTestCaseDefinitions(
   responseEngine: ResponseEngine,
 ): Promise<TestCaseDefinition[]> {
-  const params = new URLSearchParams();
-
-  if (responseEngine.type === "retell-llm") {
-    params.set("type", "retell-llm");
-    params.set("llm_id", responseEngine.llm_id);
-  } else {
-    params.set("type", "conversation-flow");
-    params.set("conversation_flow_id", responseEngine.conversation_flow_id);
-  }
-
-  return apiRequest<TestCaseDefinition[]>(
-    "GET",
-    `/list-test-case-definitions?${params.toString()}`,
-  );
+  const client = getRetellClient();
+  return (await client.tests.listTestCaseDefinitions(
+    responseEngine as any,
+  )) as unknown as TestCaseDefinition[];
 }
 
 /**
@@ -93,10 +36,10 @@ export async function listTestCaseDefinitions(
 export async function getTestCaseDefinition(
   testCaseDefinitionId: string,
 ): Promise<TestCaseDefinition> {
-  return apiRequest<TestCaseDefinition>(
-    "GET",
-    `/get-test-case-definition/${testCaseDefinitionId}`,
-  );
+  const client = getRetellClient();
+  return (await client.tests.getTestCaseDefinition(
+    testCaseDefinitionId,
+  )) as unknown as TestCaseDefinition;
 }
 
 /**
@@ -112,11 +55,10 @@ export async function createTestCaseDefinition(params: {
   tool_mocks?: ToolMock[];
   llm_model?: LlmModel;
 }): Promise<TestCaseDefinition> {
-  return apiRequest<TestCaseDefinition>(
-    "POST",
-    "/create-test-case-definition",
-    params,
-  );
+  const client = getRetellClient();
+  return (await client.tests.createTestCaseDefinition(
+    params as any,
+  )) as unknown as TestCaseDefinition;
 }
 
 /**
@@ -134,11 +76,11 @@ export async function updateTestCaseDefinition(
     llm_model?: LlmModel;
   },
 ): Promise<TestCaseDefinition> {
-  return apiRequest<TestCaseDefinition>(
-    "PUT",
-    `/update-test-case-definition/${testCaseDefinitionId}`,
-    params,
-  );
+  const client = getRetellClient();
+  return (await client.tests.updateTestCaseDefinition(
+    testCaseDefinitionId,
+    params as any,
+  )) as unknown as TestCaseDefinition;
 }
 
 /**
@@ -147,10 +89,8 @@ export async function updateTestCaseDefinition(
 export async function deleteTestCaseDefinition(
   testCaseDefinitionId: string,
 ): Promise<void> {
-  await apiRequest<void>(
-    "DELETE",
-    `/delete-test-case-definition/${testCaseDefinitionId}`,
-  );
+  const client = getRetellClient();
+  await client.tests.deleteTestCaseDefinition(testCaseDefinitionId);
 }
 
 // ===== BATCH TESTS =====
@@ -161,27 +101,20 @@ export async function deleteTestCaseDefinition(
 export async function listBatchTests(
   responseEngine: ResponseEngine,
 ): Promise<BatchTest[]> {
-  const params = new URLSearchParams();
-
-  if (responseEngine.type === "retell-llm") {
-    params.set("type", "retell-llm");
-    params.set("llm_id", responseEngine.llm_id);
-  } else {
-    params.set("type", "conversation-flow");
-    params.set("conversation_flow_id", responseEngine.conversation_flow_id);
-  }
-
-  return apiRequest<BatchTest[]>(
-    "GET",
-    `/list-batch-tests?${params.toString()}`,
-  );
+  const client = getRetellClient();
+  return (await client.tests.listBatchTests(
+    responseEngine as any,
+  )) as unknown as BatchTest[];
 }
 
 /**
  * Get a batch test
  */
 export async function getBatchTest(batchJobId: string): Promise<BatchTest> {
-  return apiRequest<BatchTest>("GET", `/get-batch-test/${batchJobId}`);
+  const client = getRetellClient();
+  return (await client.tests.getBatchTest(
+    batchJobId,
+  )) as unknown as BatchTest;
 }
 
 /**
@@ -191,7 +124,10 @@ export async function createBatchTest(params: {
   response_engine: ResponseEngine;
   test_case_definition_ids: string[];
 }): Promise<BatchTest> {
-  return apiRequest<BatchTest>("POST", "/create-batch-test", params);
+  const client = getRetellClient();
+  return (await client.tests.createBatchTest(
+    params as any,
+  )) as unknown as BatchTest;
 }
 
 // ===== TEST RUNS =====
@@ -200,12 +136,16 @@ export async function createBatchTest(params: {
  * List test runs for a batch test
  */
 export async function listTestRuns(batchJobId: string): Promise<TestRun[]> {
-  return apiRequest<TestRun[]>("GET", `/list-test-runs/${batchJobId}`);
+  const client = getRetellClient();
+  return (await client.tests.listTestRuns(
+    batchJobId,
+  )) as unknown as TestRun[];
 }
 
 /**
  * Get a test run
  */
 export async function getTestRun(testRunId: string): Promise<TestRun> {
-  return apiRequest<TestRun>("GET", `/get-test-run/${testRunId}`);
+  const client = getRetellClient();
+  return (await client.tests.getTestRun(testRunId)) as unknown as TestRun;
 }
