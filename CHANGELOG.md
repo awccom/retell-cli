@@ -5,6 +5,25 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-30
+
+### Added
+
+- `calls stop <call_id>` — stop an ongoing call via `client.call.stop`.
+- `exports list` — list export requests with `--limit`, `--pagination-key`, `--sort-order`, and `--fields`.
+- `playground complete <agent_id>` — run stateless playground completions with JSON or `@path` messages, optional dynamic variables, tool mocks, state/node/component context, agent version, and field filtering.
+
+### Changed
+
+- Bumped the minimum Node.js engine from `>=18.0.0` to `>=18.10.0` to match the current Retell SDK requirement.
+- Bumped `retell-sdk` from `^5.12.0` to `^5.18.0`.
+- Migrated test API helpers from direct `fetch` calls to SDK-backed `client.tests.*` wrappers while preserving existing command output shapes.
+
+### Fixed
+
+- `exports list --limit` now rejects non-positive and fractional values before calling the SDK.
+- `playground complete --fields` now ignores empty field tokens and returns the full response when no valid field paths remain.
+
 ## [1.6.0] - 2026-04-16
 
 Bulk addition of CLI surface for Retell SDK resources that were previously unwrapped or partially wrapped. Bumped `retell-sdk` dependency to `^5.12.0`.
