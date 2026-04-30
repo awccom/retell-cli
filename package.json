@@ -41,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/awccom/retell-cli.git"
+    "url": "git+https://github.com/awccom/retell-cli.git"
   },
   "bugs": {
     "url": "https://github.com/awccom/retell-cli/issues"
