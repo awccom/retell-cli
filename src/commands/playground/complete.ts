@@ -77,15 +77,15 @@ export async function playgroundCompleteCommand(
       params,
     );
 
-    const output = options.fields
-      ? filterFields(
-          result,
-          options.fields
-            .split(",")
-            .map((f) => f.trim())
-            .filter((f) => f.length > 0),
-        )
-      : result;
+    const selectedFields = options.fields
+      ? options.fields
+          .split(",")
+          .map((f) => f.trim())
+          .filter((f) => f.length > 0)
+      : [];
+
+    const output =
+      selectedFields.length > 0 ? filterFields(result, selectedFields) : result;
 
     outputJson(output);
   } catch (error) {

@@ -102,4 +102,14 @@ describe("playgroundCompleteCommand", () => {
       "current_state",
     ]);
   });
+
+  it("returns the full response when fields contains no valid tokens", async () => {
+    await playgroundCompleteCommand("agent_1", {
+      messages: '[{"role":"user","content":"Hi"}]',
+      fields: " , , ",
+    });
+
+    expect(outputFormatter.filterFields).not.toHaveBeenCalled();
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith(mockResponse);
+  });
 });
