@@ -48,13 +48,13 @@
   },
   "homepage": "https://github.com/awccom/retell-cli#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.10.0"
   },
   "dependencies": {
     "commander": "^14.0.0",
     "dotenv": "^17.0.0",
     "microdiff": "^1.5.0",
-    "retell-sdk": "^5.12.0",
+    "retell-sdk": "^5.18.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {

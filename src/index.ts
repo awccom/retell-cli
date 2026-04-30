@@ -67,7 +67,9 @@ import { createWebCallCommand } from "./commands/calls/create-web";
 import { registerPhoneCallCommand } from "./commands/calls/register-phone";
 import { updateCallCommand } from "./commands/calls/update";
 import { deleteCallCommand } from "./commands/calls/delete";
+import { stopCallCommand } from "./commands/calls/stop";
 import { createBatchCallCommand } from "./commands/batch-calls/create";
+import { listExportRequestsCommand } from "./commands/export-requests/list";
 import { listLlmsCommand } from "./commands/llms/list";
 import { getLlmCommand } from "./commands/llms/get";
 import { createLlmCommand } from "./commands/llms/create";
@@ -99,6 +101,7 @@ import { updateFlowComponentCommand } from "./commands/flow-components/update";
 import { deleteFlowComponentCommand } from "./commands/flow-components/delete";
 import { getConcurrencyCommand } from "./commands/concurrency/get";
 import { agentMcpToolsCommand } from "./commands/agents/mcp-tools";
+import { playgroundCompleteCommand } from "./commands/playground/complete";
 import { parseNumericFlag } from "./services/numeric-flag";
 
 // Read package.json for version
@@ -1604,10 +1607,42 @@ calls
   });
 
 calls
+  .command("stop <call_id>")
+  .description("Stop an ongoing call")
+  .action(async (callId) => {
+    await stopCallCommand(callId);
+  });
+
+calls
   .command("delete <call_id>")
   .description("Delete a call and its associated data")
   .action(async (callId) => {
     await deleteCallCommand(callId);
+  });
+
+// Export request commands
+const exportsCommand = program
+  .command("exports")
+  .description("Manage export requests");
+
+exportsCommand
+  .command("list")
+  .description("List export requests")
+  .option("--limit <number>", "Maximum number of export requests to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
+  .option("--sort-order <order>", "ascending or descending")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell exports list
+  $ retell exports list --limit 20 --sort-order descending
+  $ retell exports list --fields items.0.export_request_id,pagination_key
+    `,
+  )
+  .action(async (options) => {
+    await listExportRequestsCommand(options);
   });
 
 // Batch Calls commands
@@ -1885,6 +1920,40 @@ chats
   .description("End an active chat session")
   .action(async (chatId) => {
     await endChatCommand(chatId);
+  });
+
+// Playground commands
+const playground = program
+  .command("playground")
+  .description("Run stateless playground completions");
+
+playground
+  .command("complete <agent_id>")
+  .description("Run a stateless playground completion")
+  .requiredOption(
+    "--messages <json>",
+    "Conversation history as inline JSON array or @path",
+  )
+  .option(
+    "--dynamic-variables <json>",
+    "Inline JSON object or @path for dynamic variables",
+  )
+  .option("--tool-mocks <json>", "Inline JSON array or @path for tool mocks")
+  .option("--current-state <name>", "Current Retell-LLM state")
+  .option("--current-node-id <id>", "Current conversation-flow node id")
+  .option("--component-id <id>", "Conversation-flow component id")
+  .option("--version <number>", "Agent version to use")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ retell playground complete agent_abc --messages '[{"role":"user","content":"Hi"}]'
+  $ retell playground complete agent_abc --messages @messages.json --dynamic-variables '{"name":"Ada"}'
+    `,
+  )
+  .action(async (agentId, options) => {
+    await playgroundCompleteCommand(agentId, options);
   });
 
 // Chat Agents commands
