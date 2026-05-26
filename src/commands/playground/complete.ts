@@ -65,7 +65,10 @@ export async function playgroundCompleteCommand(
       );
     }
     if (options.componentId !== undefined) {
-      params.component_id = requireNonEmpty(options.componentId, "--component-id");
+      params.component_id = requireNonEmpty(
+        options.componentId,
+        "--component-id",
+      );
     }
     if (options.version !== undefined) {
       params.version = parseNumericFlag(options.version, "--version");

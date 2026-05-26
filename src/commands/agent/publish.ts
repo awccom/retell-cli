@@ -7,6 +7,13 @@
 
 import { getRetellClient } from "../../services/retell-client";
 import { outputJson, handleSdkError } from "../../services/output-formatter";
+import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import { findNewestUnpublishedVersion } from "../../services/version-selection";
+
+export interface PublishAgentOptions {
+  version?: string;
+  description?: string;
+}
 
 /**
  * Publish an agent's draft version to production
@@ -28,25 +35,31 @@ import { outputJson, handleSdkError } from "../../services/output-formatter";
  * // Publish an agent
  * await publishAgentCommand('agent-123abc');
  */
-export async function publishAgentCommand(agentId: string): Promise<void> {
+export async function publishAgentCommand(
+  agentId: string,
+  options: PublishAgentOptions = {},
+): Promise<void> {
   const client = getRetellClient();
+  let publishedVersion: number;
 
   try {
-    await client.agent.publish(agentId);
+    publishedVersion =
+      options.version !== undefined
+        ? parsePositiveIntegerFlag(options.version, "--version")
+        : findNewestUnpublishedVersion(
+            await client.agent.getVersions(agentId),
+            "agent",
+          );
+
+    await client.agent.publish(agentId, {
+      version: publishedVersion,
+      ...(options.description
+        ? { version_description: options.description }
+        : {}),
+    });
   } catch (error) {
-    // Check if this is the known SDK bug where it fails to parse empty response
-    // The Retell API returns an empty body for publish, but the SDK tries to parse it as JSON
-    if (
-      error instanceof Error &&
-      error.message.includes("invalid json response body") &&
-      error.message.includes("Unexpected end of JSON input")
-    ) {
-      // The API call succeeded but SDK failed to parse empty response
-      // Continue to fetch agent details below
-    } else {
-      // Re-throw other errors to be handled normally
-      handleSdkError(error);
-    }
+    handleSdkError(error);
+    return;
   }
 
   // Fetch agent to verify publish succeeded and get current state
@@ -58,10 +71,12 @@ export async function publishAgentCommand(agentId: string): Promise<void> {
       agent_id: agent.agent_id,
       agent_name: agent.agent_name || "Unknown",
       version: agent.version || "Unknown",
+      published_version: publishedVersion,
       is_published: agent.is_published ?? true,
-      note: "Draft version incremented and ready for new changes",
+      note: "Version published successfully",
     });
   } catch (error) {
     handleSdkError(error);
+    return;
   }
 }

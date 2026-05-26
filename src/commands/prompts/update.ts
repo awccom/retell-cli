@@ -167,7 +167,7 @@ export async function updatePromptsCommand(
         agent_name: promptSource.agentName,
         type: "retell-llm",
         llm_id: promptSource.llmId,
-        note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+        note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
       });
     } else if (
       promptSource.type === "conversation-flow" &&
@@ -184,7 +184,7 @@ export async function updatePromptsCommand(
         agent_name: promptSource.agentName,
         type: "conversation-flow",
         conversation_flow_id: promptSource.flowId,
-        note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+        note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
       });
     }
   } catch (error) {

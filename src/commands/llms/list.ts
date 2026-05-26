@@ -16,7 +16,6 @@ import type { LlmListParams } from "retell-sdk/resources/llm";
 export interface ListLlmsOptions {
   limit?: string;
   paginationKey?: string;
-  paginationKeyVersion?: string;
   fields?: string;
 }
 
@@ -29,12 +28,6 @@ export async function listLlmsCommand(
       query.limit = parseNumericFlag(options.limit, "--limit");
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
-    if (options.paginationKeyVersion !== undefined) {
-      query.pagination_key_version = parseNumericFlag(
-        options.paginationKeyVersion,
-        "--pagination-key-version",
-      );
-    }
 
     const client = getRetellClient();
     const llms = await client.llm.list(query);

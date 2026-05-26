@@ -120,7 +120,7 @@ export async function removeToolCommand(
           tool_name: toolName,
           operation: "remove",
           location: { location: "state", stateName },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       } else {
@@ -151,7 +151,7 @@ export async function removeToolCommand(
           tool_name: toolName,
           operation: "remove",
           location: { location: "general" },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       }
@@ -217,7 +217,7 @@ export async function removeToolCommand(
           tool_name: toolName,
           operation: "remove",
           location: { location: "component", componentId },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       } else {
@@ -246,7 +246,7 @@ export async function removeToolCommand(
           tool_name: toolName,
           operation: "remove",
           location: { location: "flow" },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       }

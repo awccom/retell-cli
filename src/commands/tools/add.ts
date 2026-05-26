@@ -154,7 +154,7 @@ export async function addToolCommand(
           tool_name: tool.name,
           operation: "add",
           location: { location: "state", stateName: options.state },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       } else {
@@ -173,7 +173,7 @@ export async function addToolCommand(
           tool_name: tool.name,
           operation: "add",
           location: { location: "general" },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       }
@@ -237,7 +237,7 @@ export async function addToolCommand(
           tool_name: tool.name,
           operation: "add",
           location: { location: "component", componentId: options.component },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       } else {
@@ -256,7 +256,7 @@ export async function addToolCommand(
           tool_name: tool.name,
           operation: "add",
           location: { location: "flow" },
-          note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+          note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
         };
         outputJson(output);
       }

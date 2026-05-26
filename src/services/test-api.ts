@@ -112,9 +112,7 @@ export async function listBatchTests(
  */
 export async function getBatchTest(batchJobId: string): Promise<BatchTest> {
   const client = getRetellClient();
-  return (await client.tests.getBatchTest(
-    batchJobId,
-  )) as unknown as BatchTest;
+  return (await client.tests.getBatchTest(batchJobId)) as unknown as BatchTest;
 }
 
 /**
@@ -135,10 +133,17 @@ export async function createBatchTest(params: {
 /**
  * List test runs for a batch test
  */
-export async function listTestRuns(batchJobId: string): Promise<TestRun[]> {
+export async function listTestRuns(
+  batchJobId: string,
+  query?: {
+    limit?: number;
+    pagination_key?: string;
+  },
+): Promise<TestRun[]> {
   const client = getRetellClient();
   return (await client.tests.listTestRuns(
     batchJobId,
+    query,
   )) as unknown as TestRun[];
 }
 

@@ -27,8 +27,22 @@ describe("listFlowComponentsCommand", () => {
 
   it("calls list and outputs results", async () => {
     await listFlowComponentsCommand();
-    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalled();
+    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalledWith({});
     expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
+  });
+
+  it("passes pagination options to the SDK", async () => {
+    await listFlowComponentsCommand({
+      limit: "10",
+      paginationKey: "cursor",
+      sortOrder: "ascending",
+    });
+
+    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalledWith({
+      limit: 10,
+      pagination_key: "cursor",
+      sort_order: "ascending",
+    });
   });
 
   it("routes SDK errors through handleSdkError", async () => {
@@ -37,5 +51,22 @@ describe("listFlowComponentsCommand", () => {
     );
     await listFlowComponentsCommand();
     expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+  });
+
+  it("rejects invalid sort order before calling the SDK", async () => {
+    await listFlowComponentsCommand({ sortOrder: "newest" });
+
+    expect(mockClient.conversationFlowComponent.list).not.toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+  });
+
+  it("rejects non-positive or fractional limits before calling the SDK", async () => {
+    await listFlowComponentsCommand({ limit: "0" });
+    await listFlowComponentsCommand({ limit: "1.5" });
+
+    expect(mockClient.conversationFlowComponent.list).not.toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledTimes(2);
   });
 });

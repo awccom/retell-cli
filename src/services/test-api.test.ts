@@ -62,7 +62,7 @@ describe("test-api service", () => {
       response_engine: { type: "retell-llm", llm_id: "llm_1" },
       test_case_definition_ids: ["tcd_1"],
     });
-    await listTestRuns("bt_1");
+    await listTestRuns("bt_1", { limit: 25, pagination_key: "cursor" });
     await getTestRun("run_1");
 
     expect(mockClient.tests.getTestCaseDefinition).toHaveBeenCalledWith(
@@ -82,7 +82,10 @@ describe("test-api service", () => {
     });
     expect(mockClient.tests.getBatchTest).toHaveBeenCalledWith("bt_1");
     expect(mockClient.tests.createBatchTest).toHaveBeenCalled();
-    expect(mockClient.tests.listTestRuns).toHaveBeenCalledWith("bt_1");
+    expect(mockClient.tests.listTestRuns).toHaveBeenCalledWith("bt_1", {
+      limit: 25,
+      pagination_key: "cursor",
+    });
     expect(mockClient.tests.getTestRun).toHaveBeenCalledWith("run_1");
   });
 });

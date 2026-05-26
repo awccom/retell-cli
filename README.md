@@ -115,7 +115,10 @@ retell prompts update agent_123abc --dry-run
 retell prompts update agent_123abc
 
 # Publish the updated agent
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
+
+# Or publish a specific draft version
+retell agents publish agent_123abc --version 15 --description "May prompt update"
 ```
 
 ## Authentication
@@ -275,6 +278,27 @@ retell agents versions agent_123abc
 retell agents versions agent_123abc --fields version,is_published
 ```
 
+#### `retell agents create-version <agent_id> --base-version <n>`
+
+Create a new draft agent version from an existing version.
+
+#### `retell agents delete-version <agent_id> --version <n>`
+
+Delete a specific agent version.
+
+#### `retell agents publish <agent_id> [options]`
+
+Publish a draft agent version. If `--version` is omitted, the CLI publishes the newest unpublished draft.
+
+**Options:**
+- `--version <n>` - Draft version to publish
+- `--description <text>` - Optional version description
+
+**Example:**
+```bash
+retell agents publish agent_123abc --version 15 --description "May prompt update"
+```
+
 ### Prompts
 
 #### `retell prompts pull <agent_id> [options]`
@@ -348,16 +372,18 @@ retell prompts update agent_123abc --source my-prompts.json
 
 **Important:** After updating prompts, remember to publish the agent:
 ```bash
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 ```
 
-#### `retell agent-publish <agent_id>`
+#### `retell agents publish <agent_id> [options]`
 
-Publish a draft agent to make changes live.
+Publish a draft agent version. If `--version` is omitted, the CLI publishes the newest unpublished draft.
+
+The legacy `retell agent-publish <agent_id>` alias is still available, but `retell agents publish` is preferred for version-aware workflows.
 
 **Example:**
 ```bash
-retell agent-publish agent_123abc
+retell agents publish agent_123abc --version 15
 ```
 
 ### Agent Configuration
@@ -432,7 +458,7 @@ retell agent update agent_123abc --file config.json --dry-run
 retell agent update agent_123abc --file config.json
 
 # Remember to publish after updating
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 ```
 
 ### Tools
@@ -590,7 +616,7 @@ retell tools import agent_123abc --file tools.json --replace
 
 **Important:** After modifying tools, remember to publish the agent:
 ```bash
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 ```
 
 ### Phone Numbers
@@ -602,11 +628,15 @@ Manage phone numbers for your Retell AI agents.
 List all phone numbers in your account.
 
 **Options:**
+- `--limit <n>` - Maximum number of phone numbers to return
+- `--pagination-key <key>` - Pagination key for the next page
+- `--sort-order <order>` - `ascending` or `descending`
 - `--fields <fields>` - Comma-separated list of fields to return
 
 **Example:**
 ```bash
 retell phone-numbers list
+retell phone-numbers list --limit 25 --sort-order descending
 retell phone-numbers list --fields phone_number,nickname,inbound_agents,outbound_agents
 ```
 
@@ -811,6 +841,7 @@ retell calls delete call_abc123
 ```
 
 Shared on all three: `--metadata`, `--dynamic-variables`, `--fields`.
+`--dynamic-variables` must be a JSON object with string values, for example `{"customer_name":"Avery"}`.
 
 - `create-phone` also: `--override-agent-id`, `--override-agent-version`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--ignore-e164-validation`.
 - `create-web` also: `--agent-version`, `--agent-override <path>`, `--current-node-id`, `--current-state`.
@@ -839,6 +870,7 @@ retell llms get llm_abc
 retell llms create --general-prompt "You are a helpful agent." --model gpt-4.1
 retell llms create --file my-llm.json
 retell llms update llm_abc --file updates.json
+retell llms update llm_abc --file updates.json --version 3
 retell llms delete llm_abc
 ```
 
@@ -862,6 +894,7 @@ retell chats complete --chat-id chat_abc --content "What's the status?"
 retell chats sms --from-number +14157774444 --to-number +12137774445
 retell chats update chat_abc --metadata '{"k":"v"}'
 retell chats end chat_abc
+retell chats delete chat_abc
 ```
 
 ### Chat Agents
@@ -872,7 +905,9 @@ retell chat-agents create --llm-id llm_abc --name "Support Chat"
 retell chat-agents get ca_abc --version 2
 retell chat-agents update ca_abc --file updates.json
 retell chat-agents versions ca_abc
-retell chat-agents publish ca_abc
+retell chat-agents create-version ca_abc --base-version 2
+retell chat-agents publish ca_abc --version 3
+retell chat-agents delete-version ca_abc --version 2
 retell chat-agents delete ca_abc
 ```
 
@@ -895,7 +930,7 @@ retell phone-numbers delete +14157774444
 ### Flow Components
 
 ```bash
-retell flow-components list
+retell flow-components list --limit 25 --sort-order descending
 retell flow-components get comp_abc
 retell flow-components create --file component.json
 retell flow-components update comp_abc --file updates.json
@@ -945,7 +980,7 @@ done
 for file in prompts-*.json; do
   agent_id=$(echo $file | sed 's/prompts-//;s/.json//')
   retell prompts update $agent_id --source $file
-  retell agent-publish $agent_id
+  retell agents publish $agent_id
 done
 ```
 
@@ -1005,7 +1040,7 @@ retell prompts update agent_456 --dry-run
 
 # Apply changes
 retell prompts update agent_456
-retell agent-publish agent_456
+retell agents publish agent_456
 ```
 
 ### Error Format

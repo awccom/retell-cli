@@ -6,7 +6,12 @@ import { describe, it, expect, afterEach } from "vitest";
 import { writeFileSync, unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { loadJsonArg, readJsonFile, readJsonObjectFile } from "./json-arg";
+import {
+  loadJsonArg,
+  loadStringRecordArg,
+  readJsonFile,
+  readJsonObjectFile,
+} from "./json-arg";
 
 describe("loadJsonArg", () => {
   const tmpPath = join(
@@ -143,5 +148,34 @@ describe("readJsonObjectFile", () => {
     expect(() => readJsonObjectFile(tmpPath, "--file")).toThrow(
       /must contain a JSON object, not a number/,
     );
+  });
+});
+
+describe("loadStringRecordArg", () => {
+  it("returns undefined when the flag is absent", () => {
+    expect(
+      loadStringRecordArg(undefined, "--dynamic-variables"),
+    ).toBeUndefined();
+  });
+
+  it("parses a JSON object with string values", () => {
+    expect(
+      loadStringRecordArg(
+        '{"customer_name":"Avery","plan":"pro"}',
+        "--dynamic-variables",
+      ),
+    ).toEqual({ customer_name: "Avery", plan: "pro" });
+  });
+
+  it("rejects non-object values", () => {
+    expect(() =>
+      loadStringRecordArg('["not","object"]', "--dynamic-variables"),
+    ).toThrow("--dynamic-variables must be a JSON object");
+  });
+
+  it("rejects non-string object values", () => {
+    expect(() =>
+      loadStringRecordArg('{"attempt":2}', "--dynamic-variables"),
+    ).toThrow("--dynamic-variables.attempt must be a string");
   });
 });

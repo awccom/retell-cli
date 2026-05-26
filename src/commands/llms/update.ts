@@ -37,7 +37,7 @@ export async function updateLlmCommand(
     const body = rawBody as unknown as LlmUpdateParams;
 
     if (options.version !== undefined) {
-      body.query_version = parseNumericFlag(options.version, "--version");
+      body.version = parseNumericFlag(options.version, "--version");
     }
 
     const client = getRetellClient();
