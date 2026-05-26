@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `retell-sdk` from `^5.18.0` to `^5.28.0`.
 - `agents publish` / `agent-publish` and `chat-agents publish` now publish a specific draft version through the SDK's `{ version, version_description? }` body. If `--version` is omitted, the CLI publishes the newest unpublished draft.
 - `phone-numbers list` now reads the SDK's paginated `items` response while preserving the CLI's existing formatted list output.
-- `llms update --version` now sends the SDK's current `version` request parameter.
+- `llms update --version` now sends the SDK's current version in the request body as `body.version`.
 - `--dynamic-variables` values for call and chat commands must be JSON objects with string values.
 - Updated README, user guide, and examples for the SDK 5.28 command surface.
 

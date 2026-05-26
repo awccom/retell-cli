@@ -35,7 +35,7 @@ export async function listTestRunsCommand(
   try {
     const query: { limit?: number; pagination_key?: string } = {};
     if (options.limit !== undefined) {
-      if (!Number.isInteger(options.limit) || options.limit < 1) {
+      if (!Number.isInteger(options.limit) || options.limit <= 0) {
         throwValidation("--limit must be a positive integer");
       }
       query.limit = options.limit;
