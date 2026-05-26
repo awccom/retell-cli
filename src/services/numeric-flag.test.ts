@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseNumericFlag } from "./numeric-flag";
+import { parseNumericFlag, parsePositiveIntegerFlag } from "./numeric-flag";
 
 describe("parseNumericFlag", () => {
   it("parses integer strings", () => {
@@ -45,6 +45,30 @@ describe("parseNumericFlag", () => {
   it("throws ValidationError on Infinity", () => {
     expect(() => parseNumericFlag("Infinity", "--version")).toThrow(
       "--version must be a number",
+    );
+  });
+});
+
+describe("parsePositiveIntegerFlag", () => {
+  it("parses positive integer strings", () => {
+    expect(parsePositiveIntegerFlag("42", "--version")).toBe(42);
+  });
+
+  it("rejects zero", () => {
+    expect(() => parsePositiveIntegerFlag("0", "--limit")).toThrow(
+      "--limit must be a positive integer",
+    );
+  });
+
+  it("rejects negative numbers", () => {
+    expect(() => parsePositiveIntegerFlag("-3", "--version")).toThrow(
+      "--version must be a positive integer",
+    );
+  });
+
+  it("rejects fractional numbers", () => {
+    expect(() => parsePositiveIntegerFlag("1.5", "--version")).toThrow(
+      "--version must be a positive integer",
     );
   });
 });

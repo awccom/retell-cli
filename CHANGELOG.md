@@ -5,6 +5,28 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-05-26
+
+### Added
+
+- `agents create-version <agent_id> --base-version <n>` and `agents delete-version <agent_id> --version <n>` for draft agent version lifecycle.
+- `chat-agents create-version <agent_id> --base-version <n>` and `chat-agents delete-version <agent_id> --version <n>`.
+- `chats delete <chat_id>` for deleting chat records.
+- Pagination flags for `phone-numbers list`, `flow-components list`, and `tests runs list`.
+
+### Changed
+
+- Bumped `retell-sdk` from `^5.18.0` to `^5.28.0`.
+- `agents publish` / `agent-publish` and `chat-agents publish` now publish a specific draft version through the SDK's `{ version, version_description? }` body. If `--version` is omitted, the CLI publishes the newest unpublished draft.
+- `phone-numbers list` now reads the SDK's paginated `items` response while preserving the CLI's existing formatted list output.
+- `llms update --version` now sends the SDK's current `version` query parameter.
+- `--dynamic-variables` values for call and chat commands must be JSON objects with string values.
+- Updated README, user guide, and examples for the SDK 5.28 command surface.
+
+### Removed
+
+- Removed `llms list --pagination-key-version`; the current SDK no longer accepts that parameter.
+
 ## [1.7.0] - 2026-04-30
 
 ### Added

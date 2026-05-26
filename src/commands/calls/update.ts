@@ -11,7 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg } from "../../services/json-arg";
+import { loadJsonArg, loadStringRecordArg } from "../../services/json-arg";
 import type { CallUpdateParams } from "retell-sdk/resources/call";
 
 const DATA_STORAGE_SETTINGS = [
@@ -45,9 +45,11 @@ export async function updateCallCommand(
         string | number | boolean
       >;
 
-    const dv = loadJsonArg(options.dynamicVariables, "--dynamic-variables");
-    if (dv !== undefined)
-      params.override_dynamic_variables = dv as Record<string, string>;
+    const dv = loadStringRecordArg(
+      options.dynamicVariables,
+      "--dynamic-variables",
+    );
+    if (dv !== undefined) params.override_dynamic_variables = dv;
 
     if (options.dataStorageSetting) {
       if (

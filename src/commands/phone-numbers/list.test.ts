@@ -50,7 +50,11 @@ describe("listPhoneNumbersCommand", () => {
 
     mockClient = {
       phoneNumber: {
-        list: vi.fn().mockResolvedValue(mockPhoneNumbers),
+        list: vi.fn().mockResolvedValue({
+          items: mockPhoneNumbers,
+          has_more: true,
+          pagination_key: "next_page",
+        }),
       },
     };
 
@@ -61,7 +65,7 @@ describe("listPhoneNumbersCommand", () => {
     it("should list phone numbers with formatted output", async () => {
       await listPhoneNumbersCommand();
 
-      expect(mockClient.phoneNumber.list).toHaveBeenCalled();
+      expect(mockClient.phoneNumber.list).toHaveBeenCalledWith({});
       expect(outputFormatter.outputJson).toHaveBeenCalledWith([
         {
           phone_number: "+14157774444",
@@ -83,7 +87,7 @@ describe("listPhoneNumbersCommand", () => {
     });
 
     it("should handle empty phone numbers list", async () => {
-      mockClient.phoneNumber.list.mockResolvedValue([]);
+      mockClient.phoneNumber.list.mockResolvedValue({ items: [] });
 
       await listPhoneNumbersCommand();
 
@@ -99,6 +103,20 @@ describe("listPhoneNumbersCommand", () => {
         expect.any(Array),
         ["phone_number", "nickname"],
       );
+    });
+
+    it("passes pagination options to the SDK", async () => {
+      await listPhoneNumbersCommand({
+        limit: "25",
+        paginationKey: "cursor",
+        sortOrder: "descending",
+      });
+
+      expect(mockClient.phoneNumber.list).toHaveBeenCalledWith({
+        limit: 25,
+        pagination_key: "cursor",
+        sort_order: "descending",
+      });
     });
   });
 

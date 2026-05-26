@@ -16,6 +16,8 @@ import type { TestRunListOutput } from "../../../types/tests";
  * Options for the list test runs command
  */
 export interface ListTestRunsOptions {
+  limit?: number;
+  paginationKey?: string;
   /** Comma-separated list of fields to return */
   fields?: string;
 }
@@ -31,7 +33,10 @@ export async function listTestRunsCommand(
   options: ListTestRunsOptions,
 ): Promise<void> {
   try {
-    const testRuns = await listTestRuns(batchJobId);
+    const query: { limit?: number; pagination_key?: string } = {};
+    if (options.limit !== undefined) query.limit = options.limit;
+    if (options.paginationKey) query.pagination_key = options.paginationKey;
+    const testRuns = await listTestRuns(batchJobId, query);
 
     const output: TestRunListOutput = {
       batch_job_id: batchJobId,

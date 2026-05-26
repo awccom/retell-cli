@@ -561,7 +561,7 @@ retell prompts update agent_123abc --source my-prompts.json --dry-run
 
 ```json
 {
-  "message": "Agent updated successfully. Run 'retell agent-publish agent_123abc' to publish changes.",
+  "message": "Agent updated successfully. Run 'retell agents publish agent_123abc' to publish changes.",
   "agent_id": "agent_123abc",
   "agent_name": "Customer Support Bot",
   "updated_fields": ["begin_message", "general_prompt"]
@@ -571,19 +571,20 @@ retell prompts update agent_123abc --source my-prompts.json --dry-run
 **Important:** After updating prompts, you must publish the agent to make changes live:
 
 ```bash
-retell agent-publish agent_123abc
+retell agents publish agent_123abc --version 15 --description "May prompt update"
 ```
 
 #### Publish Agent
 
-**Command:** `retell agent-publish <agent_id>`
+**Command:** `retell agents publish <agent_id> [--version <n>] [--description <text>]`
 
-**Description:** Publish a draft agent to make changes live.
+**Description:** Publish a draft agent version. If `--version` is omitted, the CLI publishes the newest unpublished draft.
 
 **Usage:**
 
 ```bash
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
+retell agents publish agent_123abc --version 15 --description "May prompt update"
 ```
 
 **Output:**
@@ -592,8 +593,41 @@ retell agent-publish agent_123abc
 {
   "message": "Agent published successfully",
   "agent_id": "agent_123abc",
-  "agent_name": "Customer Support Bot"
+  "agent_name": "Customer Support Bot",
+  "published_version": 15
 }
+```
+
+#### Agent and Chat Agent Version Lifecycle
+
+```bash
+retell agents versions agent_123abc
+retell agents create-version agent_123abc --base-version 14
+retell agents delete-version agent_123abc --version 13
+
+retell chat-agents versions ca_123abc
+retell chat-agents create-version ca_123abc --base-version 2
+retell chat-agents publish ca_123abc --version 3
+retell chat-agents delete-version ca_123abc --version 2
+```
+
+Dynamic-variable flags such as `--dynamic-variables` require a JSON object with string values, for example `{"customer_name":"Avery"}`.
+
+#### Pagination and Chat Deletion
+
+Several list commands now expose Retell SDK pagination directly:
+
+```bash
+retell phone-numbers list --limit 25 --pagination-key next --sort-order descending
+retell flow-components list --limit 25 --pagination-key next --sort-order ascending
+retell tests runs list batch_job_123 --limit 25 --pagination-key next
+```
+
+Chats can be ended or deleted depending on the workflow:
+
+```bash
+retell chats end chat_123abc
+retell chats delete chat_123abc
 ```
 
 ---
@@ -639,7 +673,7 @@ retell prompts update agent_123abc --source prompts-v2.json --dry-run
 retell prompts update agent_123abc --source prompts-v2.json
 
 # Step 5: Publish changes
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 
 # Step 6: Test with a call, then analyze
 # Make a test call...
@@ -671,7 +705,7 @@ done
 # Step 5: Review dry runs, then apply
 for agent_id in $(jq -r '.[].agent_id' agents.json); do
   retell prompts update $agent_id --source "prompts-${agent_id}.json"
-  retell agent-publish $agent_id
+  retell agents publish $agent_id
 done
 ```
 

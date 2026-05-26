@@ -11,7 +11,11 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg, readJsonObjectFile } from "../../services/json-arg";
+import {
+  loadJsonArg,
+  loadStringRecordArg,
+  readJsonObjectFile,
+} from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
 import { requireNonEmpty } from "../../services/flag-guards";
 import type { CallCreateWebCallParams } from "retell-sdk/resources/call";
@@ -49,9 +53,11 @@ export async function createWebCallCommand(
     const metadata = loadJsonArg(options.metadata, "--metadata");
     if (metadata !== undefined) params.metadata = metadata;
 
-    const dv = loadJsonArg(options.dynamicVariables, "--dynamic-variables");
-    if (dv !== undefined)
-      params.retell_llm_dynamic_variables = dv as Record<string, unknown>;
+    const dv = loadStringRecordArg(
+      options.dynamicVariables,
+      "--dynamic-variables",
+    );
+    if (dv !== undefined) params.retell_llm_dynamic_variables = dv;
 
     if (options.agentOverride) {
       const override = readJsonObjectFile(

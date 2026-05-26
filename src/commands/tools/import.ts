@@ -210,8 +210,8 @@ export async function importToolsCommand(
         tools_added: [...toolsAdded, ...toolsReplaced],
         note:
           toolsSkipped.length > 0
-            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
-            : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agents publish ${agentId}' to publish changes.`
+            : `Run 'retell agents publish ${agentId}' to publish changes to production`,
       };
       outputJson(output);
     } else {
@@ -325,8 +325,8 @@ export async function importToolsCommand(
         tools_added: [...toolsAdded, ...toolsReplaced],
         note:
           toolsSkipped.length > 0
-            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agent-publish ${agentId}' to publish changes.`
-            : `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+            ? `Skipped ${toolsSkipped.length} existing tools. Use --replace to overwrite. Run 'retell agents publish ${agentId}' to publish changes.`
+            : `Run 'retell agents publish ${agentId}' to publish changes to production`,
       };
       outputJson(output);
     }

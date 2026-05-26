@@ -234,8 +234,11 @@ retell prompts update agent_123abc --source prompts.json --dry-run
 # Step 4: Apply changes
 retell prompts update agent_123abc --source prompts.json
 
-# Step 5: Publish agent
-retell agent-publish agent_123abc
+# Step 5: Publish the newest unpublished draft
+retell agents publish agent_123abc
+
+# Or publish an explicit draft version
+retell agents publish agent_123abc --version 15 --description "Prompt refresh"
 ```
 
 **Dry Run Output:**
@@ -256,7 +259,7 @@ retell agent-publish agent_123abc
 
 ```bash
 # After updating prompts, publish to make changes live
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 ```
 
 **Output:**

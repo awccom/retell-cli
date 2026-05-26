@@ -10,7 +10,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg } from "../../services/json-arg";
+import { loadJsonArg, loadStringRecordArg } from "../../services/json-arg";
 import { parseNumericFlag } from "../../services/numeric-flag";
 import { requireNonEmpty } from "../../services/flag-guards";
 import type { ChatCreateSMSChatParams } from "retell-sdk/resources/chat";
@@ -46,9 +46,11 @@ export async function createSmsChatCommand(
     const metadata = loadJsonArg(options.metadata, "--metadata");
     if (metadata !== undefined) params.metadata = metadata;
 
-    const dv = loadJsonArg(options.dynamicVariables, "--dynamic-variables");
-    if (dv !== undefined)
-      params.retell_llm_dynamic_variables = dv as Record<string, unknown>;
+    const dv = loadStringRecordArg(
+      options.dynamicVariables,
+      "--dynamic-variables",
+    );
+    if (dv !== undefined) params.retell_llm_dynamic_variables = dv;
 
     const client = getRetellClient();
     const chat = await client.chat.createSMSChat(params);

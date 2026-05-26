@@ -22,6 +22,8 @@ import { agentInfoCommand } from "./commands/agents/info";
 import { createAgentCommand } from "./commands/agents/create";
 import { deleteAgentCommand } from "./commands/agents/delete";
 import { agentVersionsCommand } from "./commands/agents/versions";
+import { createAgentVersionCommand } from "./commands/agents/create-version";
+import { deleteAgentVersionCommand } from "./commands/agents/delete-version";
 import { pullPromptsCommand } from "./commands/prompts/pull";
 import { updatePromptsCommand } from "./commands/prompts/update";
 import { diffPromptsCommand } from "./commands/prompts/diff";
@@ -87,6 +89,7 @@ import { updateChatCommand } from "./commands/chats/update";
 import { chatCompleteCommand } from "./commands/chats/complete";
 import { createSmsChatCommand } from "./commands/chats/sms";
 import { endChatCommand } from "./commands/chats/end";
+import { deleteChatCommand } from "./commands/chats/delete";
 import { createChatAgentCommand } from "./commands/chat-agents/create";
 import { getChatAgentCommand } from "./commands/chat-agents/get";
 import { updateChatAgentCommand } from "./commands/chat-agents/update";
@@ -94,6 +97,8 @@ import { listChatAgentsCommand } from "./commands/chat-agents/list";
 import { deleteChatAgentCommand } from "./commands/chat-agents/delete";
 import { chatAgentVersionsCommand } from "./commands/chat-agents/versions";
 import { publishChatAgentCommand } from "./commands/chat-agents/publish";
+import { createChatAgentVersionCommand } from "./commands/chat-agents/create-version";
+import { deleteChatAgentVersionCommand } from "./commands/chat-agents/delete-version";
 import { listFlowComponentsCommand } from "./commands/flow-components/list";
 import { getFlowComponentCommand } from "./commands/flow-components/get";
 import { createFlowComponentCommand } from "./commands/flow-components/create";
@@ -102,7 +107,10 @@ import { deleteFlowComponentCommand } from "./commands/flow-components/delete";
 import { getConcurrencyCommand } from "./commands/concurrency/get";
 import { agentMcpToolsCommand } from "./commands/agents/mcp-tools";
 import { playgroundCompleteCommand } from "./commands/playground/complete";
-import { parseNumericFlag } from "./services/numeric-flag";
+import {
+  parseNumericFlag,
+  parsePositiveIntegerFlag,
+} from "./services/numeric-flag";
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -116,6 +124,19 @@ function parseFlagOrExit(
   if (value === undefined) return undefined;
   try {
     return parseNumericFlag(value, flagName);
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
+
+function parsePositiveIntegerFlagOrExit(
+  value: string | undefined,
+  flagName: string,
+): number | undefined {
+  if (value === undefined) return undefined;
+  try {
+    return parsePositiveIntegerFlag(value, flagName);
   } catch (err) {
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);
@@ -422,6 +443,31 @@ Examples:
     await agentVersionsCommand(agentId, options);
   });
 
+agents
+  .command("create-version <agent_id>")
+  .description("Create a draft agent version from a base version")
+  .requiredOption("--base-version <n>", "Existing version to copy")
+  .action(async (agentId, options) => {
+    await createAgentVersionCommand(agentId, options);
+  });
+
+agents
+  .command("delete-version <agent_id>")
+  .description("Delete a specific agent version")
+  .requiredOption("--version <n>", "Version to delete")
+  .action(async (agentId, options) => {
+    await deleteAgentVersionCommand(agentId, options);
+  });
+
+agents
+  .command("publish <agent_id>")
+  .description("Publish a draft agent version")
+  .option("--version <n>", "Draft version to publish")
+  .option("--description <text>", "Version description")
+  .action(async (agentId, options) => {
+    await publishAgentCommand(agentId, options);
+  });
+
 // Prompts commands
 const prompts = program.command("prompts").description("Manage agent prompts");
 
@@ -482,7 +528,7 @@ prompts
 Examples:
   $ retell prompts update agent_123abc --source my-prompts.json --dry-run
   $ retell prompts update agent_123abc --source my-prompts.json
-  # Remember to publish: retell agent-publish agent_123abc
+  # Remember to publish: retell agents publish agent_123abc
   `,
   )
   .action(async (agentId, options) => {
@@ -493,16 +539,19 @@ Examples:
 program
   .command("agent-publish <agent_id>")
   .description("Publish a draft agent to make changes live")
+  .option("--version <n>", "Draft version to publish")
+  .option("--description <text>", "Version description")
   .addHelpText(
     "after",
     `
 Examples:
-  $ retell agent-publish agent_123abc
+  $ retell agents publish agent_123abc
+  $ retell agents publish agent_123abc --version 15 --description "May prompt update"
   # Run this after updating prompts to make changes live
   `,
   )
-  .action(async (agentId) => {
-    await publishAgentCommand(agentId);
+  .action(async (agentId, options) => {
+    await publishAgentCommand(agentId, options);
   });
 
 // Agent commands (for agent-level configuration)
@@ -575,7 +624,7 @@ Example JSON for post-call analysis:
     "analysis_summary_prompt": "Summarize the call in 2 sentences."
   }
 
-Note: Run 'retell agent-publish <agent_id>' after updating to publish changes.
+Note: Run 'retell agents publish <agent_id>' after updating to publish changes.
   `,
   )
   .action(async (agentId, options) => {
@@ -996,17 +1045,22 @@ const testsRuns = tests.command("runs").description("View test run results");
 testsRuns
   .command("list <batch_job_id>")
   .description("List all test runs for a batch test")
+  .option("--limit <n>", "Maximum number of test runs to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
     "after",
     `
 Examples:
   $ retell tests runs list bjj_abc123
+  $ retell tests runs list bjj_abc123 --limit 25 --pagination-key next
   $ retell tests runs list bjj_abc123 --fields test_runs
   `,
   )
   .action(async (batchJobId, options) => {
     await listTestRunsCommand(batchJobId, {
+      limit: parsePositiveIntegerFlagOrExit(options.limit, "--limit"),
+      paginationKey: options.paginationKey,
       fields: options.fields,
     });
   });
@@ -1296,12 +1350,16 @@ const phoneNumbers = program
 phoneNumbers
   .command("list")
   .description("List all phone numbers")
+  .option("--limit <n>", "Maximum number of phone numbers to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
+  .option("--sort-order <order>", "ascending or descending")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
     "after",
     `
 Examples:
   $ retell phone-numbers list
+  $ retell phone-numbers list --limit 25 --sort-order descending
   $ retell phone-numbers list --fields phone_number,nickname,inbound_agents
   `,
   )
@@ -1691,10 +1749,6 @@ llms
   .description("List Retell LLMs")
   .option("-l, --limit <n>", "Maximum number to return")
   .option("--pagination-key <key>", "LLM id to start from")
-  .option(
-    "--pagination-key-version <n>",
-    "Version paired with --pagination-key",
-  )
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (options) => {
     await listLlmsCommand(options);
@@ -1922,6 +1976,13 @@ chats
     await endChatCommand(chatId);
   });
 
+chats
+  .command("delete <chat_id>")
+  .description("Delete a chat and its associated data")
+  .action(async (chatId) => {
+    await deleteChatCommand(chatId);
+  });
+
 // Playground commands
 const playground = program
   .command("playground")
@@ -2022,10 +2083,28 @@ chatAgents
   });
 
 chatAgents
+  .command("create-version <agent_id>")
+  .description("Create a draft chat agent version from a base version")
+  .requiredOption("--base-version <n>", "Existing version to copy")
+  .action(async (agentId, options) => {
+    await createChatAgentVersionCommand(agentId, options);
+  });
+
+chatAgents
+  .command("delete-version <agent_id>")
+  .description("Delete a specific chat agent version")
+  .requiredOption("--version <n>", "Version to delete")
+  .action(async (agentId, options) => {
+    await deleteChatAgentVersionCommand(agentId, options);
+  });
+
+chatAgents
   .command("publish <agent_id>")
-  .description("Publish the draft configuration of a chat agent")
-  .action(async (agentId) => {
-    await publishChatAgentCommand(agentId);
+  .description("Publish a draft chat agent version")
+  .option("--version <n>", "Draft version to publish")
+  .option("--description <text>", "Version description")
+  .action(async (agentId, options) => {
+    await publishChatAgentCommand(agentId, options);
   });
 
 // Flow Components commands
@@ -2036,6 +2115,9 @@ const flowComponents = program
 flowComponents
   .command("list")
   .description("List flow components")
+  .option("--limit <n>", "Maximum number of flow components to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
+  .option("--sort-order <order>", "ascending or descending")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (options) => {
     await listFlowComponentsCommand(options);

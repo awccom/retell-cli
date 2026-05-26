@@ -1,6 +1,6 @@
 {
   "name": "retell-cli",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Community CLI for Retell AI - efficient access to transcripts, agents, and prompts for AI assistants without MCP overhead",
   "main": "dist/index.js",
   "bin": {
@@ -54,7 +54,7 @@
     "commander": "^14.0.0",
     "dotenv": "^17.0.0",
     "microdiff": "^1.5.0",
-    "retell-sdk": "^5.18.0",
+    "retell-sdk": "^5.28.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {

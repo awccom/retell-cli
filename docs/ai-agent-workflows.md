@@ -84,7 +84,7 @@ retell prompts update agent_123 --dry-run
 retell prompts update agent_123
 
 # 7. Publish to production
-retell agent-publish agent_123
+retell agents publish agent_123
 ```
 
 ### Using Diff Effectively
@@ -230,7 +230,7 @@ done
 ┌─────────────────────────────────────┐
 │ 6. Apply & Publish                  │
 │    retell prompts update agent_123  │
-│    retell agent-publish agent_123   │
+│    retell agents publish agent_123   │
 └────────────┬────────────────────────┘
              │
              ▼
@@ -267,7 +267,7 @@ retell prompts update agent_123 --dry-run
 
 # Step 6: Apply
 retell prompts update agent_123
-retell agent-publish agent_123
+retell agents publish agent_123
 
 # Step 7: Monitor next 10 calls for improvement
 retell transcripts search --agent-id agent_123 --limit 10 --from-date 2025-11-16
@@ -386,7 +386,7 @@ retell prompts pull agent_123
 retell prompts diff agent_123
 retell prompts update agent_123 --dry-run
 retell prompts update agent_123
-retell agent-publish agent_123
+retell agents publish agent_123
 ```
 
 ### Pattern 2: A/B Testing Prompt Changes
@@ -399,7 +399,7 @@ retell transcripts search --agent-id agent_123 --limit 50 --fields sentiment_sco
 retell prompts pull agent_123
 # ... edit prompts ...
 retell prompts update agent_123
-retell agent-publish agent_123
+retell agents publish agent_123
 
 # 3. Compare results after 24 hours
 retell transcripts search --agent-id agent_123 --from-date 2025-11-17 --limit 50 --fields sentiment_score,call_analysis
@@ -450,7 +450,7 @@ retell prompts pull agent_123
 retell prompts diff agent_123  # Verify only general_prompt changed
 retell prompts update agent_123 --dry-run
 retell prompts update agent_123
-retell agent-publish agent_123
+retell agents publish agent_123
 
 # Wait, monitor 10 calls
 
@@ -459,7 +459,7 @@ retell agent-publish agent_123
 retell prompts diff agent_123  # Verify new state added
 retell prompts update agent_123 --dry-run
 retell prompts update agent_123
-retell agent-publish agent_123
+retell agents publish agent_123
 
 # Wait, monitor 10 calls
 
@@ -548,7 +548,7 @@ retell prompts pull <agent-id>
 retell prompts diff <agent-id>
 retell prompts update <agent-id> --dry-run
 retell prompts update <agent-id>
-retell agent-publish <agent-id>
+retell agents publish <agent-id>
 
 # Token-efficient analysis
 retell transcripts analyze <call-id> --fields call_id,transcript,call_analysis

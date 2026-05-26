@@ -59,6 +59,30 @@ export function loadJsonArg(
 }
 
 /**
+ * Parse a CLI JSON flag and assert it is an object whose values are strings.
+ * Retell dynamic-variable params are string-valued in the current SDK.
+ */
+export function loadStringRecordArg(
+  value: string | undefined,
+  flagName: string,
+): Record<string, string> | undefined {
+  const parsed = loadJsonArg(value, flagName);
+  if (parsed === undefined) return undefined;
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throwValidation(`${flagName} must be a JSON object`);
+  }
+
+  const result: Record<string, string> = {};
+  for (const [key, val] of Object.entries(parsed)) {
+    if (typeof val !== "string") {
+      throwValidation(`${flagName}.${key} must be a string`);
+    }
+    result[key] = val;
+  }
+  return result;
+}
+
+/**
  * Read and parse a JSON file from disk. Used for body-as-file flags.
  */
 export function readJsonFile(path: string, flagName: string): unknown {

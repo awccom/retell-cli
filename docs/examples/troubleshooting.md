@@ -306,7 +306,7 @@ After updating prompts, always publish:
 
 ```bash
 retell prompts update agent_123abc --source prompts.json
-retell agent-publish agent_123abc  # ← Don't forget this!
+retell agents publish agent_123abc  # ← Don't forget this!
 ```
 
 Verify changes were applied:
@@ -682,7 +682,7 @@ retell prompts update agent_123abc --source prompts.json
 
 # ✓ Correct - don't forget to publish
 retell prompts update agent_123abc --source prompts.json
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 ```
 
 ### 2. Not Using Dry Run

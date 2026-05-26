@@ -27,8 +27,22 @@ describe("listFlowComponentsCommand", () => {
 
   it("calls list and outputs results", async () => {
     await listFlowComponentsCommand();
-    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalled();
+    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalledWith({});
     expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
+  });
+
+  it("passes pagination options to the SDK", async () => {
+    await listFlowComponentsCommand({
+      limit: "10",
+      paginationKey: "cursor",
+      sortOrder: "ascending",
+    });
+
+    expect(mockClient.conversationFlowComponent.list).toHaveBeenCalledWith({
+      limit: 10,
+      pagination_key: "cursor",
+      sort_order: "ascending",
+    });
   });
 
   it("routes SDK errors through handleSdkError", async () => {

@@ -58,12 +58,12 @@ describe("updateLlmCommand", () => {
     expect(mockClient.llm.update).not.toHaveBeenCalled();
   });
 
-  it("passes --version as query_version (not as body.version)", async () => {
+  it("passes --version as version in the SDK params object", async () => {
     writeFileSync(tmpFile, JSON.stringify({ general_prompt: "p" }));
     await updateLlmCommand("llm_1", { file: tmpFile, version: "3" });
     expect(mockClient.llm.update).toHaveBeenCalledWith("llm_1", {
       general_prompt: "p",
-      query_version: 3,
+      version: 3,
     });
   });
 });

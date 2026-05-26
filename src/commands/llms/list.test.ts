@@ -34,6 +34,13 @@ describe("listLlmsCommand", () => {
     expect(mockClient.llm.list).toHaveBeenCalledWith({ limit: 50 });
   });
 
+  it("passes pagination key without pagination key version", async () => {
+    await listLlmsCommand({ paginationKey: "next" });
+    expect(mockClient.llm.list).toHaveBeenCalledWith({
+      pagination_key: "next",
+    });
+  });
+
   it("rejects non-numeric --limit", async () => {
     await listLlmsCommand({ limit: "abc" });
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(

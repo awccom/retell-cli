@@ -132,7 +132,7 @@ export async function updateAgentCommand(
       agent_name: updatedAgent.agent_name || "Unknown",
       version: updatedAgent.version,
       fields_updated: Object.keys(updateParams),
-      note: `Run 'retell agent-publish ${agentId}' to publish changes to production`,
+      note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
     });
   } catch (error) {
     // Handle JSON parsing errors

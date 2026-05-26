@@ -38,7 +38,7 @@ retell prompts update agent_123abc \
   --source current-prompts.json
 
 # Step 7: Publish agent
-retell agent-publish agent_123abc
+retell agents publish agent_123abc --version 15 --description "Prompt update"
 ```
 
 ### Iterative Prompt Refinement
@@ -67,7 +67,7 @@ while true; do
 
   if [ "$apply" = "y" ]; then
     retell prompts update $AGENT_ID --source "prompts-v${VERSION}.json"
-    retell agent-publish $AGENT_ID
+    retell agents publish $AGENT_ID
     echo "Version ${VERSION} published"
     VERSION=$((VERSION + 1))
   else
@@ -121,7 +121,7 @@ if [ "$proceed" = "y" ]; then
   for agent_id in "${AGENTS[@]}"; do
     echo "Publishing $agent_id..."
     retell prompts update $agent_id --source "prompts-${agent_id}.json"
-    retell agent-publish $agent_id
+    retell agents publish $agent_id
   done
   echo "All agents updated and published"
 else
@@ -154,7 +154,7 @@ retell agents list | jq -r '.[] | select(.response_engine.type == "retell-llm") 
 
   # Update agent
   retell prompts update $agent_id --source "updated-${agent_id}.json"
-  retell agent-publish $agent_id
+  retell agents publish $agent_id
 
   # Cleanup
   rm "temp-${agent_id}.json" "updated-${agent_id}.json"
@@ -199,7 +199,7 @@ git commit -m "Update support agent: improve greeting message"
 
 # Apply changes to Retell
 retell prompts update agent_123abc --source agents/agent_123abc.json
-retell agent-publish agent_123abc
+retell agents publish agent_123abc --version 15
 
 # Merge to main
 git checkout main
@@ -260,7 +260,7 @@ read apply
 
 if [ "$apply" = "y" ]; then
   retell prompts update $AGENT_ID --source after.json
-  retell agent-publish $AGENT_ID
+  retell agents publish $AGENT_ID
   echo "Changes applied"
 else
   echo "Changes discarded"
@@ -278,7 +278,7 @@ TEST_CALLS=10
 
 # Update prompts
 retell prompts update $AGENT_ID --source new-prompts.json
-retell agent-publish $AGENT_ID
+retell agents publish $AGENT_ID
 
 echo "Agent updated. Make $TEST_CALLS test calls, then press Enter..."
 read
@@ -330,7 +330,7 @@ read
 
 # Apply prompts to Agent B
 retell prompts update $AGENT_B --source prompts-b.json
-retell agent-publish $AGENT_B
+retell agents publish $AGENT_B
 
 echo "A/B test agents ready:"
 echo "  Agent A (control): $AGENT_A"
@@ -422,7 +422,7 @@ if (( $(echo "$success_rate < $THRESHOLD_SUCCESS_RATE" | bc -l) )); then
 
   # Apply update
   retell prompts update $AGENT_ID --source improved.json
-  retell agent-publish $AGENT_ID
+  retell agents publish $AGENT_ID
 
   echo "Prompts updated to improve success rate"
 else
@@ -462,7 +462,7 @@ NEXT_INDEX=$(( (CURRENT_INDEX + 1) % ${#PROMPTS[@]} ))
 # Apply next prompt
 echo "Rotating to prompt: ${PROMPTS[$NEXT_INDEX]}"
 retell prompts update $AGENT_ID --source "${PROMPTS[$NEXT_INDEX]}"
-retell agent-publish $AGENT_ID
+retell agents publish $AGENT_ID
 
 # Save new index
 echo $NEXT_INDEX > "$INDEX_FILE"
@@ -502,13 +502,13 @@ retell prompts pull agent_123abc --output test-prompts.json
 
 # Edit and test on a staging agent first
 retell prompts update agent_staging --source test-prompts.json
-retell agent-publish agent_staging
+retell agents publish agent_staging
 
 # Test with sample calls
 
 # Deploy to production
 retell prompts update agent_123abc --source test-prompts.json
-retell agent-publish agent_123abc
+retell agents publish agent_123abc --version 15
 ```
 
 ### 4. Document Changes
@@ -533,7 +533,7 @@ EOF
 ```bash
 # After updating prompts, monitor performance
 retell prompts update agent_123abc --source new-prompts.json
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 
 # Wait for some calls
 sleep 3600  # 1 hour
@@ -567,7 +567,7 @@ retell prompts pull agent_123abc --output fresh-prompts.json
 
 ```bash
 # Ensure you published the agent
-retell agent-publish agent_123abc
+retell agents publish agent_123abc
 
 # Verify the update was applied
 retell agents info agent_123abc | jq '.response_engine.general_prompt'
