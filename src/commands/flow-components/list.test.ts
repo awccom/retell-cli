@@ -52,4 +52,21 @@ describe("listFlowComponentsCommand", () => {
     await listFlowComponentsCommand();
     expect(outputFormatter.handleSdkError).toHaveBeenCalled();
   });
+
+  it("rejects invalid sort order before calling the SDK", async () => {
+    await listFlowComponentsCommand({ sortOrder: "newest" });
+
+    expect(mockClient.conversationFlowComponent.list).not.toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ValidationError" }),
+    );
+  });
+
+  it("rejects non-positive or fractional limits before calling the SDK", async () => {
+    await listFlowComponentsCommand({ limit: "0" });
+    await listFlowComponentsCommand({ limit: "1.5" });
+
+    expect(mockClient.conversationFlowComponent.list).not.toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledTimes(2);
+  });
 });

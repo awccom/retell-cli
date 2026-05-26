@@ -129,5 +129,22 @@ describe("listPhoneNumbersCommand", () => {
 
       expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(apiError);
     });
+
+    it("rejects invalid sort order before calling the SDK", async () => {
+      await listPhoneNumbersCommand({ sortOrder: "newest" });
+
+      expect(mockClient.phoneNumber.list).not.toHaveBeenCalled();
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+    });
+
+    it("rejects non-positive or fractional limits before calling the SDK", async () => {
+      await listPhoneNumbersCommand({ limit: "0" });
+      await listPhoneNumbersCommand({ limit: "1.5" });
+
+      expect(mockClient.phoneNumber.list).not.toHaveBeenCalled();
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledTimes(2);
+    });
   });
 });

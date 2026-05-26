@@ -32,4 +32,14 @@ describe("deleteChatCommand", () => {
       operation: "delete",
     });
   });
+
+  it("routes SDK errors through handleSdkError", async () => {
+    const error = new Error("sdk error");
+    mockClient.chat.delete.mockRejectedValue(error);
+
+    await deleteChatCommand("chat_1");
+
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(error);
+    expect(outputFormatter.outputJson).not.toHaveBeenCalled();
+  });
 });

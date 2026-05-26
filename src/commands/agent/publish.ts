@@ -58,7 +58,7 @@ export async function publishAgentCommand(
         : {}),
     });
   } catch (error) {
-    handleSdkError(error);
+    return handleSdkError(error);
   }
 
   // Fetch agent to verify publish succeeded and get current state
@@ -75,6 +75,6 @@ export async function publishAgentCommand(
       note: "Version published successfully",
     });
   } catch (error) {
-    handleSdkError(error);
+    return handleSdkError(error);
   }
 }

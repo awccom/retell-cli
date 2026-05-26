@@ -73,6 +73,8 @@ describe("publishAgentCommand", () => {
     await publishAgentCommand("agent_1");
 
     expect(mockClient.agent.publish).not.toHaveBeenCalled();
+    expect(mockClient.agent.retrieve).not.toHaveBeenCalled();
+    expect(outputFormatter.outputJson).not.toHaveBeenCalled();
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
       expect.objectContaining({ name: "ValidationError" }),
     );

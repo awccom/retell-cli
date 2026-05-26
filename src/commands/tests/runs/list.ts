@@ -34,7 +34,12 @@ export async function listTestRunsCommand(
 ): Promise<void> {
   try {
     const query: { limit?: number; pagination_key?: string } = {};
-    if (options.limit !== undefined) query.limit = options.limit;
+    if (options.limit !== undefined) {
+      if (!Number.isInteger(options.limit) || options.limit < 1) {
+        throwValidation("--limit must be a positive integer");
+      }
+      query.limit = options.limit;
+    }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
     const testRuns = await listTestRuns(batchJobId, query);
 
@@ -56,4 +61,10 @@ export async function listTestRunsCommand(
   } catch (error) {
     handleSdkError(error);
   }
+}
+
+function throwValidation(message: string): never {
+  const err = new Error(message);
+  err.name = "ValidationError";
+  throw err;
 }
