@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bumped `retell-sdk` from `^5.28.0` to `^5.32.4`.
 - `transcripts list` and `transcripts search` now read calls from the SDK's paginated `items` response used by `POST /v3/list-calls`, while retaining compatibility with older array responses.
+- `transcripts search` now sends v3 `filter_criteria` objects for status, agent, and start timestamp filters.
 
 ## [1.8.0] - 2026-05-26
 
