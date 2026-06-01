@@ -19,6 +19,18 @@ export interface ListTranscriptsOptions {
   fields?: string;
 }
 
+function getCallItems(response: unknown): unknown[] {
+  if (Array.isArray(response)) return response;
+  if (
+    response &&
+    typeof response === "object" &&
+    Array.isArray((response as { items?: unknown }).items)
+  ) {
+    return (response as { items: unknown[] }).items;
+  }
+  return [];
+}
+
 // ===== COMMAND IMPLEMENTATION =====
 
 /**
@@ -33,9 +45,10 @@ export async function listTranscriptsCommand(
     const client = getRetellClient();
 
     // Call the SDK to list calls
-    const calls = await client.call.list({
+    const response = await client.call.list({
       limit: options.limit || 50,
     });
+    const calls = getCallItems(response);
 
     // Apply field filtering if requested
     const output = options.fields

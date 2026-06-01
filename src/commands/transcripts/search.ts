@@ -40,6 +40,18 @@ const CallSchema = z
 
 const CallListSchema = z.array(CallSchema);
 
+function getCallItems(response: unknown): unknown {
+  if (Array.isArray(response)) return response;
+  if (
+    response &&
+    typeof response === "object" &&
+    Array.isArray((response as { items?: unknown }).items)
+  ) {
+    return (response as { items: unknown[] }).items;
+  }
+  return response;
+}
+
 /**
  * Options for searching transcripts
  *
@@ -257,9 +269,10 @@ async function searchTranscripts(
 
   // Fetch from API (all filtering is done server-side!)
   const response = await client.call.list(apiParams as any);
+  const responseItems = getCallItems(response);
 
   // Validate response format with Zod
-  const validation = CallListSchema.safeParse(response);
+  const validation = CallListSchema.safeParse(responseItems);
 
   if (!validation.success) {
     console.warn(

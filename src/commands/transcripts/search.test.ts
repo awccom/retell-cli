@@ -337,6 +337,21 @@ describe("searchTranscriptsCommand", () => {
   });
 
   describe("result structure", () => {
+    it("should use items from the SDK's paginated list response", async () => {
+      mockClient.call.list.mockResolvedValue({
+        items: mockCalls,
+        has_more: true,
+        pagination_key: "next_page",
+      });
+
+      await searchTranscriptsCommand({});
+
+      const output = vi.mocked(outputFormatter.outputJson).mock
+        .calls[0][0] as any;
+      expect(output.results).toEqual(mockCalls);
+      expect(output.total_count).toBe(4);
+    });
+
     it("should return structured results with filters_applied", async () => {
       mockClient.call.list.mockResolvedValue(mockCalls);
 
