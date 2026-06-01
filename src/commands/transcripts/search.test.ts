@@ -227,7 +227,11 @@ describe("searchTranscriptsCommand", () => {
         limit: 50,
         sort_order: "descending",
         filter_criteria: {
-          call_status: ["error"],
+          call_status: {
+            op: "in",
+            type: "enum",
+            value: ["error"],
+          },
         },
       });
     });
@@ -241,7 +245,7 @@ describe("searchTranscriptsCommand", () => {
         limit: 50,
         sort_order: "descending",
         filter_criteria: {
-          agent_id: ["agent_123"],
+          agent: [{ agent_id: "agent_123" }],
         },
       });
     });
@@ -255,13 +259,14 @@ describe("searchTranscriptsCommand", () => {
       });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      expect(callArgs.filter_criteria.start_timestamp).toBeDefined();
-      expect(callArgs.filter_criteria.start_timestamp.lower_threshold).toBe(
-        new Date("2025-11-01").getTime(),
-      );
-      expect(callArgs.filter_criteria.start_timestamp.upper_threshold).toBe(
-        new Date("2025-11-15T23:59:59.999Z").getTime(),
-      );
+      expect(callArgs.filter_criteria.start_timestamp).toEqual({
+        op: "bt",
+        type: "range",
+        value: [
+          new Date("2025-11-01").getTime(),
+          new Date("2025-11-15T23:59:59.999Z").getTime(),
+        ],
+      });
     });
 
     it("should construct API params with only since date", async () => {
@@ -270,13 +275,11 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ since: "2025-11-01" });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      expect(callArgs.filter_criteria.start_timestamp).toBeDefined();
-      expect(callArgs.filter_criteria.start_timestamp.lower_threshold).toBe(
-        new Date("2025-11-01").getTime(),
-      );
-      expect(
-        callArgs.filter_criteria.start_timestamp.upper_threshold,
-      ).toBeUndefined();
+      expect(callArgs.filter_criteria.start_timestamp).toEqual({
+        op: "ge",
+        type: "number",
+        value: new Date("2025-11-01").getTime(),
+      });
     });
 
     it("should construct API params with only until date", async () => {
@@ -285,13 +288,11 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ until: "2025-11-15" });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      expect(callArgs.filter_criteria.start_timestamp).toBeDefined();
-      expect(
-        callArgs.filter_criteria.start_timestamp.lower_threshold,
-      ).toBeUndefined();
-      expect(callArgs.filter_criteria.start_timestamp.upper_threshold).toBe(
-        new Date("2025-11-15T23:59:59.999Z").getTime(),
-      );
+      expect(callArgs.filter_criteria.start_timestamp).toEqual({
+        op: "le",
+        type: "number",
+        value: new Date("2025-11-15T23:59:59.999Z").getTime(),
+      });
     });
 
     it("should construct API params with custom limit", async () => {
@@ -328,15 +329,38 @@ describe("searchTranscriptsCommand", () => {
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
       expect(callArgs.limit).toBe(20);
-      expect(callArgs.filter_criteria.call_status).toEqual(["error"]);
-      expect(callArgs.filter_criteria.agent_id).toEqual(["agent_123"]);
-      expect(
-        callArgs.filter_criteria.start_timestamp.lower_threshold,
-      ).toBeDefined();
+      expect(callArgs.filter_criteria.call_status).toEqual({
+        op: "in",
+        type: "enum",
+        value: ["error"],
+      });
+      expect(callArgs.filter_criteria.agent).toEqual([
+        { agent_id: "agent_123" },
+      ]);
+      expect(callArgs.filter_criteria.start_timestamp).toEqual({
+        op: "ge",
+        type: "number",
+        value: new Date("2025-11-01").getTime(),
+      });
     });
   });
 
   describe("result structure", () => {
+    it("should use items from the SDK's paginated list response", async () => {
+      mockClient.call.list.mockResolvedValue({
+        items: mockCalls,
+        has_more: true,
+        pagination_key: "next_page",
+      });
+
+      await searchTranscriptsCommand({});
+
+      const output = vi.mocked(outputFormatter.outputJson).mock
+        .calls[0][0] as any;
+      expect(output.results).toEqual(mockCalls);
+      expect(output.total_count).toBe(4);
+    });
+
     it("should return structured results with filters_applied", async () => {
       mockClient.call.list.mockResolvedValue(mockCalls);
 
@@ -500,8 +524,7 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ since: dateString });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      const timestamp =
-        callArgs.filter_criteria.start_timestamp.lower_threshold;
+      const timestamp = callArgs.filter_criteria.start_timestamp.value;
 
       // Verify the timestamp matches the input date
       expect(timestamp).toBe(new Date(dateString).getTime());
@@ -515,8 +538,7 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ since: dateString });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      const timestamp =
-        callArgs.filter_criteria.start_timestamp.lower_threshold;
+      const timestamp = callArgs.filter_criteria.start_timestamp.value;
 
       // Verify the timestamp matches the input date
       expect(timestamp).toBe(new Date(dateString).getTime());
@@ -530,8 +552,7 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ since: dateString });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      const timestamp =
-        callArgs.filter_criteria.start_timestamp.lower_threshold;
+      const timestamp = callArgs.filter_criteria.start_timestamp.value;
 
       expect(timestamp).toBe(new Date(dateString).getTime());
     });
@@ -542,8 +563,7 @@ describe("searchTranscriptsCommand", () => {
       await searchTranscriptsCommand({ until: "2025-11-15" });
 
       const callArgs = mockClient.call.list.mock.calls[0][0];
-      const timestamp =
-        callArgs.filter_criteria.start_timestamp.upper_threshold;
+      const timestamp = callArgs.filter_criteria.start_timestamp.value;
 
       expect(timestamp).toBe(new Date("2025-11-15T23:59:59.999Z").getTime());
     });

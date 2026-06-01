@@ -11,6 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import type { CallListParams } from "retell-sdk/resources/call";
 import { z } from "zod";
 
 // ===== CONSTANTS =====
@@ -39,6 +40,18 @@ const CallSchema = z
   .passthrough();
 
 const CallListSchema = z.array(CallSchema);
+
+function getCallItems(response: unknown): unknown {
+  if (Array.isArray(response)) return response;
+  if (
+    response &&
+    typeof response === "object" &&
+    Array.isArray((response as { items?: unknown }).items)
+  ) {
+    return (response as { items: unknown[] }).items;
+  }
+  return response;
+}
 
 /**
  * Options for searching transcripts
@@ -71,20 +84,12 @@ interface SearchResult {
   };
 }
 
-interface ApiFilterCriteria {
-  call_status?: string[];
-  agent_id?: string[];
-  start_timestamp?: {
-    lower_threshold?: number;
-    upper_threshold?: number;
-  };
-}
+type ApiFilterCriteria = NonNullable<CallListParams["filter_criteria"]>;
 
-interface ApiListParams {
+type ApiListParams = CallListParams & {
   limit: number;
   sort_order: "ascending" | "descending";
-  filter_criteria?: ApiFilterCriteria;
-}
+};
 
 /**
  * Custom error class for validation errors
@@ -200,6 +205,40 @@ function validateSearchOptions(options: SearchOptions): {
   return parsedDates;
 }
 
+function buildStartTimestampFilter(parsedDates: {
+  sinceDate?: ParsedDate;
+  untilDate?: ParsedDate;
+}): ApiFilterCriteria["start_timestamp"] | undefined {
+  const lowerBound = parsedDates.sinceDate?.date.getTime();
+  const upperBound = parsedDates.untilDate?.date.getTime();
+
+  if (lowerBound !== undefined && upperBound !== undefined) {
+    return {
+      op: "bt",
+      type: "range",
+      value: [lowerBound, upperBound],
+    };
+  }
+
+  if (lowerBound !== undefined) {
+    return {
+      op: "ge",
+      type: "number",
+      value: lowerBound,
+    };
+  }
+
+  if (upperBound !== undefined) {
+    return {
+      op: "le",
+      type: "number",
+      value: upperBound,
+    };
+  }
+
+  return undefined;
+}
+
 /**
  * Search transcripts with API filtering
  *
@@ -224,30 +263,25 @@ async function searchTranscripts(
   // Build filter_criteria object
   const filterCriteria: ApiFilterCriteria = {};
 
-  // Status filter (API accepts array, we convert single value)
+  // Status filter (API accepts enum filter object)
   if (options.status) {
-    filterCriteria.call_status = [options.status];
+    filterCriteria.call_status = {
+      op: "in",
+      type: "enum",
+      value: [options.status as "error" | "ended" | "ongoing"],
+    };
   }
 
-  // Agent ID filter (API accepts array, we convert single value)
+  // Agent ID filter (API accepts agent filter objects)
   if (options.agentId) {
-    filterCriteria.agent_id = [options.agentId];
+    filterCriteria.agent = [{ agent_id: options.agentId }];
   }
 
   // Date range filter (API accepts Unix timestamps in milliseconds)
   // Use pre-parsed dates from validation to avoid redundant parsing
-  if (parsedDates.sinceDate || parsedDates.untilDate) {
-    filterCriteria.start_timestamp = {};
-
-    if (parsedDates.sinceDate) {
-      filterCriteria.start_timestamp.lower_threshold =
-        parsedDates.sinceDate.date.getTime();
-    }
-
-    if (parsedDates.untilDate) {
-      filterCriteria.start_timestamp.upper_threshold =
-        parsedDates.untilDate.date.getTime();
-    }
+  const startTimestampFilter = buildStartTimestampFilter(parsedDates);
+  if (startTimestampFilter) {
+    filterCriteria.start_timestamp = startTimestampFilter;
   }
 
   // Add filter_criteria to params if any filters were set
@@ -257,9 +291,10 @@ async function searchTranscripts(
 
   // Fetch from API (all filtering is done server-side!)
   const response = await client.call.list(apiParams as any);
+  const responseItems = getCallItems(response);
 
   // Validate response format with Zod
-  const validation = CallListSchema.safeParse(response);
+  const validation = CallListSchema.safeParse(responseItems);
 
   if (!validation.success) {
     console.warn(
