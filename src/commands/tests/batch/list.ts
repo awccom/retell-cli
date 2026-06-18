@@ -23,6 +23,10 @@ export interface ListBatchTestsOptions {
   llmId?: string;
   /** Flow ID (required when type is conversation-flow) */
   flowId?: string;
+  /** Maximum number of batch tests to return */
+  limit?: number;
+  /** Pagination key for the next page */
+  paginationKey?: string;
   /** Comma-separated list of fields to return */
   fields?: string;
 }
@@ -66,12 +70,31 @@ export async function listBatchTestsCommand(
     const responseEngine = buildResponseEngine(options);
     if (!responseEngine) return;
 
-    const batchTests = await listBatchTests(responseEngine);
+    const query: { limit?: number; pagination_key?: string } = {};
+    if (options.limit !== undefined) {
+      if (!Number.isInteger(options.limit) || options.limit <= 0) {
+        throwValidation("--limit must be a positive integer");
+      }
+      query.limit = options.limit;
+    }
+    if (options.paginationKey) query.pagination_key = options.paginationKey;
+
+    const batchTestsPage = await listBatchTests(responseEngine, query);
+    const batchTests = batchTestsPage.items;
 
     const output: BatchTestListOutput = {
       response_engine: responseEngine,
-      batch_tests: batchTests || [],
-      total_count: (batchTests || []).length,
+      batch_tests: batchTests,
+      total_count: batchTests.length,
+      ...(batchTestsPage.has_more !== undefined && {
+        has_more: batchTestsPage.has_more,
+      }),
+      ...(batchTestsPage.pagination_key !== undefined && {
+        pagination_key: batchTestsPage.pagination_key,
+      }),
+      ...(batchTestsPage.total !== undefined && {
+        total: batchTestsPage.total,
+      }),
     };
 
     if (options.fields) {
@@ -86,4 +109,10 @@ export async function listBatchTestsCommand(
   } catch (error) {
     handleSdkError(error);
   }
+}
+
+function throwValidation(message: string): never {
+  const err = new Error(message);
+  err.name = "ValidationError";
+  throw err;
 }

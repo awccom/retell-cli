@@ -26,6 +26,10 @@ export interface ListTestCasesOptions {
   llmId?: string;
   /** Flow ID (required when type is conversation-flow) */
   flowId?: string;
+  /** Maximum number of test case definitions to return */
+  limit?: number;
+  /** Pagination key for the next page */
+  paginationKey?: string;
   /** Comma-separated list of fields to return */
   fields?: string;
 }
@@ -69,12 +73,29 @@ export async function listTestCasesCommand(
     const responseEngine = buildResponseEngine(options);
     if (!responseEngine) return;
 
-    const testCases = await listTestCaseDefinitions(responseEngine);
+    const query: { limit?: number; pagination_key?: string } = {};
+    if (options.limit !== undefined) {
+      if (!Number.isInteger(options.limit) || options.limit <= 0) {
+        throwValidation("--limit must be a positive integer");
+      }
+      query.limit = options.limit;
+    }
+    if (options.paginationKey) query.pagination_key = options.paginationKey;
+
+    const testCasesPage = await listTestCaseDefinitions(responseEngine, query);
+    const testCases = testCasesPage.items;
 
     const output: TestCaseDefinitionListOutput = {
       response_engine: responseEngine,
-      test_case_definitions: testCases || [],
-      total_count: (testCases || []).length,
+      test_case_definitions: testCases,
+      total_count: testCases.length,
+      ...(testCasesPage.has_more !== undefined && {
+        has_more: testCasesPage.has_more,
+      }),
+      ...(testCasesPage.pagination_key !== undefined && {
+        pagination_key: testCasesPage.pagination_key,
+      }),
+      ...(testCasesPage.total !== undefined && { total: testCasesPage.total }),
     };
 
     if (options.fields) {
@@ -89,4 +110,10 @@ export async function listTestCasesCommand(
   } catch (error) {
     handleSdkError(error);
   }
+}
+
+function throwValidation(message: string): never {
+  const err = new Error(message);
+  err.name = "ValidationError";
+  throw err;
 }

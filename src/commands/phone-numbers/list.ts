@@ -12,6 +12,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { PhoneNumberListParams } from "retell-sdk/resources/phone-number";
 
 export interface ListPhoneNumbersOptions {
@@ -44,7 +48,7 @@ export async function listPhoneNumbersCommand(
     }
 
     const response = await client.phoneNumber.list(query);
-    const phoneNumbers = response.items ?? [];
+    const phoneNumbers = getPaginatedItems(response);
 
     // Format for cleaner output
     const formatted = phoneNumbers.map((pn) => ({
@@ -64,7 +68,7 @@ export async function listPhoneNumbersCommand(
         )
       : formatted;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }

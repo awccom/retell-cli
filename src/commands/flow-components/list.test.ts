@@ -20,7 +20,13 @@ describe("listFlowComponentsCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClient = {
-      conversationFlowComponent: { list: vi.fn().mockResolvedValue([]) },
+      conversationFlowComponent: {
+        list: vi.fn().mockResolvedValue({
+          items: [{ component_id: "comp_1" }],
+          has_more: true,
+          pagination_key: "component_next",
+        }),
+      },
     };
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
   });
@@ -28,7 +34,11 @@ describe("listFlowComponentsCommand", () => {
   it("calls list and outputs results", async () => {
     await listFlowComponentsCommand();
     expect(mockClient.conversationFlowComponent.list).toHaveBeenCalledWith({});
-    expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ component_id: "comp_1" }],
+      has_more: true,
+      pagination_key: "component_next",
+    });
   });
 
   it("passes pagination options to the SDK", async () => {

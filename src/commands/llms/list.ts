@@ -11,6 +11,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { LlmListParams } from "retell-sdk/resources/llm";
 
 export interface ListLlmsOptions {
@@ -30,7 +34,8 @@ export async function listLlmsCommand(
     if (options.paginationKey) query.pagination_key = options.paginationKey;
 
     const client = getRetellClient();
-    const llms = await client.llm.list(query);
+    const response = await client.llm.list(query);
+    const llms = getPaginatedItems(response);
 
     const output = options.fields
       ? filterFields(
@@ -39,7 +44,7 @@ export async function listLlmsCommand(
         )
       : llms;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }

@@ -11,6 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { getPaginatedItems } from "../../services/paginated-response";
 import type { CallListParams } from "retell-sdk/resources/call";
 import { z } from "zod";
 
@@ -41,14 +42,14 @@ const CallSchema = z
 
 const CallListSchema = z.array(CallSchema);
 
-function getCallItems(response: unknown): unknown {
-  if (Array.isArray(response)) return response;
+function getCallItemsForValidation(response: unknown): unknown {
   if (
-    response &&
-    typeof response === "object" &&
-    Array.isArray((response as { items?: unknown }).items)
+    Array.isArray(response) ||
+    (response &&
+      typeof response === "object" &&
+      Array.isArray((response as { items?: unknown }).items))
   ) {
-    return (response as { items: unknown[] }).items;
+    return getPaginatedItems(response as any);
   }
   return response;
 }
@@ -291,7 +292,7 @@ async function searchTranscripts(
 
   // Fetch from API (all filtering is done server-side!)
   const response = await client.call.list(apiParams as any);
-  const responseItems = getCallItems(response);
+  const responseItems = getCallItemsForValidation(response);
 
   // Validate response format with Zod
   const validation = CallListSchema.safeParse(responseItems);
