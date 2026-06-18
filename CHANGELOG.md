@@ -5,6 +5,18 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-06-18
+
+### Added
+
+- `flows list` now exposes `--pagination-key` and `--sort-order`.
+- `tests cases list` and `tests batch list` now expose `--limit` and `--pagination-key`.
+
+### Fixed
+
+- Retell list commands now preserve paginated response metadata (`has_more`, `pagination_key`, and `total` when present) instead of flattening affected responses to arrays and hiding next-page cursors.
+- Test case and batch test list output keeps the existing CLI shape while surfacing pagination metadata for larger result sets.
+
 ## [1.9.0] - 2026-06-02
 
 ### Changed

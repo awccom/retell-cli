@@ -1,6 +1,6 @@
 {
   "name": "retell-cli",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Community CLI for Retell AI - efficient access to transcripts, agents, and prompts for AI assistants without MCP overhead",
   "main": "dist/index.js",
   "bin": {
