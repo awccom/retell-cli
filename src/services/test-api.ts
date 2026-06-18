@@ -7,6 +7,7 @@
  */
 
 import { getRetellClient } from "./retell-client";
+import { getPaginatedItems } from "./paginated-response";
 import type {
   ResponseEngine,
   TestCaseDefinition,
@@ -25,9 +26,10 @@ export async function listTestCaseDefinitions(
   responseEngine: ResponseEngine,
 ): Promise<TestCaseDefinition[]> {
   const client = getRetellClient();
-  return (await client.tests.listTestCaseDefinitions(
+  const response = await client.tests.listTestCaseDefinitions(
     responseEngine as any,
-  )) as unknown as TestCaseDefinition[];
+  );
+  return getPaginatedItems<TestCaseDefinition>(response as any);
 }
 
 /**
@@ -102,9 +104,8 @@ export async function listBatchTests(
   responseEngine: ResponseEngine,
 ): Promise<BatchTest[]> {
   const client = getRetellClient();
-  return (await client.tests.listBatchTests(
-    responseEngine as any,
-  )) as unknown as BatchTest[];
+  const response = await client.tests.listBatchTests(responseEngine as any);
+  return getPaginatedItems<BatchTest>(response as any);
 }
 
 /**
@@ -141,10 +142,8 @@ export async function listTestRuns(
   },
 ): Promise<TestRun[]> {
   const client = getRetellClient();
-  return (await client.tests.listTestRuns(
-    batchJobId,
-    query,
-  )) as unknown as TestRun[];
+  const response = await client.tests.listTestRuns(batchJobId, query);
+  return getPaginatedItems<TestRun>(response as any);
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { getPaginatedItems } from "../../services/paginated-response";
 import type { ListFlowsOptions } from "../../types/flows";
 
 /**
@@ -25,9 +26,10 @@ export async function listFlowsCommand(
     const client = getRetellClient();
 
     // Call the SDK to list conversation flows
-    const flows = await client.conversationFlow.list({
+    const response = await client.conversationFlow.list({
       limit: options.limit || 100,
     });
+    const flows = getPaginatedItems(response);
 
     // Apply field filtering if requested
     const output = options.fields
