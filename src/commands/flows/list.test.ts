@@ -42,11 +42,18 @@ describe("listFlowsCommand", () => {
   });
 
   it("applies field filtering to flow items", async () => {
+    vi.mocked(outputFormatter.filterFields).mockReturnValueOnce([
+      { conversation_flow_id: "filtered_flow" },
+    ] as any);
+
     await listFlowsCommand({ fields: "conversation_flow_id" });
 
     expect(outputFormatter.filterFields).toHaveBeenCalledWith(
       [{ conversation_flow_id: "flow_1" }],
       ["conversation_flow_id"],
     );
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith([
+      { conversation_flow_id: "filtered_flow" },
+    ]);
   });
 });

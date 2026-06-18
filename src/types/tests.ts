@@ -248,6 +248,9 @@ export interface TestRunListOutput {
   batch_job_id: string;
   test_runs: TestRun[];
   total_count: number;
+  has_more?: boolean;
+  pagination_key?: string;
+  total?: number;
 }
 
 /**

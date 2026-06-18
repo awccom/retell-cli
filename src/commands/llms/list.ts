@@ -11,7 +11,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parseNumericFlag } from "../../services/numeric-flag";
-import { getPaginatedItems } from "../../services/paginated-response";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { LlmListParams } from "retell-sdk/resources/llm";
 
 export interface ListLlmsOptions {
@@ -41,7 +44,7 @@ export async function listLlmsCommand(
         )
       : llms;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }

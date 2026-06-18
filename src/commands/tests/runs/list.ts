@@ -41,12 +41,20 @@ export async function listTestRunsCommand(
       query.limit = options.limit;
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
-    const testRuns = await listTestRuns(batchJobId, query);
+    const testRunsPage = await listTestRuns(batchJobId, query);
+    const testRuns = testRunsPage.items;
 
     const output: TestRunListOutput = {
       batch_job_id: batchJobId,
-      test_runs: testRuns || [],
-      total_count: (testRuns || []).length,
+      test_runs: testRuns,
+      total_count: testRuns.length,
+      ...(testRunsPage.has_more !== undefined && {
+        has_more: testRunsPage.has_more,
+      }),
+      ...(testRunsPage.pagination_key !== undefined && {
+        pagination_key: testRunsPage.pagination_key,
+      }),
+      ...(testRunsPage.total !== undefined && { total: testRunsPage.total }),
     };
 
     if (options.fields) {

@@ -9,7 +9,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
-import { getPaginatedItems } from "../../services/paginated-response";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { ConversationFlowComponentListParams } from "retell-sdk/resources/conversation-flow-component";
 
 export interface ListFlowComponentsOptions {
@@ -45,7 +48,7 @@ export async function listFlowComponentsCommand(
         )
       : items;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }

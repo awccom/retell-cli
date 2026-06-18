@@ -36,6 +36,8 @@ describe("test-api service", () => {
         createBatchTest: vi.fn().mockResolvedValue({}),
         listTestRuns: vi.fn().mockResolvedValue({
           items: [{ test_run_id: "run_1" }],
+          has_more: true,
+          pagination_key: "run_next",
         }),
         getTestRun: vi.fn().mockResolvedValue({}),
       },
@@ -101,7 +103,11 @@ describe("test-api service", () => {
       limit: 25,
       pagination_key: "cursor",
     });
-    expect(testRuns).toEqual([{ test_run_id: "run_1" }]);
+    expect(testRuns).toEqual({
+      items: [{ test_run_id: "run_1" }],
+      has_more: true,
+      pagination_key: "run_next",
+    });
     expect(mockClient.tests.getTestRun).toHaveBeenCalledWith("run_1");
   });
 });

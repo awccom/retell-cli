@@ -17,7 +17,9 @@ vi.mock("../../../services/output-formatter", async () => {
 describe("listTestRunsCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(testApi.listTestRuns).mockResolvedValue([]);
+    vi.mocked(testApi.listTestRuns).mockResolvedValue({
+      items: [],
+    });
   });
 
   it("passes pagination options to the SDK helper", async () => {
@@ -29,6 +31,24 @@ describe("listTestRunsCommand", () => {
     expect(testApi.listTestRuns).toHaveBeenCalledWith("batch_1", {
       limit: 10,
       pagination_key: "cursor",
+    });
+  });
+
+  it("includes pagination metadata in the output", async () => {
+    vi.mocked(testApi.listTestRuns).mockResolvedValueOnce({
+      items: [{ test_run_id: "run_1" } as any],
+      has_more: true,
+      pagination_key: "run_next",
+    });
+
+    await listTestRunsCommand("batch_1", {});
+
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      batch_job_id: "batch_1",
+      test_runs: [{ test_run_id: "run_1" }],
+      total_count: 1,
+      has_more: true,
+      pagination_key: "run_next",
     });
   });
 

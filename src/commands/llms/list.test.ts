@@ -18,8 +18,8 @@ describe("listLlmsCommand", () => {
   let mockClient: any;
   const mockResponse = {
     items: [{ llm_id: "llm_1" }],
-    has_more: false,
-    pagination_key: "next",
+    has_more: true,
+    pagination_key: "llm_next",
   };
 
   beforeEach(() => {
@@ -31,9 +31,11 @@ describe("listLlmsCommand", () => {
   it("calls llm.list() with empty query by default", async () => {
     await listLlmsCommand();
     expect(mockClient.llm.list).toHaveBeenCalledWith({});
-    expect(outputFormatter.outputJson).toHaveBeenCalledWith([
-      { llm_id: "llm_1" },
-    ]);
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ llm_id: "llm_1" }],
+      has_more: true,
+      pagination_key: "llm_next",
+    });
   });
 
   it("passes --limit as number", async () => {

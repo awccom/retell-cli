@@ -7,7 +7,11 @@
  */
 
 import { getRetellClient } from "./retell-client";
-import { getPaginatedItems } from "./paginated-response";
+import {
+  getPaginatedItems,
+  getPaginatedResult,
+  type PaginatedResult,
+} from "./paginated-response";
 import type {
   ResponseEngine,
   TestCaseDefinition,
@@ -140,10 +144,10 @@ export async function listTestRuns(
     limit?: number;
     pagination_key?: string;
   },
-): Promise<TestRun[]> {
+): Promise<PaginatedResult<TestRun>> {
   const client = getRetellClient();
   const response = await client.tests.listTestRuns(batchJobId, query);
-  return getPaginatedItems<TestRun>(response as any);
+  return getPaginatedResult<TestRun>(response as any);
 }
 
 /**
