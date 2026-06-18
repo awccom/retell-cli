@@ -143,6 +143,9 @@ export interface TestCaseDefinitionListOutput {
   response_engine: ResponseEngine;
   test_case_definitions: TestCaseDefinition[];
   total_count: number;
+  has_more?: boolean;
+  pagination_key?: string;
+  total?: number;
 }
 
 /**
@@ -190,6 +193,9 @@ export interface BatchTestListOutput {
   response_engine: ResponseEngine;
   batch_tests: BatchTest[];
   total_count: number;
+  has_more?: boolean;
+  pagination_key?: string;
+  total?: number;
 }
 
 /**

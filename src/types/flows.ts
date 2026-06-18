@@ -47,6 +47,8 @@ export interface ConversationFlow {
  */
 export interface ListFlowsOptions {
   limit?: number;
+  paginationKey?: string;
+  sortOrder?: string;
   fields?: string;
 }
 

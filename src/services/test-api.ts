@@ -7,11 +7,12 @@
  */
 
 import { getRetellClient } from "./retell-client";
-import {
-  getPaginatedItems,
-  getPaginatedResult,
-  type PaginatedResult,
-} from "./paginated-response";
+import { getPaginatedResult, type PaginatedResult } from "./paginated-response";
+import type {
+  TestListBatchTestsParams,
+  TestListTestCaseDefinitionsParams,
+  TestListTestRunsParams,
+} from "retell-sdk/resources/tests";
 import type {
   ResponseEngine,
   TestCaseDefinition,
@@ -28,12 +29,14 @@ import type {
  */
 export async function listTestCaseDefinitions(
   responseEngine: ResponseEngine,
-): Promise<TestCaseDefinition[]> {
+  query?: Pick<TestListTestCaseDefinitionsParams, "limit" | "pagination_key">,
+): Promise<PaginatedResult<TestCaseDefinition>> {
   const client = getRetellClient();
-  const response = await client.tests.listTestCaseDefinitions(
-    responseEngine as any,
-  );
-  return getPaginatedItems<TestCaseDefinition>(response as any);
+  const response = await client.tests.listTestCaseDefinitions({
+    ...(responseEngine as TestListTestCaseDefinitionsParams),
+    ...query,
+  });
+  return getPaginatedResult<TestCaseDefinition>(response as any);
 }
 
 /**
@@ -106,10 +109,14 @@ export async function deleteTestCaseDefinition(
  */
 export async function listBatchTests(
   responseEngine: ResponseEngine,
-): Promise<BatchTest[]> {
+  query?: Pick<TestListBatchTestsParams, "limit" | "pagination_key">,
+): Promise<PaginatedResult<BatchTest>> {
   const client = getRetellClient();
-  const response = await client.tests.listBatchTests(responseEngine as any);
-  return getPaginatedItems<BatchTest>(response as any);
+  const response = await client.tests.listBatchTests({
+    ...(responseEngine as TestListBatchTestsParams),
+    ...query,
+  });
+  return getPaginatedResult<BatchTest>(response as any);
 }
 
 /**
@@ -140,10 +147,7 @@ export async function createBatchTest(params: {
  */
 export async function listTestRuns(
   batchJobId: string,
-  query?: {
-    limit?: number;
-    pagination_key?: string;
-  },
+  query?: Pick<TestListTestRunsParams, "limit" | "pagination_key">,
 ): Promise<PaginatedResult<TestRun>> {
   const client = getRetellClient();
   const response = await client.tests.listTestRuns(batchJobId, query);

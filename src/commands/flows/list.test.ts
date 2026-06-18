@@ -36,9 +36,35 @@ describe("listFlowsCommand", () => {
     expect(mockClient.conversationFlow.list).toHaveBeenCalledWith({
       limit: 25,
     });
-    expect(outputFormatter.outputJson).toHaveBeenCalledWith([
-      { conversation_flow_id: "flow_1" },
-    ]);
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ conversation_flow_id: "flow_1" }],
+      has_more: false,
+    });
+  });
+
+  it("preserves pagination metadata and passes cursor options", async () => {
+    mockClient.conversationFlow.list.mockResolvedValueOnce({
+      items: [{ conversation_flow_id: "flow_2" }],
+      has_more: true,
+      pagination_key: "flow_next",
+    });
+
+    await listFlowsCommand({
+      limit: 25,
+      paginationKey: "cursor",
+      sortOrder: "ascending",
+    });
+
+    expect(mockClient.conversationFlow.list).toHaveBeenCalledWith({
+      limit: 25,
+      pagination_key: "cursor",
+      sort_order: "ascending",
+    });
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ conversation_flow_id: "flow_2" }],
+      has_more: true,
+      pagination_key: "flow_next",
+    });
   });
 
   it("applies field filtering to flow items", async () => {
@@ -52,8 +78,9 @@ describe("listFlowsCommand", () => {
       [{ conversation_flow_id: "flow_1" }],
       ["conversation_flow_id"],
     );
-    expect(outputFormatter.outputJson).toHaveBeenCalledWith([
-      { conversation_flow_id: "filtered_flow" },
-    ]);
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ conversation_flow_id: "filtered_flow" }],
+      has_more: false,
+    });
   });
 });

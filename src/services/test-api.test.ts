@@ -24,6 +24,8 @@ describe("test-api service", () => {
       tests: {
         listTestCaseDefinitions: vi.fn().mockResolvedValue({
           items: [{ test_case_definition_id: "tcd_1" }],
+          has_more: true,
+          pagination_key: "case_next",
         }),
         getTestCaseDefinition: vi.fn().mockResolvedValue({}),
         createTestCaseDefinition: vi.fn().mockResolvedValue({}),
@@ -31,6 +33,8 @@ describe("test-api service", () => {
         deleteTestCaseDefinition: vi.fn().mockResolvedValue(undefined),
         listBatchTests: vi.fn().mockResolvedValue({
           items: [{ test_case_batch_job_id: "bt_1" }],
+          has_more: true,
+          pagination_key: "batch_next",
         }),
         getBatchTest: vi.fn().mockResolvedValue({}),
         createBatchTest: vi.fn().mockResolvedValue({}),
@@ -55,7 +59,11 @@ describe("test-api service", () => {
       type: "retell-llm",
       llm_id: "llm_1",
     });
-    expect(result).toEqual([{ test_case_definition_id: "tcd_1" }]);
+    expect(result).toEqual({
+      items: [{ test_case_definition_id: "tcd_1" }],
+      has_more: true,
+      pagination_key: "case_next",
+    });
   });
 
   it("routes all test helpers through client.tests", async () => {
@@ -96,7 +104,11 @@ describe("test-api service", () => {
       type: "conversation-flow",
       conversation_flow_id: "flow_1",
     });
-    expect(batchTests).toEqual([{ test_case_batch_job_id: "bt_1" }]);
+    expect(batchTests).toEqual({
+      items: [{ test_case_batch_job_id: "bt_1" }],
+      has_more: true,
+      pagination_key: "batch_next",
+    });
     expect(mockClient.tests.getBatchTest).toHaveBeenCalledWith("bt_1");
     expect(mockClient.tests.createBatchTest).toHaveBeenCalled();
     expect(mockClient.tests.listTestRuns).toHaveBeenCalledWith("bt_1", {
