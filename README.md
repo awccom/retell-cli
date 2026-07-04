@@ -856,21 +856,14 @@ retell transcripts analyze <call_id> --hotspots-only
 # 3. No jq or grep needed - direct JSON parsing!
 ```
 
-### Calls (create / update / delete)
+### Calls (metadata / delete only)
 
-Call listing and retrieval stay under `transcripts`. Use `calls` to create and mutate calls.
+Call listing and retrieval stay under `transcripts`. This CLI is not intended to initiate outbound calls or drive live-call runtime behavior. Avoid `calls create-phone`, `calls create-web`, `calls register-phone`, and `batch-calls create` in normal assistant workflows unless Devon explicitly asks for a one-off exception.
+
+Use `calls` only for existing-call metadata/data administration:
 
 ```bash
-# Outbound phone call
-retell calls create-phone --from-number +14157774444 --to-number +12137774445
-
-# Web call (browser-based agent)
-retell calls create-web --agent-id agent_xxx --metadata '{"session_id":"s1"}'
-
-# Register a call for custom telephony
-retell calls register-phone --agent-id agent_xxx --direction outbound
-
-# Update metadata / data storage on an existing call
+# Update metadata / data storage on an ended call
 retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
   --data-storage-setting everything_except_pii
 
@@ -878,29 +871,14 @@ retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
 retell calls delete call_abc123
 ```
 
-Shared on create/register/update: `--metadata`, `--dynamic-variables`, `--fields`.
+Shared on update: `--metadata`, `--dynamic-variables`, `--fields`.
 `--dynamic-variables` must be a JSON object with string values, for example `{"customer_name":"Avery"}`.
 
-**Retell deprecation note:** `retell calls update --dynamic-variables` maps to Update Call's `override_dynamic_variables`, which Retell is deprecating for ongoing calls on 2026-08-31. Use it only for ended-call updates; add a dedicated Update Live Call command before relying on runtime dynamic-variable or data-storage changes for active calls.
-
-- `create-phone` also: `--override-agent-id`, `--override-agent-version`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--ignore-e164-validation`.
-- `create-web` also: `--agent-version`, `--agent-override <path>`, `--current-node-id`, `--current-state`.
-- `register-phone` also: `--agent-version`, `--direction`, `--from-number`, `--to-number`.
+**Retell deprecation note:** `retell calls update --dynamic-variables` maps to Update Call's `override_dynamic_variables`, which Retell is deprecating for ongoing calls on 2026-08-31. Because this CLI should not drive live calls, do not add a live-call-control command unless the intended product scope changes.
 
 ### Batch Calls
 
-```bash
-# Schedule a batch of outbound calls from a JSON tasks file
-retell batch-calls create \
-  --from-number +14157774444 \
-  --tasks tasks.json \
-  --name "April outreach" \
-  --reserved-concurrency 10
-
-# Optional: restrict calling windows
-retell batch-calls create --from-number +1 --tasks tasks.json \
-  --call-time-window window.json
-```
+Batch outbound calling is outside this CLI's intended assistant workflow. Do not use `retell batch-calls create` unless Devon explicitly approves a one-off exception.
 
 ### LLMs
 
