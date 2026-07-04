@@ -9,6 +9,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { ConversationFlowComponentListParams } from "retell-sdk/resources/conversation-flow-component";
 
 export interface ListFlowComponentsOptions {
@@ -34,7 +38,8 @@ export async function listFlowComponentsCommand(
       }
       query.sort_order = options.sortOrder as "ascending" | "descending";
     }
-    const items = await client.conversationFlowComponent.list(query);
+    const response = await client.conversationFlowComponent.list(query);
+    const items = getPaginatedItems(response);
 
     const output = options.fields
       ? filterFields(
@@ -43,7 +48,7 @@ export async function listFlowComponentsCommand(
         )
       : items;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }

@@ -14,7 +14,7 @@ import {
   isRecord,
   normalizeListResponse,
   type RecordLike,
-} from "../../services/sdk-response";
+} from "../../services/paginated-response";
 import type { AgentListParams } from "retell-sdk/resources/agent";
 
 export interface ListAgentsOptions {

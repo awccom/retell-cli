@@ -66,24 +66,28 @@ describe("listPhoneNumbersCommand", () => {
       await listPhoneNumbersCommand();
 
       expect(mockClient.phoneNumber.list).toHaveBeenCalledWith({});
-      expect(outputFormatter.outputJson).toHaveBeenCalledWith([
-        {
-          phone_number: "+14157774444",
-          phone_number_pretty: "(415) 777-4444",
-          phone_number_type: "twilio",
-          nickname: "Support Line",
-          inbound_agents: [{ agent_id: "agent_123", weight: 1 }],
-          outbound_agents: [{ agent_id: "agent_456", weight: 1 }],
-        },
-        {
-          phone_number: "+14157775555",
-          phone_number_pretty: "(415) 777-5555",
-          phone_number_type: "custom",
-          nickname: null,
-          inbound_agents: [],
-          outbound_agents: [],
-        },
-      ]);
+      expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+        items: [
+          {
+            phone_number: "+14157774444",
+            phone_number_pretty: "(415) 777-4444",
+            phone_number_type: "twilio",
+            nickname: "Support Line",
+            inbound_agents: [{ agent_id: "agent_123", weight: 1 }],
+            outbound_agents: [{ agent_id: "agent_456", weight: 1 }],
+          },
+          {
+            phone_number: "+14157775555",
+            phone_number_pretty: "(415) 777-5555",
+            phone_number_type: "custom",
+            nickname: null,
+            inbound_agents: [],
+            outbound_agents: [],
+          },
+        ],
+        has_more: true,
+        pagination_key: "next_page",
+      });
     });
 
     it("should handle empty phone numbers list", async () => {

@@ -19,13 +19,26 @@ describe("listChatsCommand", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockClient = { chat: { list: vi.fn().mockResolvedValue([]) } };
+    mockClient = {
+      chat: {
+        list: vi.fn().mockResolvedValue({
+          items: [{ chat_id: "chat_1" }],
+          has_more: true,
+          pagination_key: "chat_next",
+        }),
+      },
+    };
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
   });
 
   it("calls chat.list with empty query by default", async () => {
     await listChatsCommand();
     expect(mockClient.chat.list).toHaveBeenCalledWith({});
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith({
+      items: [{ chat_id: "chat_1" }],
+      has_more: true,
+      pagination_key: "chat_next",
+    });
   });
 
   it("passes --limit and --sort-order", async () => {

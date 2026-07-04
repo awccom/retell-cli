@@ -11,24 +11,13 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { getPaginatedItems } from "../../services/paginated-response";
 
 // ===== TYPES =====
 
 export interface ListTranscriptsOptions {
   limit?: number;
   fields?: string;
-}
-
-function getCallItems(response: unknown): unknown[] {
-  if (Array.isArray(response)) return response;
-  if (
-    response &&
-    typeof response === "object" &&
-    Array.isArray((response as { items?: unknown }).items)
-  ) {
-    return (response as { items: unknown[] }).items;
-  }
-  return [];
 }
 
 // ===== COMMAND IMPLEMENTATION =====
@@ -48,7 +37,7 @@ export async function listTranscriptsCommand(
     const response = await client.call.list({
       limit: options.limit || 50,
     });
-    const calls = getCallItems(response);
+    const calls = getPaginatedItems(response);
 
     // Apply field filtering if requested
     const output = options.fields

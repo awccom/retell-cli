@@ -866,6 +866,8 @@ testsCases
   )
   .option("--llm-id <id>", "LLM ID (required when type is retell-llm)")
   .option("--flow-id <id>", "Flow ID (required when type is conversation-flow)")
+  .option("--limit <n>", "Maximum number of test case definitions to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
     "after",
@@ -873,6 +875,7 @@ testsCases
 Examples:
   $ retell tests cases list --type retell-llm --llm-id llm_abc123
   $ retell tests cases list --type conversation-flow --flow-id cf_abc123
+  $ retell tests cases list --type retell-llm --llm-id llm_abc123 --limit 25 --pagination-key next
   $ retell tests cases list --type retell-llm --llm-id llm_abc123 --fields test_case_definitions
   `,
   )
@@ -885,6 +888,8 @@ Examples:
       type: options.type,
       llmId: options.llmId,
       flowId: options.flowId,
+      limit: parsePositiveIntegerFlagOrExit(options.limit, "--limit"),
+      paginationKey: options.paginationKey,
       fields: options.fields,
     });
   });
@@ -989,6 +994,8 @@ testsBatch
   )
   .option("--llm-id <id>", "LLM ID (required when type is retell-llm)")
   .option("--flow-id <id>", "Flow ID (required when type is conversation-flow)")
+  .option("--limit <n>", "Maximum number of batch tests to return")
+  .option("--pagination-key <key>", "Pagination key for the next page")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
     "after",
@@ -996,6 +1003,7 @@ testsBatch
 Examples:
   $ retell tests batch list --type retell-llm --llm-id llm_abc123
   $ retell tests batch list --type conversation-flow --flow-id cf_abc123
+  $ retell tests batch list --type retell-llm --llm-id llm_abc123 --limit 25 --pagination-key next
   $ retell tests batch list --type retell-llm --llm-id llm_abc123 --fields batch_tests
   `,
   )
@@ -1008,6 +1016,8 @@ Examples:
       type: options.type,
       llmId: options.llmId,
       flowId: options.flowId,
+      limit: parsePositiveIntegerFlagOrExit(options.limit, "--limit"),
+      paginationKey: options.paginationKey,
       fields: options.fields,
     });
   });
@@ -1245,6 +1255,8 @@ flows
     "Maximum number of flows to return (default: 100, max: 1000)",
     "100",
   )
+  .option("--pagination-key <key>", "Pagination key for the next page")
+  .option("--sort-order <order>", "ascending or descending")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
     "after",
@@ -1252,6 +1264,7 @@ flows
 Examples:
   $ retell flows list
   $ retell flows list --limit 50
+  $ retell flows list --limit 50 --pagination-key next --sort-order ascending
   $ retell flows list --fields conversation_flow_id,version,start_speaker
   `,
   )
@@ -1265,6 +1278,8 @@ Examples:
     }
     await listFlowsCommand({
       limit,
+      paginationKey: options.paginationKey,
+      sortOrder: options.sortOrder,
       fields: options.fields,
     });
   });

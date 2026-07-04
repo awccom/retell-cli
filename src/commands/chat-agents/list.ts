@@ -8,7 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { normalizeListResponse } from "../../services/sdk-response";
+import { normalizeListResponse } from "../../services/paginated-response";
 import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatAgentListParams } from "retell-sdk/resources/chat-agent";
 

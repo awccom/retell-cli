@@ -9,6 +9,10 @@ import {
   filterFields,
 } from "../../services/output-formatter";
 import { parseNumericFlag } from "../../services/numeric-flag";
+import {
+  getPaginatedItems,
+  withPaginationMetadata,
+} from "../../services/paginated-response";
 import type { ChatListParams } from "retell-sdk/resources/chat";
 
 export interface ListChatsOptions {
@@ -34,7 +38,8 @@ export async function listChatsCommand(
     }
 
     const client = getRetellClient();
-    const chats = await client.chat.list(query);
+    const response = await client.chat.list(query);
+    const chats = getPaginatedItems(response);
 
     const output = options.fields
       ? filterFields(
@@ -43,7 +48,7 @@ export async function listChatsCommand(
         )
       : chats;
 
-    outputJson(output);
+    outputJson(withPaginationMetadata(response, output));
   } catch (error) {
     handleSdkError(error);
   }
