@@ -91,7 +91,16 @@ describe("listAgentsCommand", () => {
   it("outputs formatted agents from a paginated SDK response", async () => {
     await listAgentsCommand({ limit: 25 });
 
-    expect(mockClient.agent.list).toHaveBeenCalledWith({ limit: 25 });
+    expect(mockClient.agent.list).toHaveBeenCalledWith({
+      limit: 25,
+      filter_criteria: {
+        channel: {
+          op: "eq",
+          type: "string",
+          value: "voice",
+        },
+      },
+    });
     expect(outputFormatter.outputJson).toHaveBeenCalledWith([
       {
         agent_id: "agent_1",
@@ -139,9 +148,6 @@ describe("listAgentsCommand", () => {
     expect(outputFormatter.outputJson).toHaveBeenCalledWith([
       {
         agent_id: "agent_3",
-        agent_name: undefined,
-        version: undefined,
-        is_published: undefined,
         response_engine_type: "unknown",
         response_engine_id: "unknown",
       },

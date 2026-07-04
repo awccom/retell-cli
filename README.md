@@ -446,11 +446,11 @@ retell agent get agent_123abc > config.json
 #### `retell agent update <agent_id> [options]`
 
 Update agent configuration from a JSON file. This is useful for updating agent-level fields that aren't accessible through `prompts update`, such as:
-- `post_call_analysis_data` - Custom data extraction from calls
+- `post_call_analysis_data` - Custom data extraction and system preset analysis fields for calls
 - `post_call_analysis_model` - Model for analysis
-- `analysis_successful_prompt` - Success criteria prompt
-- `analysis_summary_prompt` - Summary generation prompt
 - Voice settings, language, webhooks, and more
+
+Retell deprecated the old top-level `analysis_summary_prompt`, `analysis_successful_prompt`, and `analysis_user_sentiment_prompt` fields. Use `system-presets` entries inside `post_call_analysis_data` instead.
 
 **Options:**
 - `-f, --file <path>` - Path to JSON file containing agent configuration updates (required)
@@ -463,6 +463,16 @@ Update agent configuration from a JSON file. This is useful for updating agent-l
   "post_call_analysis_model": "claude-4.5-sonnet",
   "post_call_analysis_data": [
     {
+      "type": "system-presets",
+      "name": "call_summary",
+      "description": "Summarize the call outcome in 2 sentences."
+    },
+    {
+      "type": "system-presets",
+      "name": "call_successful",
+      "description": "Determine if the issue was resolved."
+    },
+    {
       "name": "call_outcome",
       "type": "enum",
       "description": "Result of the call",
@@ -473,9 +483,7 @@ Update agent configuration from a JSON file. This is useful for updating agent-l
       "type": "string",
       "description": "Overall customer sentiment"
     }
-  ],
-  "analysis_successful_prompt": "Determine if the issue was resolved.",
-  "analysis_summary_prompt": "Summarize the call in 2 sentences."
+  ]
 }
 ```
 
@@ -870,8 +878,10 @@ retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
 retell calls delete call_abc123
 ```
 
-Shared on all three: `--metadata`, `--dynamic-variables`, `--fields`.
+Shared on create/register/update: `--metadata`, `--dynamic-variables`, `--fields`.
 `--dynamic-variables` must be a JSON object with string values, for example `{"customer_name":"Avery"}`.
+
+**Retell deprecation note:** `retell calls update --dynamic-variables` maps to Update Call's `override_dynamic_variables`, which Retell is deprecating for ongoing calls on 2026-08-31. Use it only for ended-call updates; add a dedicated Update Live Call command before relying on runtime dynamic-variable or data-storage changes for active calls.
 
 - `create-phone` also: `--override-agent-id`, `--override-agent-version`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--ignore-e164-validation`.
 - `create-web` also: `--agent-version`, `--agent-override <path>`, `--current-node-id`, `--current-state`.

@@ -23,20 +23,30 @@ describe("listChatAgentsCommand", () => {
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
   });
 
-  it("calls chatAgent.list with empty query by default", async () => {
+  it("calls chatAgent.list with the current docs channel filter by default", async () => {
     await listChatAgentsCommand();
-    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({});
+    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({
+      filter_criteria: {
+        channel: {
+          op: "eq",
+          type: "string",
+          value: "chat",
+        },
+      },
+    });
   });
 
   it("passes --limit", async () => {
     await listChatAgentsCommand({ limit: "25" });
-    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({ limit: 25 });
-  });
-
-  it("passes --pagination-key-version", async () => {
-    await listChatAgentsCommand({ paginationKeyVersion: "3" });
     expect(mockClient.chatAgent.list).toHaveBeenCalledWith({
-      pagination_key_version: 3,
+      limit: 25,
+      filter_criteria: {
+        channel: {
+          op: "eq",
+          type: "string",
+          value: "chat",
+        },
+      },
     });
   });
 

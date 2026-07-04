@@ -11,14 +11,19 @@ import {
 import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatAgentListParams } from "retell-sdk/resources/chat-agent";
 
-type ChatAgentListQuery = ChatAgentListParams & {
-  pagination_key_version?: number;
+const CHAT_AGENT_FILTER = {
+  filter_criteria: {
+    channel: {
+      op: "eq" as const,
+      type: "string" as const,
+      value: "chat" as const,
+    },
+  },
 };
 
 export interface ListChatAgentsOptions {
   limit?: string;
   paginationKey?: string;
-  paginationKeyVersion?: string;
   fields?: string;
 }
 
@@ -26,17 +31,11 @@ export async function listChatAgentsCommand(
   options: ListChatAgentsOptions = {},
 ): Promise<void> {
   try {
-    const query: ChatAgentListQuery = {};
+    const query: ChatAgentListParams = { ...CHAT_AGENT_FILTER };
     if (options.limit !== undefined) {
       query.limit = parseNumericFlag(options.limit, "--limit");
     }
     if (options.paginationKey) query.pagination_key = options.paginationKey;
-    if (options.paginationKeyVersion !== undefined) {
-      query.pagination_key_version = parseNumericFlag(
-        options.paginationKeyVersion,
-        "--pagination-key-version",
-      );
-    }
 
     const client = getRetellClient();
     const agents = await client.chatAgent.list(query);

@@ -16,6 +16,16 @@ export interface ListAgentsOptions {
   fields?: string;
 }
 
+const VOICE_AGENT_FILTER = {
+  filter_criteria: {
+    channel: {
+      op: "eq" as const,
+      type: "string" as const,
+      value: "voice" as const,
+    },
+  },
+};
+
 type RecordLike = Record<string, unknown>;
 
 function isRecord(value: unknown): value is RecordLike {
@@ -77,6 +87,37 @@ function getResponseEngineId(agent: any): string {
   }
 }
 
+function setIfDefined(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
+  if (value !== undefined) {
+    target[key] = value;
+  }
+}
+
+function formatAgentForList(agent: any): Record<string, unknown> {
+  const responseEngine = agent?.response_engine ?? {};
+  const formatted: Record<string, unknown> = {};
+
+  setIfDefined(formatted, "agent_id", agent?.agent_id);
+  setIfDefined(formatted, "agent_name", agent?.agent_name);
+  setIfDefined(formatted, "channel", agent?.channel);
+  setIfDefined(
+    formatted,
+    "user_modified_timestamp",
+    agent?.user_modified_timestamp,
+  );
+  setIfDefined(formatted, "tags", agent?.tags);
+  setIfDefined(formatted, "version", agent?.version);
+  setIfDefined(formatted, "is_published", agent?.is_published);
+  formatted.response_engine_type = responseEngine.type || "unknown";
+  formatted.response_engine_id = getResponseEngineId(agent);
+
+  return formatted;
+}
+
 /**
  * List all agents with optional pagination
  *
@@ -108,22 +149,12 @@ export async function listAgentsCommand(
 
     const response = await client.agent.list({
       limit: options.limit || 100,
+      ...VOICE_AGENT_FILTER,
     });
     const agents = normalizeAgentsResponse(response);
 
     // Format for cleaner output
-    const formatted = agents.map((agent: any) => {
-      const responseEngine = agent?.response_engine ?? {};
-
-      return {
-        agent_id: agent?.agent_id,
-        agent_name: agent?.agent_name,
-        version: agent?.version,
-        is_published: agent?.is_published,
-        response_engine_type: responseEngine.type || "unknown",
-        response_engine_id: getResponseEngineId(agent),
-      };
-    });
+    const formatted = agents.map(formatAgentForList);
 
     // Apply field filtering if requested
     const output = options.fields
