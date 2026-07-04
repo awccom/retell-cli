@@ -10,13 +10,14 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import type { AgentListParams } from "retell-sdk/resources/agent";
 
 export interface ListAgentsOptions {
   limit?: number;
   fields?: string;
 }
 
-const VOICE_AGENT_FILTER = {
+const VOICE_AGENT_FILTER: Pick<AgentListParams, "filter_criteria"> = {
   filter_criteria: {
     channel: {
       op: "eq" as const,
@@ -72,16 +73,24 @@ export function normalizeAgentsResponse(response: unknown): unknown[] {
   );
 }
 
-function getResponseEngineId(agent: any): string {
-  const responseEngine = agent?.response_engine ?? {};
+function getResponseEngineId(agent: RecordLike): string {
+  const responseEngine = isRecord(agent.response_engine)
+    ? agent.response_engine
+    : {};
 
   switch (responseEngine.type) {
     case "retell-llm":
-      return responseEngine.llm_id || "unknown";
+      return typeof responseEngine.llm_id === "string"
+        ? responseEngine.llm_id
+        : "unknown";
     case "conversation-flow":
-      return responseEngine.conversation_flow_id || "unknown";
+      return typeof responseEngine.conversation_flow_id === "string"
+        ? responseEngine.conversation_flow_id
+        : "unknown";
     case "custom-llm":
-      return responseEngine.llm_websocket_url || "unknown";
+      return typeof responseEngine.llm_websocket_url === "string"
+        ? responseEngine.llm_websocket_url
+        : "unknown";
     default:
       return "unknown";
   }
@@ -97,23 +106,26 @@ function setIfDefined(
   }
 }
 
-function formatAgentForList(agent: any): Record<string, unknown> {
-  const responseEngine = agent?.response_engine ?? {};
+function formatAgentForList(agent: unknown): Record<string, unknown> {
+  const agentRecord = isRecord(agent) ? agent : {};
+  const responseEngine = isRecord(agentRecord.response_engine)
+    ? agentRecord.response_engine
+    : {};
   const formatted: Record<string, unknown> = {};
 
-  setIfDefined(formatted, "agent_id", agent?.agent_id);
-  setIfDefined(formatted, "agent_name", agent?.agent_name);
-  setIfDefined(formatted, "channel", agent?.channel);
+  setIfDefined(formatted, "agent_id", agentRecord.agent_id);
+  setIfDefined(formatted, "agent_name", agentRecord.agent_name);
+  setIfDefined(formatted, "channel", agentRecord.channel);
   setIfDefined(
     formatted,
     "user_modified_timestamp",
-    agent?.user_modified_timestamp,
+    agentRecord.user_modified_timestamp,
   );
-  setIfDefined(formatted, "tags", agent?.tags);
-  setIfDefined(formatted, "version", agent?.version);
-  setIfDefined(formatted, "is_published", agent?.is_published);
+  setIfDefined(formatted, "tags", agentRecord.tags);
+  setIfDefined(formatted, "version", agentRecord.version);
+  setIfDefined(formatted, "is_published", agentRecord.is_published);
   formatted.response_engine_type = responseEngine.type || "unknown";
-  formatted.response_engine_id = getResponseEngineId(agent);
+  formatted.response_engine_id = getResponseEngineId(agentRecord);
 
   return formatted;
 }

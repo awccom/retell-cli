@@ -11,7 +11,7 @@ import {
 import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatAgentListParams } from "retell-sdk/resources/chat-agent";
 
-const CHAT_AGENT_FILTER = {
+const CHAT_AGENT_FILTER: Pick<ChatAgentListParams, "filter_criteria"> = {
   filter_criteria: {
     channel: {
       op: "eq" as const,
@@ -20,6 +20,26 @@ const CHAT_AGENT_FILTER = {
     },
   },
 };
+
+type RecordLike = Record<string, unknown>;
+
+function isRecord(value: unknown): value is RecordLike {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeChatAgentsResponse(response: unknown): unknown[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (isRecord(response) && Array.isArray(response.items)) {
+    return response.items;
+  }
+
+  throw new Error(
+    "Unexpected chat agents list response shape: expected an array or paginated items[] response",
+  );
+}
 
 export interface ListChatAgentsOptions {
   limit?: string;
@@ -38,14 +58,14 @@ export async function listChatAgentsCommand(
     if (options.paginationKey) query.pagination_key = options.paginationKey;
 
     const client = getRetellClient();
-    const agents = await client.chatAgent.list(query);
+    const response = await client.chatAgent.list(query);
 
     const output = options.fields
       ? filterFields(
-          agents,
+          normalizeChatAgentsResponse(response),
           options.fields.split(",").map((f) => f.trim()),
         )
-      : agents;
+      : response;
 
     outputJson(output);
   } catch (error) {

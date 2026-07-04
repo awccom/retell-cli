@@ -108,7 +108,7 @@ export function getConfigSearchPaths(
 }
 
 function getConfigPathForScope(options: ConfigPathOptions = {}): string {
-  switch (options.scope ?? "local") {
+  switch (options.scope ?? "global") {
     case "global":
       return getHomeConfigFilePath(options);
     case "xdg":

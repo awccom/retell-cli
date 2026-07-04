@@ -110,6 +110,16 @@ describe("config service", () => {
     expect(getConfig({ cwd, homeDir, xdgConfigHome }).apiKey).toBe("xdg-key");
   });
 
+  it("defaults public path helpers to the global config path", () => {
+    expect(getConfigFilePath({ homeDir })).toBe(
+      join(homeDir, ".retellrc.json"),
+    );
+
+    expect(configFileExists({ homeDir })).toBe(false);
+    writeConfig(getHomeConfigFilePath({ homeDir }), "default-home-key");
+    expect(configFileExists({ homeDir })).toBe(true);
+  });
+
   it("saves global/home config with owner-only permissions", () => {
     const path = saveConfig(
       { apiKey: "saved-home-key", defaultFormat: "json" },
