@@ -27,6 +27,8 @@ Community-built command-line tool for Retell AI - designed to give AI assistants
 npm install -g retell-cli
 ```
 
+The installed command is `retell`. After `retell login`, credentials are saved to your home config by default so the globally installed command works from any directory.
+
 Or use directly with npx (no installation required):
 
 ```bash
@@ -42,7 +44,7 @@ retell login
 # Enter your Retell API key when prompted
 ```
 
-Your API key will be saved to `.retellrc.json` in the current directory.
+Your API key will be saved to `~/.retellrc.json` by default so `retell` works from any directory. Use `retell login --local` if you intentionally want a cwd-local `.retellrc.json` project override.
 
 ### 2. List Your Agents
 
@@ -123,7 +125,7 @@ retell agents publish agent_123abc --version 15 --description "May prompt update
 
 ## Authentication
 
-The CLI supports three authentication methods (in order of precedence):
+The CLI supports these authentication methods (in order of precedence):
 
 ### 1. Environment Variable (Best for CI/CD)
 
@@ -132,21 +134,7 @@ export RETELL_API_KEY=your_api_key_here
 retell agents list
 ```
 
-### 2. Local Config File (Best for Development)
-
-```bash
-retell login
-# Creates .retellrc.json in current directory
-```
-
-The config file format:
-```json
-{
-  "apiKey": "your_api_key_here"
-}
-```
-
-### 3. Per-Command Override
+A per-command environment override uses the same top-priority mechanism:
 
 ```bash
 RETELL_API_KEY=key_abc123 retell agents list
@@ -157,18 +145,60 @@ RETELL_API_KEY=key_abc123 retell agents list
 env RETELL_API_KEY=key_abc123 retell agents list
 ```
 
+### 2. Local Config File (Project-Specific Override)
+
+```bash
+retell login --local
+# Creates .retellrc.json in the current directory
+```
+
+Local config is checked before home config to preserve backward compatibility and to allow project-specific credentials.
+
+### 3. Home/Global Config File (Best for Global CLI Use)
+
+```bash
+retell login
+# Creates ~/.retellrc.json by default
+```
+
+This is the recommended default for a globally installed `retell` command because it works from any directory.
+
+### 4. XDG Config File (Optional Fallback)
+
+If present, the CLI also checks `$XDG_CONFIG_HOME/retell/config.json`, or `~/.config/retell/config.json` when `XDG_CONFIG_HOME` is unset.
+
+The config file format is the same for all config file locations:
+```json
+{
+  "apiKey": "your_api_key_here",
+  "defaultFormat": "json"
+}
+```
+
+### Safe migration from old cwd-local auth
+
+Older versions of `retell login` wrote `.retellrc.json` in the directory where login was run. That file still works and still overrides home config when commands are run from that directory. To make the global CLI work everywhere, run `retell login` once to create `~/.retellrc.json`, then keep or remove old local `.retellrc.json` files based on whether you need per-project overrides.
+
 ## Command Reference
 
 ### Authentication
 
 #### `retell login`
 
-Save your API key to a local config file.
+Save your API key to the home/global config file by default.
 
 ```bash
 retell login
 # Prompts: Enter your Retell API key:
+# Writes ~/.retellrc.json
+
+retell login --local
+# Writes ./.retellrc.json for the current directory only
 ```
+
+**Options:**
+- `--global` - Save credentials to `~/.retellrc.json` (default)
+- `--local` - Save credentials to `./.retellrc.json` for the current directory
 
 ### Transcripts
 
@@ -416,11 +446,11 @@ retell agent get agent_123abc > config.json
 #### `retell agent update <agent_id> [options]`
 
 Update agent configuration from a JSON file. This is useful for updating agent-level fields that aren't accessible through `prompts update`, such as:
-- `post_call_analysis_data` - Custom data extraction from calls
+- `post_call_analysis_data` - Custom data extraction and system preset analysis fields for calls
 - `post_call_analysis_model` - Model for analysis
-- `analysis_successful_prompt` - Success criteria prompt
-- `analysis_summary_prompt` - Summary generation prompt
 - Voice settings, language, webhooks, and more
+
+Retell deprecated the old top-level `analysis_summary_prompt`, `analysis_successful_prompt`, and `analysis_user_sentiment_prompt` fields. Use `system-presets` entries inside `post_call_analysis_data` instead.
 
 **Options:**
 - `-f, --file <path>` - Path to JSON file containing agent configuration updates (required)
@@ -433,6 +463,16 @@ Update agent configuration from a JSON file. This is useful for updating agent-l
   "post_call_analysis_model": "claude-4.5-sonnet",
   "post_call_analysis_data": [
     {
+      "type": "system-presets",
+      "name": "call_summary",
+      "description": "Summarize the call outcome in 2 sentences."
+    },
+    {
+      "type": "system-presets",
+      "name": "call_successful",
+      "description": "Determine if the issue was resolved."
+    },
+    {
       "name": "call_outcome",
       "type": "enum",
       "description": "Result of the call",
@@ -443,9 +483,7 @@ Update agent configuration from a JSON file. This is useful for updating agent-l
       "type": "string",
       "description": "Overall customer sentiment"
     }
-  ],
-  "analysis_successful_prompt": "Determine if the issue was resolved.",
-  "analysis_summary_prompt": "Summarize the call in 2 sentences."
+  ]
 }
 ```
 
@@ -818,21 +856,14 @@ retell transcripts analyze <call_id> --hotspots-only
 # 3. No jq or grep needed - direct JSON parsing!
 ```
 
-### Calls (create / update / delete)
+### Calls (metadata / delete only)
 
-Call listing and retrieval stay under `transcripts`. Use `calls` to create and mutate calls.
+Call listing and retrieval stay under `transcripts`. This CLI is not intended to initiate outbound calls or drive live-call runtime behavior. Avoid `calls create-phone`, `calls create-web`, `calls register-phone`, and `batch-calls create` in normal assistant workflows unless Devon explicitly asks for a one-off exception.
+
+Use `calls` only for existing-call metadata/data administration:
 
 ```bash
-# Outbound phone call
-retell calls create-phone --from-number +14157774444 --to-number +12137774445
-
-# Web call (browser-based agent)
-retell calls create-web --agent-id agent_xxx --metadata '{"session_id":"s1"}'
-
-# Register a call for custom telephony
-retell calls register-phone --agent-id agent_xxx --direction outbound
-
-# Update metadata / data storage on an existing call
+# Update metadata / data storage on an ended call
 retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
   --data-storage-setting everything_except_pii
 
@@ -840,27 +871,14 @@ retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
 retell calls delete call_abc123
 ```
 
-Shared on all three: `--metadata`, `--dynamic-variables`, `--fields`.
+Shared on update: `--metadata`, `--dynamic-variables`, `--fields`.
 `--dynamic-variables` must be a JSON object with string values, for example `{"customer_name":"Avery"}`.
 
-- `create-phone` also: `--override-agent-id`, `--override-agent-version`, `--custom-sip-headers`, `--agent-override <path>` (path to JSON), `--ignore-e164-validation`.
-- `create-web` also: `--agent-version`, `--agent-override <path>`, `--current-node-id`, `--current-state`.
-- `register-phone` also: `--agent-version`, `--direction`, `--from-number`, `--to-number`.
+**Retell deprecation note:** `retell calls update --dynamic-variables` maps to Update Call's `override_dynamic_variables`, which Retell is deprecating for ongoing calls on 2026-08-31. Because this CLI should not drive live calls, do not add a live-call-control command unless the intended product scope changes.
 
 ### Batch Calls
 
-```bash
-# Schedule a batch of outbound calls from a JSON tasks file
-retell batch-calls create \
-  --from-number +14157774444 \
-  --tasks tasks.json \
-  --name "April outreach" \
-  --reserved-concurrency 10
-
-# Optional: restrict calling windows
-retell batch-calls create --from-number +1 --tasks tasks.json \
-  --call-time-window window.json
-```
+Batch outbound calling is outside this CLI's intended assistant workflow. Do not use `retell batch-calls create` unless Devon explicitly approves a one-off exception.
 
 ### LLMs
 

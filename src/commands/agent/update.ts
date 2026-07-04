@@ -5,8 +5,7 @@
  * through the prompts update command. This includes:
  * - post_call_analysis_data
  * - post_call_analysis_model
- * - analysis_successful_prompt
- * - analysis_summary_prompt
+ * - system preset entries for summary, success, and sentiment analysis
  * - Voice settings, language, webhooks, etc.
  */
 

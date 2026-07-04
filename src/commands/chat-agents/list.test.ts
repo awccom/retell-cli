@@ -23,14 +23,47 @@ describe("listChatAgentsCommand", () => {
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
   });
 
-  it("calls chatAgent.list with empty query by default", async () => {
+  it("calls chatAgent.list with the current docs channel filter by default", async () => {
     await listChatAgentsCommand();
-    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({});
+    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({
+      filter_criteria: {
+        channel: {
+          op: "eq",
+          type: "string",
+          value: "chat",
+        },
+      },
+    });
   });
 
   it("passes --limit", async () => {
     await listChatAgentsCommand({ limit: "25" });
-    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({ limit: 25 });
+    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({
+      limit: 25,
+      filter_criteria: {
+        channel: {
+          op: "eq",
+          type: "string",
+          value: "chat",
+        },
+      },
+    });
+  });
+
+  it("applies field filtering to paginated chat-agent items", async () => {
+    const chatAgents = [{ agent_id: "agent_chat", agent_name: "Chat Agent" }];
+    mockClient.chatAgent.list.mockResolvedValue({
+      items: chatAgents,
+      has_more: false,
+      pagination_key: null,
+    });
+
+    await listChatAgentsCommand({ fields: "agent_id,agent_name" });
+
+    expect(outputFormatter.filterFields).toHaveBeenCalledWith(chatAgents, [
+      "agent_id",
+      "agent_name",
+    ]);
   });
 
   it("rejects non-numeric --limit", async () => {

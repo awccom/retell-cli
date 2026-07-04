@@ -157,17 +157,28 @@ program
 program
   .command("login")
   .description("Authenticate with Retell AI")
+  .option("--global", "Save credentials to ~/.retellrc.json (default)")
+  .option(
+    "--local",
+    "Save credentials to ./.retellrc.json for this directory only",
+  )
   .addHelpText(
     "after",
     `
 Examples:
   $ retell login
   # Enter your API key when prompted
-  # Creates .retellrc.json in current directory
+  # Creates ~/.retellrc.json for use from any directory
+
+  $ retell login --local
+  # Creates .retellrc.json in the current directory for project-specific override
   `,
   )
-  .action(async () => {
-    await loginCommand();
+  .action(async (options) => {
+    await loginCommand({
+      global: options.global,
+      local: options.local,
+    });
   });
 
 // Transcripts commands
@@ -614,14 +625,22 @@ Example JSON for post-call analysis:
     "post_call_analysis_model": "claude-4.5-sonnet",
     "post_call_analysis_data": [
       {
+        "type": "system-presets",
+        "name": "call_summary",
+        "description": "Summarize the call outcome in 2 sentences."
+      },
+      {
+        "type": "system-presets",
+        "name": "call_successful",
+        "description": "Determine if the issue was resolved."
+      },
+      {
         "name": "call_outcome",
         "type": "enum",
         "description": "Result of the call",
         "choices": ["successful", "unsuccessful", "callback_needed"]
       }
-    ],
-    "analysis_successful_prompt": "Determine if the issue was resolved.",
-    "analysis_summary_prompt": "Summarize the call in 2 sentences."
+    ]
   }
 
 Note: Run 'retell agents publish <agent_id>' after updating to publish changes.
@@ -2041,11 +2060,7 @@ chatAgents
   .command("list")
   .description("List chat agents")
   .option("-l, --limit <n>", "Maximum number to return")
-  .option("--pagination-key <key>", "Chat agent id to start from")
-  .option(
-    "--pagination-key-version <n>",
-    "Version paired with --pagination-key",
-  )
+  .option("--pagination-key <key>", "Pagination key for fetching the next page")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (options) => {
     await listChatAgentsCommand(options);
