@@ -10,6 +10,11 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import {
+  isRecord,
+  normalizeListResponse,
+  type RecordLike,
+} from "../../services/sdk-response";
 import type { AgentListParams } from "retell-sdk/resources/agent";
 
 export interface ListAgentsOptions {
@@ -27,49 +32,14 @@ const VOICE_AGENT_FILTER: Pick<AgentListParams, "filter_criteria"> = {
   },
 };
 
-type RecordLike = Record<string, unknown>;
-
-function isRecord(value: unknown): value is RecordLike {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * Normalize SDK/API list responses across raw arrays and paginated/list wrappers.
  */
 export function normalizeAgentsResponse(response: unknown): unknown[] {
-  if (Array.isArray(response)) {
-    return response;
-  }
-
-  if (!isRecord(response)) {
-    throw new Error(
-      "Unexpected agents list response shape: expected an array or object response",
-    );
-  }
-
-  const candidateKeys = ["agents", "data", "items", "results"];
-  for (const key of candidateKeys) {
-    const value = response[key];
-    if (Array.isArray(value)) {
-      return value;
-    }
-  }
-
-  // Some SDKs nest the array one level deeper, e.g. { data: { items: [...] } }.
-  for (const key of candidateKeys) {
-    const value = response[key];
-    if (!isRecord(value)) continue;
-
-    for (const nestedKey of candidateKeys) {
-      const nestedValue = value[nestedKey];
-      if (Array.isArray(nestedValue)) {
-        return nestedValue;
-      }
-    }
-  }
-
-  throw new Error(
+  return normalizeListResponse(
+    response,
     "Unexpected agents list response shape: expected array, agents[], data[], items[], or results[]",
+    ["agents", "data", "items", "results"],
   );
 }
 

@@ -8,6 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { normalizeListResponse } from "../../services/sdk-response";
 import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatAgentListParams } from "retell-sdk/resources/chat-agent";
 
@@ -21,23 +22,11 @@ const CHAT_AGENT_FILTER: Pick<ChatAgentListParams, "filter_criteria"> = {
   },
 };
 
-type RecordLike = Record<string, unknown>;
-
-function isRecord(value: unknown): value is RecordLike {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function normalizeChatAgentsResponse(response: unknown): unknown[] {
-  if (Array.isArray(response)) {
-    return response;
-  }
-
-  if (isRecord(response) && Array.isArray(response.items)) {
-    return response.items;
-  }
-
-  throw new Error(
+  return normalizeListResponse(
+    response,
     "Unexpected chat agents list response shape: expected an array or paginated items[] response",
+    ["items"],
   );
 }
 
