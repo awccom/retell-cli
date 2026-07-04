@@ -16,6 +16,67 @@ export interface ListAgentsOptions {
   fields?: string;
 }
 
+type RecordLike = Record<string, unknown>;
+
+function isRecord(value: unknown): value is RecordLike {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Normalize SDK/API list responses across raw arrays and paginated/list wrappers.
+ */
+export function normalizeAgentsResponse(response: unknown): unknown[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (!isRecord(response)) {
+    throw new Error(
+      "Unexpected agents list response shape: expected an array or object response",
+    );
+  }
+
+  const candidateKeys = ["agents", "data", "items", "results"];
+  for (const key of candidateKeys) {
+    const value = response[key];
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+
+  // Some SDKs nest the array one level deeper, e.g. { data: { items: [...] } }.
+  for (const key of candidateKeys) {
+    const value = response[key];
+    if (!isRecord(value)) continue;
+
+    for (const nestedKey of candidateKeys) {
+      const nestedValue = value[nestedKey];
+      if (Array.isArray(nestedValue)) {
+        return nestedValue;
+      }
+    }
+  }
+
+  throw new Error(
+    "Unexpected agents list response shape: expected array, agents[], data[], items[], or results[]",
+  );
+}
+
+function getResponseEngineId(agent: any): string {
+  const responseEngine = agent?.response_engine ?? {};
+
+  switch (responseEngine.type) {
+    case "retell-llm":
+      return responseEngine.llm_id || "unknown";
+    case "conversation-flow":
+      return responseEngine.conversation_flow_id || "unknown";
+    case "custom-llm":
+      return responseEngine.llm_websocket_url || "unknown";
+    default:
+      return "unknown";
+  }
+}
+
 /**
  * List all agents with optional pagination
  *
@@ -45,37 +106,22 @@ export async function listAgentsCommand(
   try {
     const client = getRetellClient();
 
-    const agents = await client.agent.list({
+    const response = await client.agent.list({
       limit: options.limit || 100,
     });
+    const agents = normalizeAgentsResponse(response);
 
     // Format for cleaner output
-    const formatted = agents.map((agent) => {
-      // Extract response engine ID based on type
-      let response_engine_id: string;
-      switch (agent.response_engine.type) {
-        case "retell-llm":
-          response_engine_id = agent.response_engine.llm_id || "unknown";
-          break;
-        case "conversation-flow":
-          response_engine_id =
-            agent.response_engine.conversation_flow_id || "unknown";
-          break;
-        case "custom-llm":
-          response_engine_id =
-            agent.response_engine.llm_websocket_url || "unknown";
-          break;
-        default:
-          response_engine_id = "unknown";
-      }
+    const formatted = agents.map((agent: any) => {
+      const responseEngine = agent?.response_engine ?? {};
 
       return {
-        agent_id: agent.agent_id,
-        agent_name: agent.agent_name,
-        version: agent.version,
-        is_published: agent.is_published,
-        response_engine_type: agent.response_engine.type,
-        response_engine_id,
+        agent_id: agent?.agent_id,
+        agent_name: agent?.agent_name,
+        version: agent?.version,
+        is_published: agent?.is_published,
+        response_engine_type: responseEngine.type || "unknown",
+        response_engine_id: getResponseEngineId(agent),
       };
     });
 

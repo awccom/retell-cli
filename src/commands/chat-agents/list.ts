@@ -11,6 +11,10 @@ import {
 import { parseNumericFlag } from "../../services/numeric-flag";
 import type { ChatAgentListParams } from "retell-sdk/resources/chat-agent";
 
+type ChatAgentListQuery = ChatAgentListParams & {
+  pagination_key_version?: number;
+};
+
 export interface ListChatAgentsOptions {
   limit?: string;
   paginationKey?: string;
@@ -22,7 +26,7 @@ export async function listChatAgentsCommand(
   options: ListChatAgentsOptions = {},
 ): Promise<void> {
   try {
-    const query: ChatAgentListParams = {};
+    const query: ChatAgentListQuery = {};
     if (options.limit !== undefined) {
       query.limit = parseNumericFlag(options.limit, "--limit");
     }

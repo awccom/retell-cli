@@ -157,17 +157,28 @@ program
 program
   .command("login")
   .description("Authenticate with Retell AI")
+  .option("--global", "Save credentials to ~/.retellrc.json (default)")
+  .option(
+    "--local",
+    "Save credentials to ./.retellrc.json for this directory only",
+  )
   .addHelpText(
     "after",
     `
 Examples:
   $ retell login
   # Enter your API key when prompted
-  # Creates .retellrc.json in current directory
+  # Creates ~/.retellrc.json for use from any directory
+
+  $ retell login --local
+  # Creates .retellrc.json in the current directory for project-specific override
   `,
   )
-  .action(async () => {
-    await loginCommand();
+  .action(async (options) => {
+    await loginCommand({
+      global: options.global,
+      local: options.local,
+    });
   });
 
 // Transcripts commands

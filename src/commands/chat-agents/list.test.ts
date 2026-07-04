@@ -33,6 +33,13 @@ describe("listChatAgentsCommand", () => {
     expect(mockClient.chatAgent.list).toHaveBeenCalledWith({ limit: 25 });
   });
 
+  it("passes --pagination-key-version", async () => {
+    await listChatAgentsCommand({ paginationKeyVersion: "3" });
+    expect(mockClient.chatAgent.list).toHaveBeenCalledWith({
+      pagination_key_version: 3,
+    });
+  });
+
   it("rejects non-numeric --limit", async () => {
     await listChatAgentsCommand({ limit: "x" });
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(

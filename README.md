@@ -27,6 +27,8 @@ Community-built command-line tool for Retell AI - designed to give AI assistants
 npm install -g retell-cli
 ```
 
+The installed command is `retell`. After `retell login`, credentials are saved to your home config by default so the globally installed command works from any directory.
+
 Or use directly with npx (no installation required):
 
 ```bash
@@ -42,7 +44,7 @@ retell login
 # Enter your Retell API key when prompted
 ```
 
-Your API key will be saved to `.retellrc.json` in the current directory.
+Your API key will be saved to `~/.retellrc.json` by default so `retell` works from any directory. Use `retell login --local` if you intentionally want a cwd-local `.retellrc.json` project override.
 
 ### 2. List Your Agents
 
@@ -123,7 +125,7 @@ retell agents publish agent_123abc --version 15 --description "May prompt update
 
 ## Authentication
 
-The CLI supports three authentication methods (in order of precedence):
+The CLI supports these authentication methods (in order of precedence):
 
 ### 1. Environment Variable (Best for CI/CD)
 
@@ -132,21 +134,7 @@ export RETELL_API_KEY=your_api_key_here
 retell agents list
 ```
 
-### 2. Local Config File (Best for Development)
-
-```bash
-retell login
-# Creates .retellrc.json in current directory
-```
-
-The config file format:
-```json
-{
-  "apiKey": "your_api_key_here"
-}
-```
-
-### 3. Per-Command Override
+A per-command environment override uses the same top-priority mechanism:
 
 ```bash
 RETELL_API_KEY=key_abc123 retell agents list
@@ -157,18 +145,60 @@ RETELL_API_KEY=key_abc123 retell agents list
 env RETELL_API_KEY=key_abc123 retell agents list
 ```
 
+### 2. Local Config File (Project-Specific Override)
+
+```bash
+retell login --local
+# Creates .retellrc.json in the current directory
+```
+
+Local config is checked before home config to preserve backward compatibility and to allow project-specific credentials.
+
+### 3. Home/Global Config File (Best for Global CLI Use)
+
+```bash
+retell login
+# Creates ~/.retellrc.json by default
+```
+
+This is the recommended default for a globally installed `retell` command because it works from any directory.
+
+### 4. XDG Config File (Optional Fallback)
+
+If present, the CLI also checks `$XDG_CONFIG_HOME/retell/config.json`, or `~/.config/retell/config.json` when `XDG_CONFIG_HOME` is unset.
+
+The config file format is the same for all config file locations:
+```json
+{
+  "apiKey": "your_api_key_here",
+  "defaultFormat": "json"
+}
+```
+
+### Safe migration from old cwd-local auth
+
+Older versions of `retell login` wrote `.retellrc.json` in the directory where login was run. That file still works and still overrides home config when commands are run from that directory. To make the global CLI work everywhere, run `retell login` once to create `~/.retellrc.json`, then keep or remove old local `.retellrc.json` files based on whether you need per-project overrides.
+
 ## Command Reference
 
 ### Authentication
 
 #### `retell login`
 
-Save your API key to a local config file.
+Save your API key to the home/global config file by default.
 
 ```bash
 retell login
 # Prompts: Enter your Retell API key:
+# Writes ~/.retellrc.json
+
+retell login --local
+# Writes ./.retellrc.json for the current directory only
 ```
+
+**Options:**
+- `--global` - Save credentials to `~/.retellrc.json` (default)
+- `--local` - Save credentials to `./.retellrc.json` for the current directory
 
 ### Transcripts
 
