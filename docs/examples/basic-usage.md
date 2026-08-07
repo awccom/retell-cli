@@ -277,19 +277,19 @@ retell agents publish agent_123abc
 
 ```bash
 # Get only call IDs
-retell transcripts list | jq -r '.[].call_id'
+retell transcripts list | jq -r '.items[].call_id'
 
 # Get calls longer than 1 minute
-retell transcripts list | jq '.[] | select(.duration_ms > 60000)'
+retell transcripts list | jq '.items[] | select(.duration_ms > 60000)'
 
 # Count error calls
-retell transcripts list | jq '[.[] | select(.call_status == "error")] | length'
+retell transcripts list | jq '[.items[] | select(.call_status == "error")] | length'
 
 # Get agent names only
 retell agents list | jq -r '.[].agent_name'
 
 # Format as CSV
-retell transcripts list | jq -r '.[] | [.call_id, .call_status, .duration_ms] | @csv'
+retell transcripts list | jq -r '.items[] | [.call_id, .call_status, .duration_ms] | @csv'
 ```
 
 ### Save to File
@@ -311,31 +311,31 @@ retell transcripts analyze call_abc123 > analysis.json
 
 ```bash
 # Get last 5 calls and their status
-retell transcripts list --limit 5 | jq '.[] | {call_id, call_status, duration_ms}'
+retell transcripts list --limit 5 | jq '.items[] | {call_id, call_status, duration_ms}'
 ```
 
 ### Find Your Most Active Agent
 
 ```bash
 # Count calls per agent
-retell transcripts list --limit 100 | jq 'group_by(.agent_id) | map({agent: .[0].agent_name, calls: length}) | sort_by(.calls) | reverse'
+retell transcripts list --limit 100 | jq '.items | group_by(.agent_id) | map({agent: .[0].agent_name, calls: length}) | sort_by(.calls) | reverse'
 ```
 
 ### Calculate Total Call Duration
 
 ```bash
 # Sum duration of all calls (in milliseconds)
-retell transcripts list | jq '[.[] | .duration_ms] | add'
+retell transcripts list | jq '[.items[] | .duration_ms] | add'
 
 # Convert to minutes
-retell transcripts list | jq '[.[] | .duration_ms] | add / 60000'
+retell transcripts list | jq '[.items[] | .duration_ms] | add / 60000'
 ```
 
 ### Calculate Total Cost
 
 ```bash
 # Analyze all recent calls and sum costs
-retell transcripts list --limit 100 | jq -r '.[].call_id' | while read call_id; do
+retell transcripts list --limit 100 | jq -r '.items[].call_id' | while read call_id; do
   retell transcripts analyze $call_id
 done | jq -s '[.[] | .cost.total] | add'
 ```

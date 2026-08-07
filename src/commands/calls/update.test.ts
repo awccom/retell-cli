@@ -51,15 +51,6 @@ describe("updateCallCommand", () => {
     );
   });
 
-  it("maps --dynamic-variables to override_dynamic_variables", async () => {
-    await updateCallCommand("call_1", {
-      dynamicVariables: '{"name":"Jane"}',
-    });
-    expect(mockClient.call.update).toHaveBeenCalledWith("call_1", {
-      override_dynamic_variables: { name: "Jane" },
-    });
-  });
-
   it("rejects when no mutation flags provided", async () => {
     await updateCallCommand("call_1", {});
     expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(

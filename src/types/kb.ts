@@ -48,7 +48,8 @@ export type KnowledgeBaseSource =
 /**
  * Knowledge base status
  */
-export type KnowledgeBaseStatus = "in_progress" | "complete" | "error";
+export type KnowledgeBaseStatus =
+  "in_progress" | "complete" | "error" | "refreshing_in_progress";
 
 /**
  * Knowledge base object from the API
@@ -93,7 +94,10 @@ export interface CreateKnowledgeBaseOptions {
   name: string;
   urls?: string;
   texts?: string;
+  files?: string[];
   autoRefresh?: boolean;
+  minChunkSize?: string;
+  maxChunkSize?: string;
 }
 
 /**
@@ -102,6 +106,7 @@ export interface CreateKnowledgeBaseOptions {
 export interface AddSourcesOptions {
   urls?: string;
   texts?: string;
+  files?: string[];
 }
 
 // ===== COMMAND OUTPUT TYPES =====

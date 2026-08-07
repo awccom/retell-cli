@@ -173,6 +173,12 @@ Commands for managing and analyzing call transcripts.
 
 **Options:**
 - `-l, --limit <number>` - Maximum number of calls to return (default: 50, max: 1000)
+- `--pagination-key <key>` - Opaque cursor from a previous response
+- `--skip <n>` - Offset pagination (cannot be combined with `--pagination-key`)
+- `--sort-order <order>` - `ascending` or `descending`
+- `--include-total` - Include total matching calls
+- `--filter <json>` / `--filter-file <path>` - Full Retell v3 filter criteria
+- `--fields <fields>` - Comma-separated fields to return
 
 **Usage:**
 
@@ -190,37 +196,40 @@ retell transcripts list --limit 1000
 **Output:**
 
 ```json
-[
-  {
-    "call_id": "call_abc123",
-    "call_status": "ended",
-    "start_timestamp": 1699000000,
-    "end_timestamp": 1699001000,
-    "duration_ms": 45000,
-    "agent_id": "agent_123",
-    "agent_name": "Customer Support Bot"
-  },
-  {
-    "call_id": "call_xyz789",
-    "call_status": "error",
-    "start_timestamp": 1699002000,
-    "agent_id": "agent_456",
-    "agent_name": "Sales Assistant"
-  }
-]
+{
+  "items": [
+    {
+      "call_id": "call_abc123",
+      "call_status": "ended",
+      "start_timestamp": 1699000000,
+      "end_timestamp": 1699001000,
+      "duration_ms": 45000,
+      "agent_id": "agent_123",
+      "agent_name": "Customer Support Bot"
+    },
+    {
+      "call_id": "call_xyz789",
+      "call_status": "error",
+      "start_timestamp": 1699002000,
+      "agent_id": "agent_456",
+      "agent_name": "Sales Assistant"
+    }
+  ],
+  "has_more": false
+}
 ```
 
 **Filtering with jq:**
 
 ```bash
 # Find error calls
-retell transcripts list | jq '.[] | select(.call_status == "error")'
+retell transcripts list | jq '.items[] | select(.call_status == "error")'
 
 # Find calls longer than 1 minute
-retell transcripts list | jq '.[] | select(.duration_ms > 60000)'
+retell transcripts list | jq '.items[] | select(.duration_ms > 60000)'
 
 # Get only call IDs
-retell transcripts list | jq -r '.[].call_id'
+retell transcripts list | jq -r '.items[].call_id'
 ```
 
 #### Get Transcript
@@ -643,7 +652,7 @@ Monitor and analyze call performance metrics.
 retell transcripts list --limit 100 > calls.json
 
 # Step 2: Identify calls to analyze
-jq '.[] | select(.call_status == "ended")' calls.json > ended-calls.json
+jq '.items[] | select(.call_status == "ended")' calls.json > ended-calls.json
 
 # Step 3: Analyze each call
 for call_id in $(jq -r '.call_id' ended-calls.json); do
@@ -715,7 +724,7 @@ Investigate and troubleshoot failed calls.
 
 ```bash
 # Step 1: Find error calls
-retell transcripts list | jq '.[] | select(.call_status == "error")' > errors.json
+retell transcripts list | jq '.items[] | select(.call_status == "error")' > errors.json
 
 # Step 2: Get detailed info for each error
 for call_id in $(jq -r '.call_id' errors.json); do
@@ -745,13 +754,13 @@ The CLI outputs JSON by default, making it perfect for use with `jq`:
 retell agents list | jq -r '.[].agent_id'
 
 # Format output as CSV
-retell transcripts list | jq -r '.[] | [.call_id, .call_status, .duration_ms] | @csv'
+retell transcripts list | jq -r '.items[] | [.call_id, .call_status, .duration_ms] | @csv'
 
 # Calculate total cost
-retell transcripts list | jq -s 'map(.call_cost.combined_cost) | add'
+retell transcripts list | jq '.items | map(.call_cost.combined_cost) | add'
 
 # Group calls by status
-retell transcripts list | jq 'group_by(.call_status) | map({status: .[0].call_status, count: length})'
+retell transcripts list | jq '.items | group_by(.call_status) | map({status: .[0].call_status, count: length})'
 ```
 
 ### Scripting

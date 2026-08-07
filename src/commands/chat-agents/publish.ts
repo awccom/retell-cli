@@ -12,6 +12,7 @@ import { findNewestUnpublishedVersion } from "../../services/version-selection";
 export interface PublishChatAgentOptions {
   version?: string;
   description?: string;
+  title?: string;
 }
 
 export async function publishChatAgentCommand(
@@ -33,6 +34,7 @@ export async function publishChatAgentCommand(
       ...(options.description
         ? { version_description: options.description }
         : {}),
+      ...(options.title ? { version_title: options.title } : {}),
     });
 
     outputJson({

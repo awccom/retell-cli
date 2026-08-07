@@ -11,7 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
-import { loadJsonArg, loadStringRecordArg } from "../../services/json-arg";
+import { loadJsonArg } from "../../services/json-arg";
 import type { CallUpdateParams } from "retell-sdk/resources/call";
 
 const DATA_STORAGE_SETTINGS = [
@@ -23,7 +23,6 @@ const DATA_STORAGE_SETTINGS = [
 export interface UpdateCallOptions {
   metadata?: string;
   customAttributes?: string;
-  dynamicVariables?: string;
   dataStorageSetting?: string;
   fields?: string;
 }
@@ -45,12 +44,6 @@ export async function updateCallCommand(
         string | number | boolean
       >;
 
-    const dv = loadStringRecordArg(
-      options.dynamicVariables,
-      "--dynamic-variables",
-    );
-    if (dv !== undefined) params.override_dynamic_variables = dv;
-
     if (options.dataStorageSetting) {
       if (
         !DATA_STORAGE_SETTINGS.includes(options.dataStorageSetting as never)
@@ -65,7 +58,7 @@ export async function updateCallCommand(
 
     if (Object.keys(params).length === 0) {
       throwValidation(
-        "No mutation flags provided. Pass at least one of --metadata, --custom-attributes, --dynamic-variables, --data-storage-setting.",
+        "No mutation flags provided. Pass at least one of --metadata, --custom-attributes, --data-storage-setting.",
       );
     }
 

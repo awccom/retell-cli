@@ -35,10 +35,12 @@ describe("publishChatAgentCommand", () => {
     await publishChatAgentCommand("ca_1", {
       version: "4",
       description: "Release copy",
+      title: "August production release",
     });
     expect(mockClient.chatAgent.publish).toHaveBeenCalledWith("ca_1", {
       version: 4,
       version_description: "Release copy",
+      version_title: "August production release",
     });
     expect(outputFormatter.outputJson).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -13,6 +13,7 @@ import { findNewestUnpublishedVersion } from "../../services/version-selection";
 export interface PublishAgentOptions {
   version?: string;
   description?: string;
+  title?: string;
 }
 
 /**
@@ -56,6 +57,7 @@ export async function publishAgentCommand(
       ...(options.description
         ? { version_description: options.description }
         : {}),
+      ...(options.title ? { version_title: options.title } : {}),
     });
   } catch (error) {
     handleSdkError(error);
