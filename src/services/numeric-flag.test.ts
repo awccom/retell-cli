@@ -75,6 +75,12 @@ describe("parsePositiveIntegerFlag", () => {
       "--version must be a positive integer",
     );
   });
+
+  it("rejects unsafe integers", () => {
+    expect(() =>
+      parsePositiveIntegerFlag("9007199254740993", "--version"),
+    ).toThrow("--version must be a positive integer");
+  });
 });
 
 describe("parseNonNegativeIntegerFlag", () => {
@@ -90,5 +96,11 @@ describe("parseNonNegativeIntegerFlag", () => {
     expect(() => parseNonNegativeIntegerFlag("1.5", "--skip")).toThrow(
       "--skip must be a non-negative integer",
     );
+  });
+
+  it("rejects unsafe integer offsets", () => {
+    expect(() =>
+      parseNonNegativeIntegerFlag("9007199254740993", "--skip"),
+    ).toThrow("--skip must be a non-negative integer");
   });
 });

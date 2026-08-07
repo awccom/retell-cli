@@ -117,12 +117,14 @@ export async function createKnowledgeBaseCommand(
     const files = loadUploadFiles(options.files);
     if (files) createParams.knowledge_base_files = files;
 
-    const minChunkSize = options.minChunkSize
-      ? parsePositiveIntegerFlag(options.minChunkSize, "--min-chunk-size")
-      : undefined;
-    const maxChunkSize = options.maxChunkSize
-      ? parsePositiveIntegerFlag(options.maxChunkSize, "--max-chunk-size")
-      : undefined;
+    const minChunkSize =
+      options.minChunkSize !== undefined
+        ? parsePositiveIntegerFlag(options.minChunkSize, "--min-chunk-size")
+        : undefined;
+    const maxChunkSize =
+      options.maxChunkSize !== undefined
+        ? parsePositiveIntegerFlag(options.maxChunkSize, "--max-chunk-size")
+        : undefined;
     validateChunkSizes(minChunkSize, maxChunkSize);
     if (minChunkSize !== undefined) createParams.min_chunk_size = minChunkSize;
     if (maxChunkSize !== undefined) createParams.max_chunk_size = maxChunkSize;

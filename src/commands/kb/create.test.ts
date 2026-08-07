@@ -63,4 +63,18 @@ describe("createKnowledgeBaseCommand", () => {
       expect.objectContaining({ name: "ValidationError" }),
     );
   });
+
+  it.each(["minChunkSize", "maxChunkSize"] as const)(
+    "rejects an empty %s flag",
+    async (option) => {
+      await createKnowledgeBaseCommand({
+        name: "Support",
+        [option]: "",
+      });
+      expect(mockClient.knowledgeBase.create).not.toHaveBeenCalled();
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ValidationError" }),
+      );
+    },
+  );
 });
