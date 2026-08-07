@@ -17,6 +17,8 @@ import type {
   TextEntry,
   KnowledgeBaseMutationOutput,
 } from "../../../types/kb";
+import { loadUploadFiles } from "../../../services/upload-files";
+import type { KnowledgeBaseAddSourcesParams } from "retell-sdk/resources/knowledge-base";
 
 /**
  * Add sources to a knowledge base
@@ -30,19 +32,16 @@ export async function addKnowledgeBaseSourcesCommand(
 ): Promise<void> {
   try {
     // Validate at least one source type is provided
-    if (!options.urls && !options.texts) {
+    if (!options.urls && !options.texts && !options.files?.length) {
       outputError(
-        "At least one of --urls or --texts must be provided",
+        "At least one of --urls, --texts, or --file must be provided",
         "MISSING_SOURCES",
       );
       return;
     }
 
     // Build the add sources request
-    const addParams: {
-      knowledge_base_urls?: string[];
-      knowledge_base_texts?: Array<{ title: string; text: string }>;
-    } = {};
+    const addParams: KnowledgeBaseAddSourcesParams = {};
 
     // Parse URLs if provided
     if (options.urls) {
@@ -108,6 +107,9 @@ export async function addKnowledgeBaseSourcesCommand(
         return;
       }
     }
+
+    const files = loadUploadFiles(options.files);
+    if (files) addParams.knowledge_base_files = files;
 
     const client = getRetellClient();
 

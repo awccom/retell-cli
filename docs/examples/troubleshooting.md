@@ -134,7 +134,7 @@ Solutions to common problems and error messages.
 3. **Ensure resource exists:**
    ```bash
    # For calls, check if it's in your account
-   retell transcripts list | jq -r '.[].call_id' | grep call_xyz789
+   retell transcripts list | jq -r '.items[].call_id' | grep call_xyz789
 
    # For agents, verify agent_id
    retell agents list | jq -r '.[].agent_id' | grep agent_xyz
@@ -179,7 +179,7 @@ Add delays between requests:
 
 ```bash
 # Add sleep between calls
-for call_id in $(retell transcripts list | jq -r '.[].call_id'); do
+for call_id in $(retell transcripts list | jq -r '.items[].call_id'); do
   retell transcripts analyze $call_id
   sleep 1  # Wait 1 second between requests
 done

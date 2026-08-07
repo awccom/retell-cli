@@ -17,6 +17,9 @@ import type {
   TextEntry,
   KnowledgeBaseMutationOutput,
 } from "../../types/kb";
+import { loadUploadFiles } from "../../services/upload-files";
+import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import type { KnowledgeBaseCreateParams } from "retell-sdk/resources/knowledge-base";
 
 /**
  * Create a new knowledge base
@@ -37,12 +40,7 @@ export async function createKnowledgeBaseCommand(
     }
 
     // Build the create request
-    const createParams: {
-      knowledge_base_name: string;
-      enable_auto_refresh?: boolean;
-      knowledge_base_urls?: string[];
-      knowledge_base_texts?: Array<{ title: string; text: string }>;
-    } = {
+    const createParams: KnowledgeBaseCreateParams = {
       knowledge_base_name: options.name,
     };
 
@@ -116,9 +114,20 @@ export async function createKnowledgeBaseCommand(
       }
     }
 
-    const client = getRetellClient();
+    const files = loadUploadFiles(options.files);
+    if (files) createParams.knowledge_base_files = files;
 
-    // Create the knowledge base
+    const minChunkSize = options.minChunkSize
+      ? parsePositiveIntegerFlag(options.minChunkSize, "--min-chunk-size")
+      : undefined;
+    const maxChunkSize = options.maxChunkSize
+      ? parsePositiveIntegerFlag(options.maxChunkSize, "--max-chunk-size")
+      : undefined;
+    validateChunkSizes(minChunkSize, maxChunkSize);
+    if (minChunkSize !== undefined) createParams.min_chunk_size = minChunkSize;
+    if (maxChunkSize !== undefined) createParams.max_chunk_size = maxChunkSize;
+
+    const client = getRetellClient();
     const knowledgeBase = await client.knowledgeBase.create(createParams);
 
     const output: KnowledgeBaseMutationOutput = {
@@ -136,4 +145,31 @@ export async function createKnowledgeBaseCommand(
   } catch (error) {
     handleSdkError(error);
   }
+}
+
+function validateChunkSizes(
+  minChunkSize: number | undefined,
+  maxChunkSize: number | undefined,
+): void {
+  if (
+    minChunkSize !== undefined &&
+    (minChunkSize < 200 || minChunkSize > 2000)
+  ) {
+    throwValidation("--min-chunk-size must be between 200 and 2000");
+  }
+  if (
+    maxChunkSize !== undefined &&
+    (maxChunkSize < 600 || maxChunkSize > 6000)
+  ) {
+    throwValidation("--max-chunk-size must be between 600 and 6000");
+  }
+  if ((minChunkSize ?? 400) >= (maxChunkSize ?? 2000)) {
+    throwValidation("--min-chunk-size must be less than --max-chunk-size");
+  }
+}
+
+function throwValidation(message: string): never {
+  const error = new Error(message);
+  error.name = "ValidationError";
+  throw error;
 }

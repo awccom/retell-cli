@@ -41,11 +41,13 @@ describe("publishAgentCommand", () => {
     await publishAgentCommand("agent_1", {
       version: "4",
       description: "Release copy",
+      title: "August production release",
     });
 
     expect(mockClient.agent.publish).toHaveBeenCalledWith("agent_1", {
       version: 4,
       version_description: "Release copy",
+      version_title: "August production release",
     });
     expect(outputFormatter.outputJson).toHaveBeenCalledWith(
       expect.objectContaining({

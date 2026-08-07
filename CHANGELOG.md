@@ -5,6 +5,25 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-08-07
+
+### Added
+
+- `calls rerun-analysis <call_id>` and `chats rerun-analysis <chat_id>` expose Retell's paid post-session analysis reruns, with optional field filtering.
+- `transcripts list` and `chats list` accept full v3 filter criteria via `--filter` (inline JSON or `@path`) or `--filter-file`, plus `--skip` and `--include-total`.
+- `kb create` and `kb sources add` accept repeatable `--file` uploads with Retell's 25-file/50 MB validation; `kb create` also exposes immutable `--min-chunk-size` and `--max-chunk-size` settings.
+- Agent and chat-agent publish commands accept `--title` for `version_title`.
+
+### Changed
+
+- Pinned `retell-sdk` to `5.60.0`.
+- `transcripts list` now preserves v3 pagination metadata in the same `{ items, has_more, pagination_key, total? }` shape used by other paginated commands.
+- `calls update` is documented and validated as an ended-call administration command.
+
+### Removed
+
+- Removed `calls update --dynamic-variables`; Retell removed `override_dynamic_variables` from Update Call, and live-call control remains intentionally outside this CLI's scope.
+
 ## [1.9.2] - 2026-06-22
 
 ### Changed

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseNumericFlag, parsePositiveIntegerFlag } from "./numeric-flag";
+import {
+  parseNonNegativeIntegerFlag,
+  parseNumericFlag,
+  parsePositiveIntegerFlag,
+} from "./numeric-flag";
 
 describe("parseNumericFlag", () => {
   it("parses integer strings", () => {
@@ -69,6 +73,22 @@ describe("parsePositiveIntegerFlag", () => {
   it("rejects fractional numbers", () => {
     expect(() => parsePositiveIntegerFlag("1.5", "--version")).toThrow(
       "--version must be a positive integer",
+    );
+  });
+});
+
+describe("parseNonNegativeIntegerFlag", () => {
+  it("accepts zero and positive integers", () => {
+    expect(parseNonNegativeIntegerFlag("0", "--skip")).toBe(0);
+    expect(parseNonNegativeIntegerFlag("12", "--skip")).toBe(12);
+  });
+
+  it("rejects negative and fractional values", () => {
+    expect(() => parseNonNegativeIntegerFlag("-1", "--skip")).toThrow(
+      "--skip must be a non-negative integer",
+    );
+    expect(() => parseNonNegativeIntegerFlag("1.5", "--skip")).toThrow(
+      "--skip must be a non-negative integer",
     );
   });
 });

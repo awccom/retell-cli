@@ -27,6 +27,17 @@ export function parsePositiveIntegerFlag(
   return parsed;
 }
 
+export function parseNonNegativeIntegerFlag(
+  value: string,
+  flagName: string,
+): number {
+  const parsed = parseNumericFlag(value, flagName);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throwValidation(`${flagName} must be a non-negative integer`);
+  }
+  return parsed;
+}
+
 function throwValidation(message: string): never {
   const err = new Error(message);
   err.name = "ValidationError";

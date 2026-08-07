@@ -204,10 +204,17 @@ retell login --local
 
 #### `retell transcripts list [options]`
 
-List call transcripts with optional filtering.
+List calls through Retell's v3 endpoint. The response includes `items`, `has_more`, `pagination_key`, and `total` when requested. Retrieve an individual call for transcript-heavy fields.
 
 **Options:**
 - `-l, --limit <number>` - Maximum number of calls to return (default: 50)
+- `--pagination-key <key>` - Opaque cursor from a previous response
+- `--skip <n>` - Offset pagination (cannot be combined with `--pagination-key`)
+- `--sort-order <order>` - `ascending` or `descending`
+- `--include-total` - Include the total number matching the filter
+- `--filter <json>` - Full Retell filter criteria as inline JSON or `@path`
+- `--filter-file <path>` - Full Retell filter criteria from a JSON file
+- `--fields <fields>` - Comma-separated fields to return from each item
 
 **Examples:**
 ```bash
@@ -216,6 +223,10 @@ retell transcripts list
 
 # List up to 100 calls
 retell transcripts list --limit 100
+
+# Filter by agent environment tag and include total matches
+retell transcripts list --include-total \
+  --filter '{"agent_tag":{"type":"enum","op":"in","value":["prod"]}}'
 ```
 
 #### `retell transcripts get <call_id>`
@@ -323,10 +334,12 @@ Publish a draft agent version. If `--version` is omitted, the CLI publishes the 
 **Options:**
 - `--version <n>` - Draft version to publish
 - `--description <text>` - Optional version description
+- `--title <text>` - Optional version title for your reference
 
 **Example:**
 ```bash
-retell agents publish agent_123abc --version 15 --description "May prompt update"
+retell agents publish agent_123abc --version 15 \
+  --title "May production update" --description "Prompt and routing changes"
 ```
 
 ### Prompts
@@ -856,25 +869,25 @@ retell transcripts analyze <call_id> --hotspots-only
 # 3. No jq or grep needed - direct JSON parsing!
 ```
 
-### Calls (metadata / delete only)
+### Calls (ended-call administration)
 
 Call listing and retrieval stay under `transcripts`. This CLI is not intended to initiate outbound calls or drive live-call runtime behavior. Avoid `calls create-phone`, `calls create-web`, `calls register-phone`, and `batch-calls create` in normal assistant workflows unless Devon explicitly asks for a one-off exception.
 
-Use `calls` only for existing-call metadata/data administration:
+Use `calls` for existing-call administration:
 
 ```bash
 # Update metadata / data storage on an ended call
 retell calls update call_abc123 --metadata '{"customer_id":"c_1"}' \
   --data-storage-setting everything_except_pii
 
+# Rerun paid post-call analysis after changing analysis configuration
+retell calls rerun-analysis call_abc123
+
 # Delete a call and its data
 retell calls delete call_abc123
 ```
 
-Shared on update: `--metadata`, `--dynamic-variables`, `--fields`.
-`--dynamic-variables` must be a JSON object with string values, for example `{"customer_name":"Avery"}`.
-
-**Retell deprecation note:** `retell calls update --dynamic-variables` maps to Update Call's `override_dynamic_variables`, which Retell is deprecating for ongoing calls on 2026-08-31. Because this CLI should not drive live calls, do not add a live-call-control command unless the intended product scope changes.
+`calls update` accepts `--metadata`, `--custom-attributes`, `--data-storage-setting`, and `--fields`. Retell restricts this endpoint to ended calls. Dynamic-variable changes belong to Retell's live-call API, which this CLI intentionally does not expose.
 
 ### Batch Calls
 
@@ -902,15 +915,31 @@ retell voices add-resource --provider-voice-id pv_1 --voice-name "Allie"
 retell voices clone --voice-name "Dev Clone" --voice-provider elevenlabs --file sample.wav
 ```
 
+### Knowledge Bases
+
+```bash
+# Create a KB with URLs, uploaded files, and custom immutable chunk sizes
+retell kb create --name "Support KB" --urls https://docs.example.com \
+  --file handbook.pdf --file policies.docx \
+  --min-chunk-size 400 --max-chunk-size 2000
+
+# Add more URL, text, or uploaded-file sources
+retell kb sources add kb_abc --file updated-policy.pdf
+```
+
+Repeat `--file` for up to 25 files per request; each file may be at most 50 MB. Chunk sizes are creation-only: minimum 200–2000, maximum 600–6000, and minimum must be less than maximum.
+
 ### Chats
 
 ```bash
 retell chats create --agent-id agent_xxx
 retell chats list --limit 10 --sort-order descending
+retell chats list --include-total --filter-file chat-filters.json
 retell chats get chat_abc
 retell chats complete --chat-id chat_abc --content "What's the status?"
 retell chats sms --from-number +14157774444 --to-number +12137774445
 retell chats update chat_abc --metadata '{"k":"v"}'
+retell chats rerun-analysis chat_abc
 retell chats end chat_abc
 retell chats delete chat_abc
 ```
@@ -924,7 +953,7 @@ retell chat-agents get ca_abc --version 2
 retell chat-agents update ca_abc --file updates.json
 retell chat-agents versions ca_abc
 retell chat-agents create-version ca_abc --base-version 2
-retell chat-agents publish ca_abc --version 3
+retell chat-agents publish ca_abc --version 3 --title "August production"
 retell chat-agents delete-version ca_abc --version 2
 retell chat-agents delete ca_abc
 ```
@@ -978,7 +1007,7 @@ retell agents mcp-tools agent_abc --mcp-id mcp_1 --component-id comp_1 --version
 retell transcripts list --limit 50 > calls.json
 
 # Filter for failed calls (using jq)
-jq '.[] | select(.call_status == "error")' calls.json
+jq '.items[] | select(.call_status == "error")' calls.json
 
 # Analyze each failed call
 retell transcripts analyze call_xyz789
@@ -1012,7 +1041,7 @@ done
 retell transcripts list --limit 100 > today-calls.json
 
 # Analyze each call and save report
-for call_id in $(jq -r '.[].call_id' today-calls.json); do
+for call_id in $(jq -r '.items[].call_id' today-calls.json); do
   retell transcripts analyze $call_id > "analysis-${call_id}.json"
 done
 
@@ -1039,7 +1068,7 @@ Traditional MCP (Model Context Protocol) servers can consume significant context
 
 ```bash
 # AI agent lists all calls and finds issues
-retell transcripts list | jq '.[] | select(.call_status == "error")'
+retell transcripts list | jq '.items[] | select(.call_status == "error")'
 
 # AI analyzes a problematic call
 retell transcripts analyze call_123

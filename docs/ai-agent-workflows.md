@@ -316,7 +316,7 @@ retell transcripts search --agent-id agent_123 --limit 10 --from-date 2025-11-16
 
 ```bash
 # ❌ Bad: Fetch all, filter client-side
-retell transcripts list --limit 100 | jq '.[] | select(.call_status == "error")'
+retell transcripts list --limit 100 | jq '.items[] | select(.call_status == "error")'
 
 # ✅ Good: Filter server-side
 retell transcripts search --status error --limit 100

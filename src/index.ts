@@ -68,6 +68,7 @@ import { createPhoneCallCommand } from "./commands/calls/create-phone";
 import { createWebCallCommand } from "./commands/calls/create-web";
 import { registerPhoneCallCommand } from "./commands/calls/register-phone";
 import { updateCallCommand } from "./commands/calls/update";
+import { rerunCallAnalysisCommand } from "./commands/calls/rerun-analysis";
 import { deleteCallCommand } from "./commands/calls/delete";
 import { stopCallCommand } from "./commands/calls/stop";
 import { createBatchCallCommand } from "./commands/batch-calls/create";
@@ -90,6 +91,7 @@ import { chatCompleteCommand } from "./commands/chats/complete";
 import { createSmsChatCommand } from "./commands/chats/sms";
 import { endChatCommand } from "./commands/chats/end";
 import { deleteChatCommand } from "./commands/chats/delete";
+import { rerunChatAnalysisCommand } from "./commands/chats/rerun-analysis";
 import { createChatAgentCommand } from "./commands/chat-agents/create";
 import { getChatAgentCommand } from "./commands/chat-agents/get";
 import { updateChatAgentCommand } from "./commands/chat-agents/update";
@@ -188,12 +190,21 @@ const transcripts = program
 
 transcripts
   .command("list")
-  .description("List all call transcripts")
+  .description("List calls with v3 filters and pagination")
   .option(
     "-l, --limit <number>",
     "Maximum number of calls to return (default: 50)",
     "50",
   )
+  .option("--pagination-key <key>", "Opaque cursor from a previous response")
+  .option(
+    "--skip <n>",
+    "Records to skip (cannot be used with --pagination-key)",
+  )
+  .option("--sort-order <order>", "ascending or descending")
+  .option("--include-total", "Include the total matching call count")
+  .option("--filter <json>", "Filter criteria as inline JSON or @path")
+  .option("--filter-file <path>", "Path to filter-criteria JSON object")
   .option(
     "--fields <fields>",
     "Comma-separated list of fields to return (e.g., call_id,call_status,metadata.duration)",
@@ -203,19 +214,21 @@ transcripts
     `
 Examples:
   $ retell transcripts list
-  $ retell transcripts list --limit 100
+  $ retell transcripts list --limit 100 --include-total
+  $ retell transcripts list --filter '{"agent_tag":{"type":"enum","op":"in","value":["prod"]}}'
+  $ retell transcripts list --filter-file call-filters.json
   $ retell transcripts list --fields call_id,call_status
-  $ retell transcripts list | jq '.[] | select(.call_status == "error")'
   `,
   )
   .action(async (options) => {
-    const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
-    if (limit < 1) {
-      console.error("Error: --limit must be a positive number");
-      process.exit(1);
-    }
     await listTranscriptsCommand({
-      limit,
+      limit: options.limit,
+      paginationKey: options.paginationKey,
+      skip: options.skip,
+      sortOrder: options.sortOrder,
+      includeTotal: options.includeTotal,
+      filter: options.filter,
+      filterFile: options.filterFile,
       fields: options.fields,
     });
   });
@@ -475,6 +488,7 @@ agents
   .description("Publish a draft agent version")
   .option("--version <n>", "Draft version to publish")
   .option("--description <text>", "Version description")
+  .option("--title <text>", "Version title for your reference")
   .action(async (agentId, options) => {
     await publishAgentCommand(agentId, options);
   });
@@ -552,6 +566,7 @@ program
   .description("Publish a draft agent to make changes live")
   .option("--version <n>", "Draft version to publish")
   .option("--description <text>", "Version description")
+  .option("--title <text>", "Version title for your reference")
   .addHelpText(
     "after",
     `
@@ -1161,6 +1176,14 @@ kb.command("create")
     "Path to JSON file with text entries [{ title, text }, ...]",
   )
   .option("--auto-refresh", "Enable 12-hour automatic refresh for URL sources")
+  .option(
+    "--file <path>",
+    "File to upload (repeat for up to 25 files, 50 MB each)",
+    (value: string, previous: string[] = []) => [...previous, value],
+    [] as string[],
+  )
+  .option("--min-chunk-size <n>", "Minimum chunk size (200-2000)")
+  .option("--max-chunk-size <n>", "Maximum chunk size (600-6000)")
   .addHelpText(
     "after",
     `
@@ -1182,7 +1205,10 @@ Text file format (texts.json):
       name: options.name,
       urls: options.urls,
       texts: options.texts,
+      files: options.file,
       autoRefresh: options.autoRefresh,
+      minChunkSize: options.minChunkSize,
+      maxChunkSize: options.maxChunkSize,
     });
   });
 
@@ -1212,6 +1238,12 @@ kbSources
     "--texts <file>",
     "Path to JSON file with text entries [{ title, text }, ...]",
   )
+  .option(
+    "--file <path>",
+    "File to upload (repeat for up to 25 files, 50 MB each)",
+    (value: string, previous: string[] = []) => [...previous, value],
+    [] as string[],
+  )
   .addHelpText(
     "after",
     `
@@ -1225,6 +1257,7 @@ Examples:
     await addKnowledgeBaseSourcesCommand(knowledgeBaseId, {
       urls: options.urls,
       texts: options.texts,
+      files: options.file,
     });
   });
 
@@ -1679,15 +1712,11 @@ calls
 
 calls
   .command("update <call_id>")
-  .description("Update metadata and storage settings on an existing call")
+  .description("Update metadata and storage settings on an ended call")
   .option("--metadata <json>", "Inline JSON or @path for call metadata")
   .option(
     "--custom-attributes <json>",
     "Inline JSON or @path for custom attributes",
-  )
-  .option(
-    "--dynamic-variables <json>",
-    "Inline JSON or @path overriding dynamic variables",
   )
   .option(
     "--data-storage-setting <value>",
@@ -1696,6 +1725,14 @@ calls
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (callId, options) => {
     await updateCallCommand(callId, options);
+  });
+
+calls
+  .command("rerun-analysis <call_id>")
+  .description("Rerun paid post-call analysis for an ended call")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (callId, options) => {
+    await rerunCallAnalysisCommand(callId, options);
   });
 
 calls
@@ -1945,8 +1982,15 @@ chats
   .command("list")
   .description("List chats")
   .option("-l, --limit <n>", "Maximum number to return")
-  .option("--pagination-key <key>", "Chat id to start from")
+  .option("--pagination-key <key>", "Opaque cursor from a previous response")
+  .option(
+    "--skip <n>",
+    "Records to skip (cannot be used with --pagination-key)",
+  )
   .option("--sort-order <order>", "ascending or descending")
+  .option("--include-total", "Include the total matching chat count")
+  .option("--filter <json>", "Filter criteria as inline JSON or @path")
+  .option("--filter-file <path>", "Path to filter-criteria JSON object")
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (options) => {
     await listChatsCommand(options);
@@ -1971,6 +2015,14 @@ chats
   .option("--fields <fields>", "Comma-separated list of fields to return")
   .action(async (chatId, options) => {
     await updateChatCommand(chatId, options);
+  });
+
+chats
+  .command("rerun-analysis <chat_id>")
+  .description("Rerun paid post-chat analysis for an ended chat")
+  .option("--fields <fields>", "Comma-separated list of fields to return")
+  .action(async (chatId, options) => {
+    await rerunChatAnalysisCommand(chatId, options);
   });
 
 chats
@@ -2133,6 +2185,7 @@ chatAgents
   .description("Publish a draft chat agent version")
   .option("--version <n>", "Draft version to publish")
   .option("--description <text>", "Version description")
+  .option("--title <text>", "Version title for your reference")
   .action(async (agentId, options) => {
     await publishChatAgentCommand(agentId, options);
   });
