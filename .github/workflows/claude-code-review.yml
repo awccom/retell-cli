@@ -2,11 +2,19 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    # No `synchronize`: PR #7 collected seven stacked full-diff review
+    # summaries, one per push during review rounds. One review per PR;
+    # re-review after fixes via an `@claude review` comment (claude.yml).
+    types: [opened, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    runs-on: ubuntu-latest
+    # Blacksmith runners — org GitHub-hosted minutes exhausted until Sept 1.
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
       pull-requests: write # posting inline findings needs write
@@ -24,14 +32,12 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # App-token exchange 401s on this org (Claude GitHub App not
-          # installed on awccom); the workflow token posts instead.
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           # Direct prompt instead of the code-review plugin: the plugin
           # delegates to subagents and waits for wakeups that never come in a
           # one-shot CI run, so its findings were never posted.
           prompt: |
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+            Check `gh pr view --comments` for your own earlier review summary on this PR; if one exists, review only what changed since it and do not repeat prior findings.
             Use `gh pr diff` and `gh pr view` to read the change, and read surrounding
             files where needed. Look for real defects: correctness bugs, security
             issues, data-loss risks, spec violations, and broken invariants.
@@ -42,5 +48,5 @@ jobs:
             comment with `gh pr comment` (verdict + notable risks; say "no issues
             found" plainly if the diff is clean). Do all of this yourself in this
             session — do not delegate to subagents or schedule follow-up work.
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*)"'
+          claude_args: '--allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*)"'
 
