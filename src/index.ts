@@ -113,7 +113,7 @@ import {
   parseNumericFlag,
   parsePositiveIntegerFlag,
 } from "./services/numeric-flag";
-import { outputError } from "./services/output-formatter";
+import { handleSdkError, outputError } from "./services/output-formatter";
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -176,8 +176,9 @@ program
       );
     },
   })
-  .hook("preAction", (thisCommand) => {
-    if (thisCommand.opts().compact) process.env.RETELL_OUTPUT = "compact";
+  // Fires while Commander parses options, before usage errors are reported.
+  .on("option:compact", () => {
+    process.env.RETELL_OUTPUT = "compact";
   });
 
 // Login command
@@ -2294,7 +2295,9 @@ program.commands
   });
 
 // Parse command line arguments
-program.parse(process.argv);
+// Errors escaping a command (e.g. client initialization outside a command's
+// own try block) still produce structured JSON instead of a stack trace.
+program.parseAsync(process.argv).catch(handleSdkError);
 
 // Show help if no command specified
 if (!process.argv.slice(2).length) {

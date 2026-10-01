@@ -16,7 +16,7 @@ Thank you for your interest in contributing to the Retell AI CLI! This document 
 
 ### Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 22.12.0
 - **npm** >= 9.0.0
 - **Git**
 - A Retell AI account with API key

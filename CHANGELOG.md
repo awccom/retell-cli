@@ -254,7 +254,7 @@ Bulk addition of CLI surface for Retell SDK resources that were previously unwra
 
 ---
 
-## [2.0.0] - 2026-10-01 - v1.0.1
+## [Unreleased] - v1.0.1
 
 ### Added - Phase 1: Foundation & Utilities
 
