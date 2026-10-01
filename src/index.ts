@@ -113,6 +113,7 @@ import {
   parseNumericFlag,
   parsePositiveIntegerFlag,
 } from "./services/numeric-flag";
+import { outputError } from "./services/output-formatter";
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -127,8 +128,7 @@ function parseFlagOrExit(
   try {
     return parseNumericFlag(value, flagName);
   } catch (err) {
-    console.error(`Error: ${(err as Error).message}`);
-    process.exit(1);
+    outputError((err as Error).message, "VALIDATION_ERROR");
   }
 }
 
@@ -140,8 +140,7 @@ function parsePositiveIntegerFlagOrExit(
   try {
     return parsePositiveIntegerFlag(value, flagName);
   } catch (err) {
-    console.error(`Error: ${(err as Error).message}`);
-    process.exit(1);
+    outputError((err as Error).message, "VALIDATION_ERROR");
   }
 }
 
@@ -153,7 +152,33 @@ program
   .description("Retell AI CLI - Manage transcripts and agent prompts")
   .version(packageJson.version, "-v, --version", "Display version number")
   .helpOption("-h, --help", "Display help for command")
-  .option("--json", "Output as JSON (default)", true);
+  .option("--json", "Output as JSON (default)", true)
+  .option(
+    "--compact",
+    "Emit single-line JSON (also: RETELL_OUTPUT=compact); saves tokens for agents",
+  )
+  .showSuggestionAfterError(true)
+  .configureOutput({
+    // Usage errors (unknown command/option, missing argument) as JSON on
+    // stderr so agents can parse every failure the same way.
+    outputError: (str, write) => {
+      const text = str.replace(/^error:\s*/i, "").trim();
+      const hint = text.match(/\n?\(Did you mean (.+)\?\)$/);
+      const payload = {
+        error: hint ? text.slice(0, hint.index).trim() : text,
+        code: "USAGE_ERROR",
+        ...(hint ? { suggestion: hint[1] } : {}),
+      };
+      write(
+        (process.env.RETELL_OUTPUT === "compact"
+          ? JSON.stringify(payload)
+          : JSON.stringify(payload, null, 2)) + "\n",
+      );
+    },
+  })
+  .hook("preAction", (thisCommand) => {
+    if (thisCommand.opts().compact) process.env.RETELL_OUTPUT = "compact";
+  });
 
 // Login command
 program
@@ -377,8 +402,7 @@ Examples:
   .action(async (options) => {
     const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
     if (limit < 1) {
-      console.error("Error: --limit must be a positive number");
-      process.exit(1);
+      outputError("--limit must be a positive number", "VALIDATION_ERROR");
     }
     await listAgentsCommand({
       limit,
@@ -896,8 +920,10 @@ Examples:
   )
   .action(async (options) => {
     if (options.type !== "retell-llm" && options.type !== "conversation-flow") {
-      console.error('Error: type must be "retell-llm" or "conversation-flow"');
-      process.exit(1);
+      outputError(
+        'type must be "retell-llm" or "conversation-flow"',
+        "VALIDATION_ERROR",
+      );
     }
     await listTestCasesCommand({
       type: options.type,
@@ -1024,8 +1050,10 @@ Examples:
   )
   .action(async (options) => {
     if (options.type !== "retell-llm" && options.type !== "conversation-flow") {
-      console.error('Error: type must be "retell-llm" or "conversation-flow"');
-      process.exit(1);
+      outputError(
+        'type must be "retell-llm" or "conversation-flow"',
+        "VALIDATION_ERROR",
+      );
     }
     await listBatchTestsCommand({
       type: options.type,
@@ -1304,10 +1332,10 @@ Examples:
   .action(async (options) => {
     const limit = parseFlagOrExit(options.limit, "--limit") ?? 50;
     if (limit < 1 || limit > 1000) {
-      console.error(
-        "Error: --limit must be a positive number between 1 and 1000",
+      outputError(
+        "--limit must be a positive number between 1 and 1000",
+        "VALIDATION_ERROR",
       );
-      process.exit(1);
     }
     await listFlowsCommand({
       limit,

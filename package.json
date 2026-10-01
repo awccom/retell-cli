@@ -12,7 +12,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
     "dev": "npm run build -- --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -48,7 +48,7 @@
   },
   "homepage": "https://github.com/awccom/retell-cli#readme",
   "engines": {
-    "node": ">=18.10.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "commander": "^15.0.0",

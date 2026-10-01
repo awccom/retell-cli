@@ -1092,7 +1092,9 @@ retell agents publish agent_456
 
 ### Error Format
 
-All errors are returned as JSON for easy parsing:
+Every failure — including usage errors like unknown commands, unknown options,
+and missing arguments — exits with code `1` and writes JSON to **stderr**.
+Successful output is JSON on **stdout**.
 
 ```json
 {
@@ -1101,11 +1103,32 @@ All errors are returned as JSON for easy parsing:
 }
 ```
 
-**Common error codes:**
-- `AUTHENTICATION_ERROR` - Invalid API key
+API errors also include `status` (HTTP status) and `api_message` (Retell's own
+message). Usage errors may include `suggestion` (for example, `"agents"` for a
+mistyped `agnets`).
+
+**Error codes:**
+- `USAGE_ERROR` - Unknown command/option or missing argument
+- `VALIDATION_ERROR` - Invalid flag value or input
+- `NO_CONFIG` / `INVALID_CONFIG` / `INVALID_JSON` - Missing or unreadable credentials config
+- `AUTH_ERROR` - Invalid API key
+- `PERMISSION_DENIED` - API key lacks permission
 - `NOT_FOUND` - Resource not found
+- `BAD_REQUEST` / `API_ERROR` - Request rejected by the Retell API
+- `RATE_LIMIT` - Rate limited; retry later
+- `SERVER_ERROR` / `CONNECTION_ERROR` / `TIMEOUT_ERROR` - Transient; retry later
 - `CUSTOM_LLM_ERROR` - Cannot manage custom LLM agents
 - `TYPE_MISMATCH` - Prompt file type doesn't match agent type
+
+### Compact Output for Agents
+
+Pass `--compact` (or set `RETELL_OUTPUT=compact`) to emit single-line JSON on
+stdout and stderr. This saves tokens when an AI agent consumes the output:
+
+```bash
+retell --compact agents list --fields agent_id,agent_name
+RETELL_OUTPUT=compact retell transcripts list --limit 5
+```
 
 ## Troubleshooting
 

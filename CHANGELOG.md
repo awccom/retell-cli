@@ -5,6 +5,24 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Requires Node.js 22.12 or newer** (commander 15). Build target is now `node22`.
+- Updated to `retell-sdk` 6.0.1. SDK 6 removed `getVersions`; `agents versions`, `chat-agents versions`, `agent-publish`, and `chat-agents publish` now use the paginated `listVersions` endpoint and fetch every page. `agents versions` returns `base_version`, `version_title`, and `version_description`; `agent_name` is no longer available per version.
+- Updated commander 15, zod 4, TypeScript 7, vitest 5, and esbuild 0.28. Removed the unused `dotenv` and `microdiff` dependencies.
+- Usage errors (unknown command or option, missing argument) and flag-validation errors are now JSON on stderr with codes `USAGE_ERROR` / `VALIDATION_ERROR`; a mistyped command adds a `suggestion` field.
+- API errors include `status` and `api_message`; config errors keep their specific codes (`NO_CONFIG`, `INVALID_CONFIG`, `INVALID_JSON`) instead of `UNKNOWN_ERROR`.
+
+### Added
+
+- Global `--compact` flag and `RETELL_OUTPUT=compact` for single-line JSON output.
+
+### Fixed
+
+- Request timeouts now report `TIMEOUT_ERROR` instead of `CONNECTION_ERROR`.
+
 ## [1.10.0] - 2026-08-07
 
 ### Added
