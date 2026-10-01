@@ -7,6 +7,7 @@
 import { getRetellClient } from "../../services/retell-client";
 import { outputJson, handleSdkError } from "../../services/output-formatter";
 import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import { listAllAgentVersions } from "../../services/agent-versions";
 import { findNewestUnpublishedVersion } from "../../services/version-selection";
 
 export interface PublishChatAgentOptions {
@@ -25,7 +26,7 @@ export async function publishChatAgentCommand(
       options.version !== undefined
         ? parsePositiveIntegerFlag(options.version, "--version")
         : findNewestUnpublishedVersion(
-            await client.chatAgent.getVersions(agentId),
+            await listAllAgentVersions(client, agentId),
             "chat agent",
           );
 

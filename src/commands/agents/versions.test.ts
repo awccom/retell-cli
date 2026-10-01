@@ -28,14 +28,14 @@ describe("agentVersionsCommand", () => {
     {
       version: 1,
       is_published: true,
-      agent_name: "Test Agent",
+      version_title: "Launch",
       last_modification_timestamp: 1700000000000,
       extra_field: "ignored",
     },
     {
       version: 2,
       is_published: false,
-      agent_name: "Test Agent v2",
+      base_version: 1,
       last_modification_timestamp: 1700100000000,
       extra_field: "also ignored",
     },
@@ -46,7 +46,9 @@ describe("agentVersionsCommand", () => {
 
     mockClient = {
       agent: {
-        getVersions: vi.fn().mockResolvedValue(mockVersions),
+        listVersions: vi
+          .fn()
+          .mockResolvedValue({ has_more: false, items: mockVersions }),
       },
     };
 
@@ -57,30 +59,59 @@ describe("agentVersionsCommand", () => {
     it("should list agent versions with formatted output", async () => {
       await agentVersionsCommand("agent_123");
 
-      expect(mockClient.agent.getVersions).toHaveBeenCalledWith("agent_123");
+      expect(mockClient.agent.listVersions).toHaveBeenCalledWith("agent_123", {
+        limit: 100,
+      });
       expect(outputFormatter.outputJson).toHaveBeenCalledWith([
         {
           version: 1,
           is_published: true,
-          agent_name: "Test Agent",
           last_modification_timestamp: 1700000000000,
+          base_version: undefined,
+          version_title: "Launch",
+          version_description: undefined,
         },
         {
           version: 2,
           is_published: false,
-          agent_name: "Test Agent v2",
           last_modification_timestamp: 1700100000000,
+          base_version: 1,
+          version_title: undefined,
+          version_description: undefined,
         },
       ]);
     });
 
     it("should handle empty versions list", async () => {
-      mockClient.agent.getVersions.mockResolvedValue([]);
+      mockClient.agent.listVersions.mockResolvedValue({
+        has_more: false,
+        items: [],
+      });
 
       await agentVersionsCommand("agent_123");
 
       expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
     });
+  });
+
+  it("should follow pagination keys until has_more is false", async () => {
+    mockClient.agent.listVersions
+      .mockResolvedValueOnce({
+        has_more: true,
+        pagination_key: "next",
+        items: [mockVersions[0]],
+      })
+      .mockResolvedValueOnce({ has_more: false, items: [mockVersions[1]] });
+
+    await agentVersionsCommand("agent_123");
+
+    expect(mockClient.agent.listVersions).toHaveBeenNthCalledWith(
+      2,
+      "agent_123",
+      { limit: 100, pagination_key: "next" },
+    );
+    const output = vi.mocked(outputFormatter.outputJson).mock.calls[0][0];
+    expect(output).toHaveLength(2);
   });
 
   describe("field filtering", () => {
@@ -99,7 +130,7 @@ describe("agentVersionsCommand", () => {
   describe("error handling", () => {
     it("should handle API errors via handleSdkError", async () => {
       const apiError = new Error("Agent not found");
-      mockClient.agent.getVersions.mockRejectedValue(apiError);
+      mockClient.agent.listVersions.mockRejectedValue(apiError);
 
       await agentVersionsCommand("nonexistent_agent");
 

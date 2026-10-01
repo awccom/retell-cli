@@ -28,8 +28,7 @@ export interface ConversationFlowResponseEngine {
  * Union type for response engines
  */
 export type ResponseEngine =
-  | RetellLlmResponseEngine
-  | ConversationFlowResponseEngine;
+  RetellLlmResponseEngine | ConversationFlowResponseEngine;
 
 // ===== TEST CASE DEFINITION TYPES =====
 
@@ -37,11 +36,7 @@ export type ResponseEngine =
  * Available test metrics
  */
 export type TestMetric =
-  | "response_quality"
-  | "task_completion"
-  | "latency"
-  | "sentiment"
-  | "custom";
+  "response_quality" | "task_completion" | "latency" | "sentiment" | "custom";
 
 /**
  * Tool mock input match rule - matches any input
@@ -62,8 +57,7 @@ export interface ToolMockInputMatchRulePartial {
  * Union type for tool mock input match rules
  */
 export type ToolMockInputMatchRule =
-  | ToolMockInputMatchRuleAny
-  | ToolMockInputMatchRulePartial;
+  ToolMockInputMatchRuleAny | ToolMockInputMatchRulePartial;
 
 /**
  * Tool mock definition

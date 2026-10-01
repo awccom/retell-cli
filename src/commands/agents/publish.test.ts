@@ -20,11 +20,14 @@ describe("publishAgentCommand", () => {
     vi.clearAllMocks();
     mockClient = {
       agent: {
-        getVersions: vi.fn().mockResolvedValue([
-          { version: 1, is_published: true },
-          { version: 5, is_published: false },
-          { version: 3, is_published: false },
-        ]),
+        listVersions: vi.fn().mockResolvedValue({
+          has_more: false,
+          items: [
+            { version: 1, is_published: true },
+            { version: 5, is_published: false },
+            { version: 3, is_published: false },
+          ],
+        }),
         publish: vi.fn().mockResolvedValue(undefined),
         retrieve: vi.fn().mockResolvedValue({
           agent_id: "agent_1",
@@ -61,16 +64,19 @@ describe("publishAgentCommand", () => {
   it("auto-selects the newest unpublished version", async () => {
     await publishAgentCommand("agent_1");
 
-    expect(mockClient.agent.getVersions).toHaveBeenCalledWith("agent_1");
+    expect(mockClient.agent.listVersions).toHaveBeenCalledWith("agent_1", {
+      limit: 100,
+    });
     expect(mockClient.agent.publish).toHaveBeenCalledWith("agent_1", {
       version: 5,
     });
   });
 
   it("rejects publish when no unpublished draft exists", async () => {
-    mockClient.agent.getVersions.mockResolvedValue([
-      { version: 1, is_published: true },
-    ]);
+    mockClient.agent.listVersions.mockResolvedValue({
+      has_more: false,
+      items: [{ version: 1, is_published: true }],
+    });
 
     await publishAgentCommand("agent_1");
 

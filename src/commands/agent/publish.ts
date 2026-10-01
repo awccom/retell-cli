@@ -8,6 +8,7 @@
 import { getRetellClient } from "../../services/retell-client";
 import { outputJson, handleSdkError } from "../../services/output-formatter";
 import { parsePositiveIntegerFlag } from "../../services/numeric-flag";
+import { listAllAgentVersions } from "../../services/agent-versions";
 import { findNewestUnpublishedVersion } from "../../services/version-selection";
 
 export interface PublishAgentOptions {
@@ -48,7 +49,7 @@ export async function publishAgentCommand(
       options.version !== undefined
         ? parsePositiveIntegerFlag(options.version, "--version")
         : findNewestUnpublishedVersion(
-            await client.agent.getVersions(agentId),
+            await listAllAgentVersions(client, agentId),
             "agent",
           );
 

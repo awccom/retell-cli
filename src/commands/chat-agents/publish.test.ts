@@ -19,12 +19,17 @@ describe("publishChatAgentCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClient = {
+      agent: {
+        listVersions: vi.fn().mockResolvedValue({
+          has_more: false,
+          items: [
+            { version: 1, is_published: true },
+            { version: 3, is_published: false },
+            { version: 2, is_published: false },
+          ],
+        }),
+      },
       chatAgent: {
-        getVersions: vi.fn().mockResolvedValue([
-          { version: 1, is_published: true },
-          { version: 3, is_published: false },
-          { version: 2, is_published: false },
-        ]),
         publish: vi.fn().mockResolvedValue(undefined),
       },
     };
@@ -54,16 +59,19 @@ describe("publishChatAgentCommand", () => {
   it("auto-selects the newest unpublished version", async () => {
     await publishChatAgentCommand("ca_1");
 
-    expect(mockClient.chatAgent.getVersions).toHaveBeenCalledWith("ca_1");
+    expect(mockClient.agent.listVersions).toHaveBeenCalledWith("ca_1", {
+      limit: 100,
+    });
     expect(mockClient.chatAgent.publish).toHaveBeenCalledWith("ca_1", {
       version: 3,
     });
   });
 
   it("rejects publish when no unpublished draft exists", async () => {
-    mockClient.chatAgent.getVersions.mockResolvedValue([
-      { version: 1, is_published: true },
-    ]);
+    mockClient.agent.listVersions.mockResolvedValue({
+      has_more: false,
+      items: [{ version: 1, is_published: true }],
+    });
 
     await publishChatAgentCommand("ca_1");
 
