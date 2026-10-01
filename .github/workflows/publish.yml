@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   publish:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    # npm trusted publishing (OIDC) supports only GitHub-hosted runners;
+    # on Blacksmith/self-hosted runners `npm publish` fails with E404.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
