@@ -174,7 +174,21 @@ function setNestedValue(obj: any, path: string, value: any): void {
  * @param data Data to output as JSON
  */
 export function outputJson(data: unknown): void {
-  console.log(JSON.stringify(data, null, 2));
+  console.log(stringify(data));
+}
+
+/**
+ * Whether compact (single-line) JSON output is enabled.
+ * Set via the global `--compact` flag or RETELL_OUTPUT=compact.
+ */
+export function isCompactOutput(): boolean {
+  return process.env.RETELL_OUTPUT === "compact";
+}
+
+function stringify(data: unknown): string {
+  return isCompactOutput()
+    ? JSON.stringify(data)
+    : JSON.stringify(data, null, 2);
 }
 
 /**
@@ -183,14 +197,30 @@ export function outputJson(data: unknown): void {
  * @param error Error message or Error object
  * @param code Error code (defaults to 'UNKNOWN_ERROR')
  */
-export function outputError(error: Error | string, code?: string): never {
+export function outputError(
+  error: Error | string,
+  code?: string,
+  details?: Record<string, unknown>,
+): never {
   const errorObj = {
     error: typeof error === "string" ? error : error.message,
     code: code || "UNKNOWN_ERROR",
+    ...details,
   };
 
-  console.error(JSON.stringify(errorObj, null, 2));
+  console.error(stringify(errorObj));
   process.exit(1);
+}
+
+/**
+ * Extract machine-useful details from a Retell SDK API error: the HTTP status
+ * and the API's own message, which the friendly messages below would hide.
+ */
+function apiErrorDetails(error: InstanceType<typeof Retell.APIError>) {
+  const details: Record<string, unknown> = {};
+  if (typeof error.status === "number") details.status = error.status;
+  if (error.message) details.api_message = error.message;
+  return details;
 }
 
 /**
@@ -204,29 +234,35 @@ export function outputError(error: Error | string, code?: string): never {
 export function handleSdkError(error: unknown): never {
   // Handle Retell SDK errors
   if (error instanceof Retell.NotFoundError) {
-    outputError("Resource not found", "NOT_FOUND");
+    outputError("Resource not found", "NOT_FOUND", apiErrorDetails(error));
   }
 
   if (error instanceof Retell.AuthenticationError) {
     outputError(
       "Authentication failed. Invalid API key. Please run `retell login` to authenticate.",
       "AUTH_ERROR",
+      apiErrorDetails(error),
     );
   }
 
   if (error instanceof Retell.BadRequestError) {
     const message = error.message || "Invalid request parameters";
-    outputError(message, "BAD_REQUEST");
+    outputError(message, "BAD_REQUEST", apiErrorDetails(error));
   }
 
   if (error instanceof Retell.RateLimitError) {
-    outputError("Rate limit exceeded. Please try again later.", "RATE_LIMIT");
+    outputError(
+      "Rate limit exceeded. Please try again later.",
+      "RATE_LIMIT",
+      apiErrorDetails(error),
+    );
   }
 
   if (error instanceof Retell.PermissionDeniedError) {
     outputError(
       "Permission denied. Check your API key permissions.",
       "PERMISSION_DENIED",
+      apiErrorDetails(error),
     );
   }
 
@@ -234,6 +270,15 @@ export function handleSdkError(error: unknown): never {
     outputError(
       "Retell API server error. Please try again later.",
       "SERVER_ERROR",
+      apiErrorDetails(error),
+    );
+  }
+
+  // Timeout subclasses APIConnectionError, so it must be checked first
+  if (error instanceof Retell.APIConnectionTimeoutError) {
+    outputError(
+      "Request to Retell API timed out. Please try again.",
+      "TIMEOUT_ERROR",
     );
   }
 
@@ -244,17 +289,10 @@ export function handleSdkError(error: unknown): never {
     );
   }
 
-  if (error instanceof Retell.APIConnectionTimeoutError) {
-    outputError(
-      "Request to Retell API timed out. Please try again.",
-      "TIMEOUT_ERROR",
-    );
-  }
-
   if (error instanceof Retell.APIError) {
     // Generic API error
     const message = error.message || "An API error occurred";
-    outputError(message, "API_ERROR");
+    outputError(message, "API_ERROR", apiErrorDetails(error));
   }
 
   // Non-SDK errors
@@ -262,6 +300,11 @@ export function handleSdkError(error: unknown): never {
     // Check if it's a ValidationError (by name, to avoid circular dependencies)
     if (error.name === "ValidationError") {
       outputError(error.message, "VALIDATION_ERROR");
+    }
+    // ConfigError carries its own code (NO_CONFIG, INVALID_CONFIG, ...)
+    const code = (error as { code?: unknown }).code;
+    if (error.name === "ConfigError" && typeof code === "string") {
+      outputError(error.message, code);
     }
     outputError(error.message, "UNKNOWN_ERROR");
   }

@@ -11,7 +11,8 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { filterFields } from "./output-formatter";
+import Retell from "retell-sdk";
+import { filterFields, handleSdkError, outputJson } from "./output-formatter";
 
 describe("filterFields", () => {
   describe("top-level field selection", () => {
@@ -446,5 +447,73 @@ describe("filterFields", () => {
         { role: "user", content: "I need help" },
       ]);
     });
+  });
+});
+
+describe("handleSdkError agent-facing details", () => {
+  it("includes HTTP status and API message for API errors", () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation((() => undefined) as never);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const apiError = Retell.APIError.generate(
+      422,
+      { message: "bad" },
+      "unprocessable",
+      new Headers(),
+    );
+
+    handleSdkError(apiError);
+
+    const payload = JSON.parse(err.mock.calls[0][0] as string);
+    expect(payload).toMatchObject({ code: "API_ERROR", status: 422 });
+    expect(payload.api_message).toBe("422 bad");
+    expect(exit).toHaveBeenCalledWith(1);
+    exit.mockRestore();
+    err.mockRestore();
+  });
+
+  it("classifies timeouts before generic connection errors", () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation((() => undefined) as never);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    handleSdkError(new Retell.APIConnectionTimeoutError());
+
+    expect(JSON.parse(err.mock.calls[0][0] as string).code).toBe(
+      "TIMEOUT_ERROR",
+    );
+    exit.mockRestore();
+    err.mockRestore();
+  });
+
+  it("preserves ConfigError codes", () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation((() => undefined) as never);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const configError = Object.assign(new Error("No configuration found"), {
+      name: "ConfigError",
+      code: "NO_CONFIG",
+    });
+
+    handleSdkError(configError);
+
+    expect(JSON.parse(err.mock.calls[0][0] as string).code).toBe("NO_CONFIG");
+    exit.mockRestore();
+    err.mockRestore();
+  });
+
+  it("emits single-line JSON when RETELL_OUTPUT=compact", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.env.RETELL_OUTPUT = "compact";
+    try {
+      outputJson({ a: 1, b: [2] });
+    } finally {
+      delete process.env.RETELL_OUTPUT;
+    }
+    expect(log).toHaveBeenCalledWith('{"a":1,"b":[2]}');
+    log.mockRestore();
   });
 });

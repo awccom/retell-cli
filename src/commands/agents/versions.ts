@@ -11,6 +11,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { listAllAgentVersions } from "../../services/agent-versions";
 
 export interface AgentVersionsOptions {
   fields?: string;
@@ -29,13 +30,15 @@ export async function agentVersionsCommand(
   try {
     const client = getRetellClient();
 
-    const versions = await client.agent.getVersions(agentId);
+    const versions = await listAllAgentVersions(client, agentId);
 
     // Format output showing version details
     const formatted = versions.map((v) => ({
       version: v.version,
       is_published: v.is_published,
-      agent_name: v.agent_name,
+      base_version: v.base_version,
+      version_title: v.version_title,
+      version_description: v.version_description,
       last_modification_timestamp: v.last_modification_timestamp,
     }));
 

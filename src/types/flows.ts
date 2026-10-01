@@ -15,10 +15,7 @@ export type StartSpeaker = "user" | "agent";
  * Model choice options for conversation flows
  */
 export type ModelChoice =
-  | "gpt-4o"
-  | "gpt-4o-mini"
-  | "claude-3.5-sonnet"
-  | "claude-3.5-haiku";
+  "gpt-4o" | "gpt-4o-mini" | "claude-3.5-sonnet" | "claude-3.5-haiku";
 
 /**
  * Conversation flow object from the API (simplified)

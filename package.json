@@ -1,6 +1,6 @@
 {
   "name": "retell-cli",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "description": "Community CLI for Retell AI - efficient access to transcripts, agents, and prompts for AI assistants without MCP overhead",
   "main": "dist/index.js",
   "bin": {
@@ -12,7 +12,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\" --external:readline --packages=external",
     "dev": "npm run build -- --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -48,23 +48,21 @@
   },
   "homepage": "https://github.com/awccom/retell-cli#readme",
   "engines": {
-    "node": ">=18.10.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "dotenv": "^17.0.0",
-    "microdiff": "^1.5.0",
-    "retell-sdk": "5.60.0",
-    "zod": "^3.25.0"
+    "commander": "^15.0.0",
+    "retell-sdk": "6.0.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^4.0.0",
-    "esbuild": "^0.27.0",
-    "prettier": "^3.8.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.0.0",
-    "vitest": "^4.0.0"
+    "@types/node": "^22.20.4",
+    "@vitest/coverage-v8": "^5.0.3",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   },
   "overrides": {
     "whatwg-url": "^14.0.0",

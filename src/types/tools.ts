@@ -26,9 +26,7 @@ export type RetellLlmToolType =
  * All supported tool types in Conversation Flow agents
  */
 export type ConversationFlowToolType =
-  | "custom"
-  | "check_availability_cal"
-  | "book_appointment_cal";
+  "custom" | "check_availability_cal" | "book_appointment_cal";
 
 // ===== BASE TOOL INTERFACES =====
 
@@ -123,9 +121,7 @@ export interface AgentSwapTool extends BaseTool {
   swap_to_agent_id: string;
   transfer_call_info_to_swapped_agent?: boolean;
   webhook_setting?:
-    | "both_agents"
-    | "only_destination_agent"
-    | "only_source_agent";
+    "both_agents" | "only_destination_agent" | "only_source_agent";
 }
 
 /**
@@ -257,9 +253,7 @@ export interface ToolsErrorResult {
  * Union type for all possible tool resolution results
  */
 export type ToolsSource =
-  | RetellLlmToolsResult
-  | ConversationFlowToolsResult
-  | ToolsErrorResult;
+  RetellLlmToolsResult | ConversationFlowToolsResult | ToolsErrorResult;
 
 // ===== COMMAND OUTPUT TYPES =====
 

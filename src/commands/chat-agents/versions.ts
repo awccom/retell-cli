@@ -8,6 +8,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { listAllAgentVersions } from "../../services/agent-versions";
 
 export interface ChatAgentVersionsOptions {
   fields?: string;
@@ -19,7 +20,7 @@ export async function chatAgentVersionsCommand(
 ): Promise<void> {
   try {
     const client = getRetellClient();
-    const versions = await client.chatAgent.getVersions(agentId);
+    const versions = await listAllAgentVersions(client, agentId);
 
     const output = options.fields
       ? filterFields(

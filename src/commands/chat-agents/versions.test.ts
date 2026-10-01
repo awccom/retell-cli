@@ -20,19 +20,25 @@ describe("chatAgentVersionsCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClient = {
-      chatAgent: { getVersions: vi.fn().mockResolvedValue([]) },
+      agent: {
+        listVersions: vi.fn().mockResolvedValue({ has_more: false, items: [] }),
+      },
     };
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
   });
 
   it("retrieves versions for the chat agent", async () => {
     await chatAgentVersionsCommand("ca_1");
-    expect(mockClient.chatAgent.getVersions).toHaveBeenCalledWith("ca_1");
+    expect(mockClient.agent.listVersions).toHaveBeenCalledWith("ca_1", {
+      limit: 100,
+    });
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith([]);
   });
 
   it("routes SDK errors through handleSdkError", async () => {
-    mockClient.chatAgent.getVersions.mockRejectedValue(new Error("api"));
+    const err = new Error("api");
+    mockClient.agent.listVersions.mockRejectedValue(err);
     await chatAgentVersionsCommand("ca_1");
-    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(err);
   });
 });
