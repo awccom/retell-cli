@@ -572,9 +572,17 @@ prompts
     ".retell-prompts",
   )
   .option("--dry-run", "Preview changes without applying them", false)
+  .option(
+    "--force",
+    "Overwrite remote prompts even if they changed since the last pull",
+    false,
+  )
   .addHelpText(
     "after",
     `
+Fails with REMOTE_CHANGED if the remote prompts were modified after the last
+pull. Pull again (or diff) to sync, or pass --force to overwrite.
+
 Examples:
   $ retell prompts update agent_123abc --source my-prompts.json --dry-run
   $ retell prompts update agent_123abc --source my-prompts.json

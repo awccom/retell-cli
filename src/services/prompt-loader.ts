@@ -28,12 +28,18 @@ export type LocalPrompts =
   | {
       type: "retell-llm";
       metadata: LocalMetadata;
-      prompts: Omit<RetellLlmPrompts, "llm_id" | "version">;
+      prompts: Omit<
+        RetellLlmPrompts,
+        "llm_id" | "version" | "last_modification_timestamp"
+      >;
     }
   | {
       type: "conversation-flow";
       metadata: LocalMetadata;
-      prompts: Omit<FlowPrompts, "conversation_flow_id" | "version">;
+      prompts: Omit<
+        FlowPrompts,
+        "conversation_flow_id" | "version" | "last_modification_timestamp"
+      >;
     };
 
 /**

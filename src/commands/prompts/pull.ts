@@ -141,6 +141,7 @@ function saveRetellLlmPrompts(
     agent_name: agentName,
     llm_id: llmId,
     version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
     pulled_at: new Date().toISOString(),
   };
   writeFileSync(
@@ -190,6 +191,7 @@ function saveConversationFlowPrompts(
     agent_name: agentName,
     conversation_flow_id: flowId,
     version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
     pulled_at: new Date().toISOString(),
   };
   writeFileSync(

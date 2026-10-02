@@ -6,7 +6,7 @@
  * the agent's LLM config or conversation flow.
  */
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, writeFileSync } from "fs";
 import { join } from "path";
 import { resolvePromptSource } from "../../services/prompt-resolver";
 import { getRetellClient } from "../../services/retell-client";
@@ -24,6 +24,7 @@ import { generateDiff } from "../../services/prompt-diff";
 interface UpdateOptions {
   source?: string; // Source directory (default: .retell-prompts)
   dryRun?: boolean; // Preview changes without applying them
+  force?: boolean; // Overwrite even if remote changed since last pull
 }
 
 /**
@@ -35,7 +36,65 @@ interface LocalMetadata {
   llm_id?: string;
   conversation_flow_id?: string;
   version: number;
+  remote_modified_at?: number; // last_modification_timestamp at pull time
   pulled_at: string;
+}
+
+/**
+ * Remote state relevant to conflict detection
+ */
+interface RemoteState {
+  version: number;
+  last_modification_timestamp?: number;
+}
+
+/**
+ * Describes why the remote is considered newer than the local copy
+ */
+export interface RemoteConflict {
+  local_version: number;
+  remote_version: number;
+  local_modified_at?: number;
+  remote_modified_at?: number;
+  reason: "remote_modified" | "remote_version_newer";
+}
+
+/**
+ * Detect whether the remote prompts changed since they were pulled.
+ *
+ * Prefers last_modification_timestamp (catches draft edits that don't bump
+ * the version). Falls back to version comparison for metadata written by
+ * older CLI releases that didn't record the timestamp.
+ */
+export function detectRemoteConflict(
+  metadata: Pick<LocalMetadata, "version" | "remote_modified_at">,
+  remote: RemoteState,
+): RemoteConflict | null {
+  const base = {
+    local_version: metadata.version,
+    remote_version: remote.version,
+    local_modified_at: metadata.remote_modified_at,
+    remote_modified_at: remote.last_modification_timestamp,
+  };
+
+  if (
+    typeof metadata.remote_modified_at === "number" &&
+    typeof remote.last_modification_timestamp === "number"
+  ) {
+    return remote.last_modification_timestamp > metadata.remote_modified_at
+      ? { ...base, reason: "remote_modified" }
+      : null;
+  }
+
+  if (
+    typeof metadata.version === "number" &&
+    typeof remote.version === "number" &&
+    remote.version > metadata.version
+  ) {
+    return { ...base, reason: "remote_version_newer" };
+  }
+
+  return null;
 }
 
 /**
@@ -53,6 +112,29 @@ function validateAgentId(agentId: string): void {
     throw new Error(
       "Invalid agent ID: cannot contain path separators or traversal sequences",
     );
+  }
+}
+
+/**
+ * After a successful update, record the new remote state so the next update
+ * from this same local copy isn't flagged as a conflict.
+ */
+function recordRemoteState(
+  metadataPath: string,
+  metadata: LocalMetadata,
+  updated: { version?: number; last_modification_timestamp?: number } | null,
+): void {
+  if (!updated) return;
+  const next: LocalMetadata = {
+    ...metadata,
+    version: updated.version ?? metadata.version,
+    remote_modified_at:
+      updated.last_modification_timestamp ?? metadata.remote_modified_at,
+  };
+  try {
+    writeFileSync(metadataPath, JSON.stringify(next, null, 2));
+  } catch {
+    // Non-fatal: the remote update already succeeded.
   }
 }
 
@@ -115,6 +197,9 @@ export async function updatePromptsCommand(
       return;
     }
 
+    // Detect remote changes made since the local copy was pulled
+    const conflict = detectRemoteConflict(metadata, promptSource.prompts);
+
     // Handle dry-run mode
     if (options.dryRun) {
       // Load local prompts
@@ -139,7 +224,20 @@ export async function updatePromptsCommand(
       outputJson({
         message: "Dry run - no changes applied",
         ...diff,
+        ...(conflict && {
+          remote_conflict: conflict,
+          warning: `Remote prompts changed since last pull; a real update would be refused without --force. Run 'retell prompts pull ${agentId}' to sync.`,
+        }),
       });
+      return;
+    }
+
+    if (conflict && !options.force) {
+      outputError(
+        `Remote prompts changed since they were pulled (local version ${conflict.local_version}, remote version ${conflict.remote_version}). Updating would overwrite those changes. Run 'retell prompts pull ${agentId}' to sync (this overwrites local files), 'retell prompts diff ${agentId}' to compare, or re-run with --force to overwrite the remote.`,
+        "REMOTE_CHANGED",
+        { ...conflict },
+      );
       return;
     }
 
@@ -159,7 +257,11 @@ export async function updatePromptsCommand(
       promptSource.type === "retell-llm" &&
       localPrompts.type === "retell-llm"
     ) {
-      await client.llm.update(promptSource.llmId, localPrompts.prompts as any);
+      const updated = await client.llm.update(
+        promptSource.llmId,
+        localPrompts.prompts as any,
+      );
+      recordRemoteState(metadataPath, metadata, updated);
 
       outputJson({
         message: "Prompts updated successfully (draft version)",
@@ -173,10 +275,11 @@ export async function updatePromptsCommand(
       promptSource.type === "conversation-flow" &&
       localPrompts.type === "conversation-flow"
     ) {
-      await client.conversationFlow.update(
+      const updated = await client.conversationFlow.update(
         promptSource.flowId,
         localPrompts.prompts as any,
       );
+      recordRemoteState(metadataPath, metadata, updated);
 
       outputJson({
         message: "Prompts updated successfully (draft version)",
