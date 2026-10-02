@@ -18,6 +18,8 @@ import { getRetellClient } from "./retell-client";
 export type RetellLlmPrompts = {
   llm_id: string;
   version: number;
+  /** Remote last_modification_timestamp (ms since epoch); changes on draft edits */
+  last_modification_timestamp?: number;
   general_prompt: string;
   begin_message?: string;
   states?: Array<{
@@ -41,6 +43,8 @@ export interface ConversationFlowNode {
 export type FlowPrompts = {
   conversation_flow_id: string;
   version: number;
+  /** Remote last_modification_timestamp (ms since epoch); changes on draft edits */
+  last_modification_timestamp?: number;
   global_prompt: string;
   nodes: ConversationFlowNode[];
 };
@@ -104,6 +108,7 @@ export async function resolvePromptSource(
       prompts: {
         llm_id: llm.llm_id!,
         version: llm.version!,
+        last_modification_timestamp: llm.last_modification_timestamp,
         general_prompt: llm.general_prompt!,
         begin_message: llm.begin_message ?? undefined,
         states: (llm.states ?? undefined) as any,
@@ -124,6 +129,7 @@ export async function resolvePromptSource(
       prompts: {
         conversation_flow_id: flow.conversation_flow_id!,
         version: flow.version!,
+        last_modification_timestamp: flow.last_modification_timestamp,
         global_prompt: flow.global_prompt!,
         nodes: (flow.nodes ?? []) as any,
       },

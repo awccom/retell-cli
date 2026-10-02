@@ -5,6 +5,16 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `prompts update` now refuses to overwrite remote prompts that changed after the last `prompts pull` (`REMOTE_CHANGED`), using the remote modification timestamp recorded in `metadata.json`. Pass `--force` to overwrite; `--dry-run` reports the conflict as `remote_conflict`. Directories pulled by older releases fall back to version comparison.
+
+### Fixed
+
+- `prompts pull`, `prompts diff`, and `prompts update` help and README now describe `--output`/`--source` as a base directory (`<dir>/<agent_id>/`), not a `.json` file.
+
 ## [2.0.0] - 2026-10-01
 
 ### Changed

@@ -346,18 +346,18 @@ retell agents publish agent_123abc --version 15 \
 
 #### `retell prompts pull <agent_id> [options]`
 
-Download agent prompts to a local file.
+Download agent prompts to local files in `<dir>/<agent_id>/` (`metadata.json` plus `general_prompt.md`, `begin_message.txt`, and `states/` for Retell LLM agents, or `global_prompt.md` and `nodes.json` for conversation flows).
 
 **Options:**
-- `-o, --output <path>` - Output file path (default: `.retell-prompts/<agent_id>.json`)
+- `-o, --output <dir>` - Base directory (default: `.retell-prompts`)
 
 **Examples:**
 ```bash
-# Pull to default location
+# Pull to .retell-prompts/agent_123abc/
 retell prompts pull agent_123abc
 
-# Pull to specific file
-retell prompts pull agent_123abc --output my-prompts.json
+# Pull to ./my-prompts/agent_123abc/
+retell prompts pull agent_123abc --output ./my-prompts
 ```
 
 #### `retell prompts diff <agent_id> [options]`
@@ -365,7 +365,7 @@ retell prompts pull agent_123abc --output my-prompts.json
 Show differences between local and remote prompts before applying updates.
 
 **Options:**
-- `-s, --source <path>` - Source directory path (default: `.retell-prompts`)
+- `-s, --source <dir>` - Base directory containing `<agent_id>/` from a previous pull (default: `.retell-prompts`)
 - `-f, --fields <fields>` - Comma-separated list of fields to return
 
 **Examples:**
@@ -398,19 +398,25 @@ retell prompts diff agent_123abc --fields has_changes,changes.general_prompt
 
 #### `retell prompts update <agent_id> [options]`
 
-Update agent prompts from a local file.
+Update agent prompts from the local files written by `prompts pull`.
 
 **Options:**
-- `-s, --source <path>` - Source file path (default: `.retell-prompts/<agent_id>.json`)
+- `-s, --source <dir>` - Base directory containing `<agent_id>/` from a previous pull (default: `.retell-prompts`)
 - `--dry-run` - Preview changes without applying them
+- `--force` - Overwrite remote prompts even if they changed since the last pull
+
+If the remote prompts were modified after your last pull (for example, edited in the Retell dashboard), `update` fails with `REMOTE_CHANGED` instead of overwriting them. Run `prompts diff` to compare, `prompts pull` to sync (this overwrites local files), or pass `--force` to overwrite the remote. `--dry-run` reports the conflict as `remote_conflict`. The agent being repointed to a different LLM or conversation flow is also reported as `REMOTE_CHANGED` (reason `resource_changed`). Retell has no compare-and-set, so an edit made in the moment between the check and the write can still be overwritten.
 
 **Examples:**
 ```bash
 # Dry run first (recommended)
-retell prompts update agent_123abc --source my-prompts.json --dry-run
+retell prompts update agent_123abc --dry-run
 
 # Apply changes
-retell prompts update agent_123abc --source my-prompts.json
+retell prompts update agent_123abc
+
+# Use a custom base directory
+retell prompts update agent_123abc --source ./my-prompts
 ```
 
 **Important:** After updating prompts, remember to publish the agent:
@@ -1018,16 +1024,17 @@ retell transcripts analyze call_xyz789
 ```bash
 # Pull prompts for all agents
 for agent_id in $(retell agents list | jq -r '.[].agent_id'); do
-  retell prompts pull $agent_id --output "prompts-${agent_id}.json"
+  retell prompts pull $agent_id --output ./prompts
 done
 
-# ... edit prompt files ...
+# ... edit files under ./prompts/<agent_id>/ ...
 
 # Update all agents
-for file in prompts-*.json; do
-  agent_id=$(echo $file | sed 's/prompts-//;s/.json//')
-  retell prompts update $agent_id --source $file
-  retell agents publish $agent_id
+for dir in ./prompts/*/; do
+  agent_id=$(basename "$dir")
+  # Only publish if the update succeeded (e.g. not refused with REMOTE_CHANGED)
+  retell prompts update $agent_id --source ./prompts \
+    && retell agents publish $agent_id
 done
 ```
 

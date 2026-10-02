@@ -7,7 +7,7 @@
  * - conversation-flow: global_prompt.md, nodes.json
  */
 
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { resolvePromptSource } from "../../services/prompt-resolver";
 import {
@@ -87,6 +87,11 @@ export async function pullPromptsCommand(
 
     // Save prompts based on type
     try {
+      // Drop the old sync baseline first. If any write below fails, the
+      // directory has no metadata.json, so `prompts update` refuses to upload
+      // a partially refreshed copy instead of treating it as in sync.
+      rmSync(join(agentDir, "metadata.json"), { force: true });
+
       if (promptSource.type === "retell-llm") {
         saveRetellLlmPrompts(agentDir, promptSource);
       } else if (promptSource.type === "conversation-flow") {
@@ -135,33 +140,25 @@ function saveRetellLlmPrompts(
 ): void {
   const { prompts, llmId, agentName } = promptSource;
 
-  // Save metadata
-  const metadata = {
-    type: "retell-llm",
-    agent_name: agentName,
-    llm_id: llmId,
-    version: prompts.version,
-    pulled_at: new Date().toISOString(),
-  };
-  writeFileSync(
-    join(agentDir, "metadata.json"),
-    JSON.stringify(metadata, null, 2),
-  );
-
   // Save general prompt as markdown
   writeFileSync(
     join(agentDir, "general_prompt.md"),
     prompts.general_prompt || "",
   );
 
-  // Save begin message if present
+  // Save begin message if present; remove a stale copy from an earlier pull
+  // so it isn't later re-uploaded as a local addition.
+  const beginMessagePath = join(agentDir, "begin_message.txt");
   if (prompts.begin_message) {
-    writeFileSync(join(agentDir, "begin_message.txt"), prompts.begin_message);
+    writeFileSync(beginMessagePath, prompts.begin_message);
+  } else {
+    rmSync(beginMessagePath, { force: true });
   }
 
-  // Save states if present
+  // Replace states/ wholesale so states removed remotely don't linger locally
+  const statesDir = join(agentDir, "states");
+  rmSync(statesDir, { recursive: true, force: true });
   if (prompts.states && prompts.states.length > 0) {
-    const statesDir = join(agentDir, "states");
     mkdirSync(statesDir, { recursive: true });
 
     prompts.states.forEach((state) => {
@@ -170,6 +167,28 @@ function saveRetellLlmPrompts(
       writeFileSync(join(statesDir, filename), content);
     });
   }
+
+  // Write metadata last: it is the sync baseline for `prompts update`, so it
+  // must only advance once every prompt file has been written.
+  writeMetadata(agentDir, {
+    type: "retell-llm",
+    agent_name: agentName,
+    llm_id: llmId,
+    version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
+    pulled_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Write metadata.json. Called after all prompt files are written so a failed
+ * pull never records a baseline for files that weren't refreshed.
+ */
+function writeMetadata(agentDir: string, metadata: Record<string, unknown>) {
+  writeFileSync(
+    join(agentDir, "metadata.json"),
+    JSON.stringify(metadata, null, 2),
+  );
 }
 
 /**
@@ -184,19 +203,6 @@ function saveConversationFlowPrompts(
 ): void {
   const { prompts, flowId, agentName } = promptSource;
 
-  // Save metadata
-  const metadata = {
-    type: "conversation-flow",
-    agent_name: agentName,
-    conversation_flow_id: flowId,
-    version: prompts.version,
-    pulled_at: new Date().toISOString(),
-  };
-  writeFileSync(
-    join(agentDir, "metadata.json"),
-    JSON.stringify(metadata, null, 2),
-  );
-
   // Save global prompt as markdown
   writeFileSync(
     join(agentDir, "global_prompt.md"),
@@ -208,6 +214,16 @@ function saveConversationFlowPrompts(
     join(agentDir, "nodes.json"),
     JSON.stringify(prompts.nodes, null, 2),
   );
+
+  // Write metadata last (see saveRetellLlmPrompts)
+  writeMetadata(agentDir, {
+    type: "conversation-flow",
+    agent_name: agentName,
+    conversation_flow_id: flowId,
+    version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
+    pulled_at: new Date().toISOString(),
+  });
 }
 
 /**
