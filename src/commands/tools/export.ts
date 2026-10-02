@@ -13,6 +13,7 @@ import {
   handleSdkError,
 } from "../../services/output-formatter";
 import type { ToolsExportOutput } from "../../types/tools";
+import { outputFsError } from "../../services/fs-errors";
 
 /**
  * Options for the export tools command
@@ -108,17 +109,13 @@ export async function exportToolsCommand(
           output_file: options.output,
           total_count: exportData.total_count,
         });
-      } catch (error: any) {
-        if (error.code === "EACCES") {
-          outputError(
-            `Permission denied writing to: ${options.output}`,
-            "PERMISSION_DENIED",
-          );
-        } else if (error.code === "ENOSPC") {
-          outputError("No space left on device", "NO_SPACE");
-        } else {
-          outputError(`Error writing file: ${error.message}`, "WRITE_ERROR");
-        }
+      } catch (error) {
+        return outputFsError(error, {
+          permissionDenied: `Permission denied writing to: ${options.output}`,
+          noSpace: "No space left on device",
+          fallback: "Error writing file",
+          fallbackCode: "WRITE_ERROR",
+        });
       }
     } else {
       // Output to stdout

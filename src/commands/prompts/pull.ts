@@ -15,6 +15,8 @@ import {
   outputError,
   handleSdkError,
 } from "../../services/output-formatter";
+import { DEFAULT_PROMPTS_DIR, PROMPT_FILES } from "../../services/prompt-files";
+import { outputFsError } from "../../services/fs-errors";
 
 /**
  * Options for the pull command
@@ -65,24 +67,19 @@ export async function pullPromptsCommand(
     }
 
     // Determine output directory
-    const baseDir = options.output || ".retell-prompts";
+    const baseDir = options.output || DEFAULT_PROMPTS_DIR;
     const agentDir = join(baseDir, agentId);
 
     // Create agent directory with error handling
     try {
       mkdirSync(agentDir, { recursive: true });
-    } catch (error: any) {
-      if (error.code === "EACCES") {
-        outputError(
-          `Permission denied creating directory: ${agentDir}`,
-          "PERMISSION_DENIED",
-        );
-      } else if (error.code === "ENOSPC") {
-        outputError(`No space left on device: ${agentDir}`, "NO_SPACE");
-      } else {
-        outputError(`Failed to create directory: ${error.message}`, "FS_ERROR");
-      }
-      return;
+    } catch (error) {
+      return outputFsError(error, {
+        permissionDenied: `Permission denied creating directory: ${agentDir}`,
+        noSpace: `No space left on device: ${agentDir}`,
+        fallback: "Failed to create directory",
+        fallbackCode: "FS_ERROR",
+      });
     }
 
     // Save prompts based on type
@@ -90,28 +87,20 @@ export async function pullPromptsCommand(
       // Drop the old sync baseline first. If any write below fails, the
       // directory has no metadata.json, so `prompts update` refuses to upload
       // a partially refreshed copy instead of treating it as in sync.
-      rmSync(join(agentDir, "metadata.json"), { force: true });
+      rmSync(join(agentDir, PROMPT_FILES.METADATA), { force: true });
 
       if (promptSource.type === "retell-llm") {
         saveRetellLlmPrompts(agentDir, promptSource);
       } else if (promptSource.type === "conversation-flow") {
         saveConversationFlowPrompts(agentDir, promptSource);
       }
-    } catch (error: any) {
-      if (error.code === "EACCES") {
-        outputError(
-          `Permission denied writing files to: ${agentDir}`,
-          "PERMISSION_DENIED",
-        );
-      } else if (error.code === "ENOSPC") {
-        outputError(`No space left on device: ${agentDir}`, "NO_SPACE");
-      } else {
-        outputError(
-          `Failed to write prompt files: ${error.message}`,
-          "FS_ERROR",
-        );
-      }
-      return;
+    } catch (error) {
+      return outputFsError(error, {
+        permissionDenied: `Permission denied writing files to: ${agentDir}`,
+        noSpace: `No space left on device: ${agentDir}`,
+        fallback: "Failed to write prompt files",
+        fallbackCode: "FS_ERROR",
+      });
     }
 
     // Output success message
@@ -142,13 +131,13 @@ function saveRetellLlmPrompts(
 
   // Save general prompt as markdown
   writeFileSync(
-    join(agentDir, "general_prompt.md"),
+    join(agentDir, PROMPT_FILES.GENERAL_PROMPT),
     prompts.general_prompt || "",
   );
 
   // Save begin message if present; remove a stale copy from an earlier pull
   // so it isn't later re-uploaded as a local addition.
-  const beginMessagePath = join(agentDir, "begin_message.txt");
+  const beginMessagePath = join(agentDir, PROMPT_FILES.BEGIN_MESSAGE);
   if (prompts.begin_message) {
     writeFileSync(beginMessagePath, prompts.begin_message);
   } else {
@@ -156,7 +145,7 @@ function saveRetellLlmPrompts(
   }
 
   // Replace states/ wholesale so states removed remotely don't linger locally
-  const statesDir = join(agentDir, "states");
+  const statesDir = join(agentDir, PROMPT_FILES.STATES_DIR);
   rmSync(statesDir, { recursive: true, force: true });
   if (prompts.states && prompts.states.length > 0) {
     mkdirSync(statesDir, { recursive: true });
@@ -186,7 +175,7 @@ function saveRetellLlmPrompts(
  */
 function writeMetadata(agentDir: string, metadata: Record<string, unknown>) {
   writeFileSync(
-    join(agentDir, "metadata.json"),
+    join(agentDir, PROMPT_FILES.METADATA),
     JSON.stringify(metadata, null, 2),
   );
 }
@@ -205,13 +194,13 @@ function saveConversationFlowPrompts(
 
   // Save global prompt as markdown
   writeFileSync(
-    join(agentDir, "global_prompt.md"),
+    join(agentDir, PROMPT_FILES.GLOBAL_PROMPT),
     prompts.global_prompt || "",
   );
 
   // Save nodes as JSON
   writeFileSync(
-    join(agentDir, "nodes.json"),
+    join(agentDir, PROMPT_FILES.NODES),
     JSON.stringify(prompts.nodes, null, 2),
   );
 
@@ -233,19 +222,19 @@ function getFilesCreated(
   type: string,
   promptSource: Awaited<ReturnType<typeof resolvePromptSource>>,
 ): string[] {
-  const files = ["metadata.json"];
+  const files: string[] = [PROMPT_FILES.METADATA];
 
   if (type === "retell-llm" && promptSource.type === "retell-llm") {
-    files.push("general_prompt.md");
+    files.push(PROMPT_FILES.GENERAL_PROMPT);
     if (promptSource.prompts.begin_message) {
-      files.push("begin_message.txt");
+      files.push(PROMPT_FILES.BEGIN_MESSAGE);
     }
     if (promptSource.prompts.states && promptSource.prompts.states.length > 0) {
       files.push(`states/ (${promptSource.prompts.states.length} state files)`);
     }
   } else if (type === "conversation-flow") {
-    files.push("global_prompt.md");
-    files.push("nodes.json");
+    files.push(PROMPT_FILES.GLOBAL_PROMPT);
+    files.push(PROMPT_FILES.NODES);
   }
 
   return files;

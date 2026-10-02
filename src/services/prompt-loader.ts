@@ -8,6 +8,7 @@
 import { readFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 import type { RetellLlmPrompts, FlowPrompts } from "./prompt-resolver";
+import { PROMPT_FILES } from "./prompt-files";
 
 /**
  * Local metadata structure
@@ -62,7 +63,7 @@ export function loadLocalPrompts(
   }
 
   // Load and validate metadata
-  const metadataPath = join(agentDir, "metadata.json");
+  const metadataPath = join(agentDir, PROMPT_FILES.METADATA);
   if (!existsSync(metadataPath)) {
     throw new Error(
       `metadata.json not found in ${agentDir}. Directory may be corrupted.`,
@@ -110,7 +111,7 @@ function loadRetellLlmPrompts(
   const prompts: Partial<Omit<RetellLlmPrompts, "llm_id" | "version">> = {};
 
   // Load general_prompt (required)
-  const generalPromptPath = join(agentDir, "general_prompt.md");
+  const generalPromptPath = join(agentDir, PROMPT_FILES.GENERAL_PROMPT);
   if (!existsSync(generalPromptPath)) {
     throw new Error("general_prompt.md not found");
   }
@@ -122,7 +123,7 @@ function loadRetellLlmPrompts(
   }
 
   // Load begin_message (optional) - only add if file exists
-  const beginMessagePath = join(agentDir, "begin_message.txt");
+  const beginMessagePath = join(agentDir, PROMPT_FILES.BEGIN_MESSAGE);
   if (existsSync(beginMessagePath)) {
     try {
       const beginMessage = readFileSync(beginMessagePath, "utf-8");
@@ -135,7 +136,7 @@ function loadRetellLlmPrompts(
   }
 
   // Load states (optional)
-  const statesDir = join(agentDir, "states");
+  const statesDir = join(agentDir, PROMPT_FILES.STATES_DIR);
   if (existsSync(statesDir)) {
     try {
       const stateFiles = readdirSync(statesDir).filter((f) =>
@@ -196,7 +197,7 @@ function loadConversationFlowPrompts(
   > = {};
 
   // Load global_prompt (required)
-  const globalPromptPath = join(agentDir, "global_prompt.md");
+  const globalPromptPath = join(agentDir, PROMPT_FILES.GLOBAL_PROMPT);
   if (!existsSync(globalPromptPath)) {
     throw new Error("global_prompt.md not found");
   }
@@ -208,7 +209,7 @@ function loadConversationFlowPrompts(
   }
 
   // Load nodes (required)
-  const nodesPath = join(agentDir, "nodes.json");
+  const nodesPath = join(agentDir, PROMPT_FILES.NODES);
   if (!existsSync(nodesPath)) {
     throw new Error("nodes.json not found");
   }

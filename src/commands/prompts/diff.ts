@@ -15,6 +15,7 @@ import {
   handleSdkError,
   filterFields,
 } from "../../services/output-formatter";
+import { DEFAULT_PROMPTS_DIR } from "../../services/prompt-files";
 
 /**
  * Options for the diff command
@@ -57,7 +58,7 @@ export async function diffPromptsCommand(
     validateAgentId(agentId);
 
     // Determine source directory
-    const baseDir = options.source || ".retell-prompts";
+    const baseDir = options.source || DEFAULT_PROMPTS_DIR;
     const agentDir = join(baseDir, agentId);
 
     // Load local prompts (will throw with descriptive error if fails)
