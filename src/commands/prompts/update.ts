@@ -14,7 +14,10 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import { resolvePromptSource } from "../../services/prompt-resolver";
+import {
+  resolvePromptSource,
+  type AgentVersionState,
+} from "../../services/prompt-resolver";
 import { getRetellClient } from "../../services/retell-client";
 import {
   outputJson,
@@ -23,6 +26,7 @@ import {
 } from "../../services/output-formatter";
 import { loadLocalPrompts } from "../../services/prompt-loader";
 import { generateDiff } from "../../services/prompt-diff";
+import { hashFlowPrompts, hashLlmPrompts } from "../../services/prompt-hash";
 import { DEFAULT_PROMPTS_DIR, PROMPT_FILES } from "../../services/prompt-files";
 
 /**
@@ -44,6 +48,7 @@ interface LocalMetadata {
   conversation_flow_id?: string;
   version: number;
   remote_modified_at?: number; // last_modification_timestamp at pull time
+  remote_prompt_hash?: string; // fingerprint of remote prompt content at pull time
   pulled_at: string;
 }
 
@@ -54,6 +59,7 @@ interface RemoteState {
   resource_id: string;
   version: number;
   last_modification_timestamp?: number;
+  prompt_hash?: string;
 }
 
 /**
@@ -74,15 +80,20 @@ export interface RemoteConflict {
  *
  * - A different LLM / conversation flow than the one pulled is always a
  *   conflict (the agent was repointed; local files belong to another resource).
- * - A newer last_modification_timestamp catches draft edits that don't bump
- *   the version.
- * - A newer version is a conflict regardless; it is also the only signal for
- *   metadata written by older CLI releases that didn't record the timestamp.
+ * - When both sides have a prompt-content fingerprint, only a change in prompt
+ *   content is a conflict. Publishing or creating a draft copy bumps the
+ *   timestamp/version without changing any prompt text, so those are ignored.
+ * - Otherwise (metadata from older releases): a newer
+ *   last_modification_timestamp, or a newer version, is a conflict.
  */
 export function detectRemoteConflict(
   metadata: Pick<
     LocalMetadata,
-    "version" | "remote_modified_at" | "llm_id" | "conversation_flow_id"
+    | "version"
+    | "remote_modified_at"
+    | "remote_prompt_hash"
+    | "llm_id"
+    | "conversation_flow_id"
   >,
   remote: RemoteState,
 ): RemoteConflict | null {
@@ -98,6 +109,15 @@ export function detectRemoteConflict(
 
   if (localResourceId && localResourceId !== remote.resource_id) {
     return { ...base, reason: "resource_changed" };
+  }
+
+  if (
+    typeof metadata.remote_prompt_hash === "string" &&
+    typeof remote.prompt_hash === "string"
+  ) {
+    return remote.prompt_hash !== metadata.remote_prompt_hash
+      ? { ...base, reason: "remote_modified" }
+      : null;
   }
 
   if (
@@ -150,6 +170,7 @@ function recordRemoteState(
   metadata: LocalMetadata,
   resource: { llm_id: string } | { conversation_flow_id: string },
   updated: { version?: number; last_modification_timestamp?: number } | null,
+  promptHash: string | undefined,
 ): string | undefined {
   if (
     typeof updated?.version !== "number" ||
@@ -165,6 +186,7 @@ function recordRemoteState(
     ...resource,
     version: updated.version,
     remote_modified_at: updated.last_modification_timestamp,
+    ...(promptHash !== undefined && { remote_prompt_hash: promptHash }),
   };
   const tmpPath = `${metadataPath}.tmp`;
   try {
@@ -179,6 +201,51 @@ function recordRemoteState(
     }
     return `Remote update succeeded, but ${metadataPath} could not be refreshed (${error?.message ?? error}). The next update may report REMOTE_CHANGED; run 'retell prompts pull' to resync.`;
   }
+}
+
+/**
+ * Where an update will be written.
+ */
+interface DraftTarget {
+  /** Agent draft version being edited (undefined if unknown) */
+  agentVersion?: number;
+  /** LLM / flow version to write to (undefined = API default, latest) */
+  engineVersion?: number;
+  /** Set when this command created the draft from a published version */
+  createdFrom?: number;
+}
+
+/**
+ * Published agent versions are read-only. If the agent's latest version is
+ * published, create a new draft from it so the edit never touches the live
+ * version. Otherwise write to the existing draft.
+ */
+async function ensureDraft(
+  client: ReturnType<typeof getRetellClient>,
+  agentId: string,
+  agent: AgentVersionState | undefined,
+): Promise<DraftTarget> {
+  if (!agent?.isPublished) {
+    return {
+      agentVersion: agent?.version,
+      engineVersion: agent?.engineVersion,
+    };
+  }
+  if (typeof agent.version !== "number") {
+    throw new Error(
+      "Agent's latest version is published but its version number is unknown; cannot create a draft.",
+    );
+  }
+  const draft = await client.agent.createVersion(agentId, {
+    base_version: agent.version,
+  });
+  const engine = draft.response_engine as { version?: number | null };
+  return {
+    agentVersion: draft.version,
+    engineVersion:
+      typeof engine?.version === "number" ? engine.version : undefined,
+    createdFrom: agent.version,
+  };
 }
 
 /**
@@ -249,6 +316,10 @@ export async function updatePromptsCommand(
       version: promptSource.prompts.version,
       last_modification_timestamp:
         promptSource.prompts.last_modification_timestamp,
+      prompt_hash:
+        promptSource.type === "retell-llm"
+          ? hashLlmPrompts(promptSource.prompts)
+          : hashFlowPrompts(promptSource.prompts),
     });
 
     // Handle dry-run mode
@@ -275,6 +346,10 @@ export async function updatePromptsCommand(
       outputJson({
         message: "Dry run - no changes applied",
         ...diff,
+        ...(promptSource.agent?.isPublished && {
+          would_create_draft: true,
+          note: `Agent version ${promptSource.agent.version} is published; a real update would create a new draft from it and leave the published version unchanged.`,
+        }),
         ...(conflict && {
           remote_conflict: conflict,
           warning: `Remote prompts changed since last pull; a real update would be refused without --force. Run 'retell prompts pull ${agentId}' to sync.`,
@@ -303,22 +378,37 @@ export async function updatePromptsCommand(
       return;
     }
 
-    // Update based on type
+    // Update based on type. Published versions are never modified: if the
+    // latest agent version is published, edits go to a newly created draft.
     const client = getRetellClient();
+    const target = await ensureDraft(client, agentId, promptSource.agent);
+    const draftInfo = {
+      ...(target.agentVersion !== undefined && {
+        agent_version: target.agentVersion,
+      }),
+      ...(target.createdFrom !== undefined && {
+        draft_created: { base_version: target.createdFrom },
+      }),
+    };
+    const versionParam =
+      target.engineVersion !== undefined
+        ? { version: target.engineVersion }
+        : {};
 
     if (
       promptSource.type === "retell-llm" &&
       localPrompts.type === "retell-llm"
     ) {
-      const updated = await client.llm.update(
-        promptSource.llmId,
-        localPrompts.prompts as any,
-      );
+      const updated = await client.llm.update(promptSource.llmId, {
+        ...(localPrompts.prompts as any),
+        ...versionParam,
+      });
       const warning = recordRemoteState(
         metadataPath,
         metadata,
         { llm_id: promptSource.llmId },
         updated,
+        updated ? hashLlmPrompts(updated) : undefined,
       );
 
       outputJson({
@@ -327,6 +417,7 @@ export async function updatePromptsCommand(
         agent_name: promptSource.agentName,
         type: "retell-llm",
         llm_id: promptSource.llmId,
+        ...draftInfo,
         ...(warning && { warning }),
         note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
       });
@@ -336,13 +427,14 @@ export async function updatePromptsCommand(
     ) {
       const updated = await client.conversationFlow.update(
         promptSource.flowId,
-        localPrompts.prompts as any,
+        { ...(localPrompts.prompts as any), ...versionParam },
       );
       const warning = recordRemoteState(
         metadataPath,
         metadata,
         { conversation_flow_id: promptSource.flowId },
         updated,
+        updated ? hashFlowPrompts(updated as any) : undefined,
       );
 
       outputJson({
@@ -351,6 +443,7 @@ export async function updatePromptsCommand(
         agent_name: promptSource.agentName,
         type: "conversation-flow",
         conversation_flow_id: promptSource.flowId,
+        ...draftInfo,
         ...(warning && { warning }),
         note: `Run 'retell agents publish ${agentId}' to publish changes to production`,
       });
