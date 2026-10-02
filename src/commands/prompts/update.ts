@@ -6,7 +6,13 @@
  * the agent's LLM config or conversation flow.
  */
 
-import { readFileSync, existsSync, writeFileSync, renameSync } from "fs";
+import {
+  readFileSync,
+  existsSync,
+  writeFileSync,
+  renameSync,
+  rmSync,
+} from "fs";
 import { join } from "path";
 import { resolvePromptSource } from "../../services/prompt-resolver";
 import { getRetellClient } from "../../services/retell-client";
@@ -141,11 +147,15 @@ function validateAgentId(agentId: string): void {
 function recordRemoteState(
   metadataPath: string,
   metadata: LocalMetadata,
+  resource: { llm_id: string } | { conversation_flow_id: string },
   updated: { version?: number; last_modification_timestamp?: number } | null,
 ): string | undefined {
   if (!updated) return undefined;
   const next: LocalMetadata = {
     ...metadata,
+    // After a forced update to a repointed agent, the local copy now tracks
+    // the new resource; keep it from being flagged as resource_changed again.
+    ...resource,
     version: updated.version ?? metadata.version,
     remote_modified_at:
       updated.last_modification_timestamp ?? metadata.remote_modified_at,
@@ -156,6 +166,11 @@ function recordRemoteState(
     renameSync(tmpPath, metadataPath);
     return undefined;
   } catch (error: any) {
+    try {
+      rmSync(tmpPath, { force: true });
+    } catch {
+      // Best-effort cleanup only.
+    }
     return `Remote update succeeded, but ${metadataPath} could not be refreshed (${error?.message ?? error}). The next update may report REMOTE_CHANGED; run 'retell prompts pull' to resync.`;
   }
 }
@@ -293,7 +308,12 @@ export async function updatePromptsCommand(
         promptSource.llmId,
         localPrompts.prompts as any,
       );
-      const warning = recordRemoteState(metadataPath, metadata, updated);
+      const warning = recordRemoteState(
+        metadataPath,
+        metadata,
+        { llm_id: promptSource.llmId },
+        updated,
+      );
 
       outputJson({
         message: "Prompts updated successfully (draft version)",
@@ -312,7 +332,12 @@ export async function updatePromptsCommand(
         promptSource.flowId,
         localPrompts.prompts as any,
       );
-      const warning = recordRemoteState(metadataPath, metadata, updated);
+      const warning = recordRemoteState(
+        metadataPath,
+        metadata,
+        { conversation_flow_id: promptSource.flowId },
+        updated,
+      );
 
       outputJson({
         message: "Prompts updated successfully (draft version)",

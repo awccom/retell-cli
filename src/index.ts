@@ -532,6 +532,9 @@ prompts
   .addHelpText(
     "after",
     `
+Overwrites <dir>/<agent_id>/ with the remote prompts, including removing
+begin_message.txt and any states/ files that no longer exist remotely.
+
 Examples:
   $ retell prompts pull agent_123abc
   $ retell prompts pull agent_123abc --output ./my-prompts

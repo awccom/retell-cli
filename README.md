@@ -405,7 +405,7 @@ Update agent prompts from the local files written by `prompts pull`.
 - `--dry-run` - Preview changes without applying them
 - `--force` - Overwrite remote prompts even if they changed since the last pull
 
-If the remote prompts were modified after your last pull (for example, edited in the Retell dashboard), `update` fails with `REMOTE_CHANGED` instead of overwriting them. Run `prompts diff` to compare, `prompts pull` to sync (this overwrites local files), or pass `--force` to overwrite the remote. `--dry-run` reports the conflict as `remote_conflict`.
+If the remote prompts were modified after your last pull (for example, edited in the Retell dashboard), `update` fails with `REMOTE_CHANGED` instead of overwriting them. Run `prompts diff` to compare, `prompts pull` to sync (this overwrites local files), or pass `--force` to overwrite the remote. `--dry-run` reports the conflict as `remote_conflict`. The agent being repointed to a different LLM or conversation flow is also reported as `REMOTE_CHANGED` (reason `resource_changed`). Retell has no compare-and-set, so an edit made in the moment between the check and the write can still be overwritten.
 
 **Examples:**
 ```bash

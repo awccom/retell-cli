@@ -207,6 +207,29 @@ describe("updatePromptsCommand", () => {
     expect(readFileSync(metadataPath, "utf-8")).toBe(before);
   });
 
+  it("tracks the new resource after a forced update to a repointed agent", async () => {
+    mockRemote(1, 500, "llm_2");
+    mockClient.llm.update.mockResolvedValue({
+      version: 1,
+      last_modification_timestamp: 600,
+    });
+
+    await updatePromptsCommand(agentId, { source: baseDir, force: true });
+
+    expect(mockClient.llm.update).toHaveBeenCalledWith(
+      "llm_2",
+      expect.anything(),
+    );
+    const metadata = JSON.parse(
+      readFileSync(join(agentDir, "metadata.json"), "utf-8"),
+    );
+    expect(metadata).toMatchObject({
+      llm_id: "llm_2",
+      version: 1,
+      remote_modified_at: 600,
+    });
+  });
+
   it("overwrites the remote when --force is set", async () => {
     mockRemote(4, 2000);
 
