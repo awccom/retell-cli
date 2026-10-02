@@ -114,6 +114,7 @@ import {
   parsePositiveIntegerFlag,
 } from "./services/numeric-flag";
 import { handleSdkError, outputError } from "./services/output-formatter";
+import { DEFAULT_PROMPTS_DIR } from "./services/prompt-files";
 
 // Read package.json for version
 const packageJson = JSON.parse(
@@ -527,7 +528,7 @@ prompts
   .option(
     "-o, --output <dir>",
     "Base directory; prompts are written to <dir>/<agent_id>/",
-    ".retell-prompts",
+    DEFAULT_PROMPTS_DIR,
   )
   .addHelpText(
     "after",
@@ -550,7 +551,7 @@ prompts
   .option(
     "-s, --source <dir>",
     "Base directory containing <agent_id>/ from a previous pull",
-    ".retell-prompts",
+    DEFAULT_PROMPTS_DIR,
   )
   .option("-f, --fields <fields>", "Comma-separated list of fields to return")
   .addHelpText(
@@ -572,7 +573,7 @@ prompts
   .option(
     "-s, --source <dir>",
     "Base directory containing <agent_id>/ from a previous pull",
-    ".retell-prompts",
+    DEFAULT_PROMPTS_DIR,
   )
   .option("--dry-run", "Preview changes without applying them", false)
   .option(

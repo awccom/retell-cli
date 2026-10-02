@@ -23,6 +23,7 @@ import {
 } from "../../services/output-formatter";
 import { loadLocalPrompts } from "../../services/prompt-loader";
 import { generateDiff } from "../../services/prompt-diff";
+import { DEFAULT_PROMPTS_DIR, PROMPT_FILES } from "../../services/prompt-files";
 
 /**
  * Options for the update command
@@ -195,7 +196,7 @@ export async function updatePromptsCommand(
     validateAgentId(agentId);
 
     // Determine source directory
-    const baseDir = options.source || ".retell-prompts";
+    const baseDir = options.source || DEFAULT_PROMPTS_DIR;
     const agentDir = join(baseDir, agentId);
 
     // Check if directory exists
@@ -208,7 +209,7 @@ export async function updatePromptsCommand(
     }
 
     // Load and validate metadata
-    const metadataPath = join(agentDir, "metadata.json");
+    const metadataPath = join(agentDir, PROMPT_FILES.METADATA);
     if (!existsSync(metadataPath)) {
       outputError(
         `metadata.json not found in ${agentDir}. The directory may be corrupted or a previous pull failed partway. Run 'retell prompts pull ${agentId}' to resync.`,
