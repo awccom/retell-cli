@@ -135,20 +135,6 @@ function saveRetellLlmPrompts(
 ): void {
   const { prompts, llmId, agentName } = promptSource;
 
-  // Save metadata
-  const metadata = {
-    type: "retell-llm",
-    agent_name: agentName,
-    llm_id: llmId,
-    version: prompts.version,
-    remote_modified_at: prompts.last_modification_timestamp,
-    pulled_at: new Date().toISOString(),
-  };
-  writeFileSync(
-    join(agentDir, "metadata.json"),
-    JSON.stringify(metadata, null, 2),
-  );
-
   // Save general prompt as markdown
   writeFileSync(
     join(agentDir, "general_prompt.md"),
@@ -176,6 +162,28 @@ function saveRetellLlmPrompts(
       writeFileSync(join(statesDir, filename), content);
     });
   }
+
+  // Write metadata last: it is the sync baseline for `prompts update`, so it
+  // must only advance once every prompt file has been written.
+  writeMetadata(agentDir, {
+    type: "retell-llm",
+    agent_name: agentName,
+    llm_id: llmId,
+    version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
+    pulled_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Write metadata.json. Called after all prompt files are written so a failed
+ * pull never records a baseline for files that weren't refreshed.
+ */
+function writeMetadata(agentDir: string, metadata: Record<string, unknown>) {
+  writeFileSync(
+    join(agentDir, "metadata.json"),
+    JSON.stringify(metadata, null, 2),
+  );
 }
 
 /**
@@ -190,20 +198,6 @@ function saveConversationFlowPrompts(
 ): void {
   const { prompts, flowId, agentName } = promptSource;
 
-  // Save metadata
-  const metadata = {
-    type: "conversation-flow",
-    agent_name: agentName,
-    conversation_flow_id: flowId,
-    version: prompts.version,
-    remote_modified_at: prompts.last_modification_timestamp,
-    pulled_at: new Date().toISOString(),
-  };
-  writeFileSync(
-    join(agentDir, "metadata.json"),
-    JSON.stringify(metadata, null, 2),
-  );
-
   // Save global prompt as markdown
   writeFileSync(
     join(agentDir, "global_prompt.md"),
@@ -215,6 +209,16 @@ function saveConversationFlowPrompts(
     join(agentDir, "nodes.json"),
     JSON.stringify(prompts.nodes, null, 2),
   );
+
+  // Write metadata last (see saveRetellLlmPrompts)
+  writeMetadata(agentDir, {
+    type: "conversation-flow",
+    agent_name: agentName,
+    conversation_flow_id: flowId,
+    version: prompts.version,
+    remote_modified_at: prompts.last_modification_timestamp,
+    pulled_at: new Date().toISOString(),
+  });
 }
 
 /**

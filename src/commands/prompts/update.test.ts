@@ -230,6 +230,71 @@ describe("updatePromptsCommand", () => {
     });
   });
 
+  it("does not persist a stale baseline when the update response omits version/timestamp", async () => {
+    mockRemote(3, 1000);
+    mockClient.llm.update.mockResolvedValue({});
+    const metadataPath = join(agentDir, "metadata.json");
+    const before = readFileSync(metadataPath, "utf-8");
+
+    await updatePromptsCommand(agentId, { source: baseDir });
+
+    expect(mockClient.llm.update).toHaveBeenCalled();
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith(
+      expect.objectContaining({
+        warning: expect.stringContaining("did not include the new version"),
+      }),
+    );
+    expect(readFileSync(metadataPath, "utf-8")).toBe(before);
+  });
+
+  it("tracks the new flow after a forced update to a repointed conversation-flow agent", async () => {
+    writeFileSync(
+      join(agentDir, "metadata.json"),
+      JSON.stringify({
+        type: "conversation-flow",
+        agent_name: "Support",
+        conversation_flow_id: "flow_1",
+        version: 3,
+        remote_modified_at: 1000,
+        pulled_at: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    writeFileSync(join(agentDir, "global_prompt.md"), "local global");
+    writeFileSync(join(agentDir, "nodes.json"), JSON.stringify([{ id: "n1" }]));
+    vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue({
+      type: "conversation-flow",
+      flowId: "flow_2",
+      agentName: "Support",
+      prompts: {
+        conversation_flow_id: "flow_2",
+        version: 1,
+        last_modification_timestamp: 500,
+        global_prompt: "remote global",
+        nodes: [],
+      },
+    });
+    mockClient.conversationFlow = {
+      update: vi
+        .fn()
+        .mockResolvedValue({ version: 1, last_modification_timestamp: 700 }),
+    };
+
+    await updatePromptsCommand(agentId, { source: baseDir, force: true });
+
+    expect(mockClient.conversationFlow.update).toHaveBeenCalledWith(
+      "flow_2",
+      expect.objectContaining({ global_prompt: "local global" }),
+    );
+    const metadata = JSON.parse(
+      readFileSync(join(agentDir, "metadata.json"), "utf-8"),
+    );
+    expect(metadata).toMatchObject({
+      conversation_flow_id: "flow_2",
+      version: 1,
+      remote_modified_at: 700,
+    });
+  });
+
   it("overwrites the remote when --force is set", async () => {
     mockRemote(4, 2000);
 

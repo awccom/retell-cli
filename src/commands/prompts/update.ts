@@ -150,15 +150,20 @@ function recordRemoteState(
   resource: { llm_id: string } | { conversation_flow_id: string },
   updated: { version?: number; last_modification_timestamp?: number } | null,
 ): string | undefined {
-  if (!updated) return undefined;
+  if (
+    typeof updated?.version !== "number" ||
+    typeof updated?.last_modification_timestamp !== "number"
+  ) {
+    // Don't persist values known to predate this write.
+    return `Remote update succeeded, but the response did not include the new version/timestamp, so ${metadataPath} was not refreshed. The next update may report REMOTE_CHANGED; run 'retell prompts pull' to resync.`;
+  }
   const next: LocalMetadata = {
     ...metadata,
     // After a forced update to a repointed agent, the local copy now tracks
     // the new resource; keep it from being flagged as resource_changed again.
     ...resource,
-    version: updated.version ?? metadata.version,
-    remote_modified_at:
-      updated.last_modification_timestamp ?? metadata.remote_modified_at,
+    version: updated.version,
+    remote_modified_at: updated.last_modification_timestamp,
   };
   const tmpPath = `${metadataPath}.tmp`;
   try {
