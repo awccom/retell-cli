@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `prompts update` no longer wipes tools, edges, and other settings stored inside Retell LLM states. Local state files only hold the prompt text, so the CLI used to send states with just `name` and `state_prompt`, and Retell replaced the whole state. It now merges each local state prompt into the current remote state.
+- `prompts pull`, `prompts diff`, and `prompts update` read the LLM or conversation-flow version the agent is actually pinned to, rather than the latest version of that resource (which can differ when several agents share an LLM).
 - `agents publish`, `agent-publish`, and `chat-agents publish` no longer fail with "Unexpected end of JSON input". Retell returns an empty body labelled `application/json` for publish, which the SDK tried to parse; the publish itself succeeded, but the command reported an error and exited 1. Broken since 2.0.0.
 - `prompts pull`, `prompts diff`, and `prompts update` help and README now describe `--output`/`--source` as a base directory (`<dir>/<agent_id>/`), not a `.json` file.
 

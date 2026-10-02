@@ -123,8 +123,14 @@ export async function resolvePromptSource(
 
   // Step 2: Branch based on response engine type
   if (agent.response_engine.type === "retell-llm") {
-    // Fetch Retell LLM configuration
-    const llm = await client.llm.retrieve(agent.response_engine.llm_id);
+    // Fetch the LLM version this agent version actually uses, so reads and
+    // writes (which target agentState.engineVersion) see the same version.
+    const llm = await client.llm.retrieve(
+      agent.response_engine.llm_id,
+      agentState.engineVersion !== undefined
+        ? { version: agentState.engineVersion }
+        : undefined,
+    );
 
     return {
       type: "retell-llm",
@@ -146,6 +152,9 @@ export async function resolvePromptSource(
     // Fetch Conversation Flow configuration
     const flow = await client.conversationFlow.retrieve(
       agent.response_engine.conversation_flow_id,
+      agentState.engineVersion !== undefined
+        ? { version: agentState.engineVersion }
+        : undefined,
     );
 
     return {

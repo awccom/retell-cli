@@ -8,7 +8,11 @@ import {
 } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { updatePromptsCommand, detectRemoteConflict } from "./update";
+import {
+  updatePromptsCommand,
+  detectRemoteConflict,
+  mergeStates,
+} from "./update";
 import * as retellClient from "../../services/retell-client";
 import * as promptResolver from "../../services/prompt-resolver";
 import * as outputFormatter from "../../services/output-formatter";
@@ -112,6 +116,42 @@ describe("detectRemoteConflict", () => {
         { ...remote, version: 4, last_modification_timestamp: 2000 },
       ),
     ).toBeNull();
+  });
+});
+
+describe("mergeStates", () => {
+  it("keeps remote tools/edges and replaces only state_prompt", () => {
+    const merged = mergeStates(
+      [{ name: "greet", state_prompt: "new text" }],
+      [
+        {
+          name: "greet",
+          state_prompt: "old text",
+          tools: [{ type: "end_call", name: "end" }],
+          edges: [{ destination_state_name: "next", description: "go" }],
+        },
+      ],
+    );
+    expect(merged).toEqual([
+      {
+        name: "greet",
+        state_prompt: "new text",
+        tools: [{ type: "end_call", name: "end" }],
+        edges: [{ destination_state_name: "next", description: "go" }],
+      },
+    ]);
+  });
+
+  it("adds new local states and drops states removed locally", () => {
+    const merged = mergeStates(
+      [{ name: "added", state_prompt: "a" }],
+      [{ name: "removed", state_prompt: "r", tools: [] }],
+    );
+    expect(merged).toEqual([{ name: "added", state_prompt: "a" }]);
+  });
+
+  it("returns undefined when there are no local states", () => {
+    expect(mergeStates(undefined, [{ name: "x" }])).toBeUndefined();
   });
 });
 
@@ -237,6 +277,28 @@ describe("updatePromptsCommand", () => {
       expect(typeof metadata.remote_prompt_hash).toBe("string");
     });
 
+    it("reports the created draft when the write fails afterwards", async () => {
+      mockRemote(3, 1000, "llm_1", {
+        version: 7,
+        isPublished: true,
+        engineVersion: 3,
+      });
+      const apiError = new Error("write failed");
+      mockClient.llm.update.mockReturnValue(Promise.reject(apiError));
+
+      await updatePromptsCommand(agentId, { source: baseDir }).catch(() => {});
+
+      expect(mockClient.agent.createVersion).toHaveBeenCalled();
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        apiError,
+        expect.objectContaining({
+          draft_created: { base_version: 7 },
+          agent_version: 8,
+          note: expect.stringContaining("re-running"),
+        }),
+      );
+    });
+
     it("does not create a draft when the latest version is already a draft", async () => {
       mockRemote(3, 1000, "llm_1", {
         version: 7,
@@ -292,6 +354,47 @@ describe("updatePromptsCommand", () => {
         expect.objectContaining({ would_create_draft: true }),
       );
     });
+  });
+
+  it("preserves remote state tools and edges when updating state prompts", async () => {
+    mkdirSync(join(agentDir, "states"));
+    writeFileSync(
+      join(agentDir, "states", "greet.md"),
+      "# State: greet\n\nlocal state text",
+    );
+    vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue({
+      type: "retell-llm",
+      llmId: "llm_1",
+      agentName: "Support",
+      prompts: {
+        llm_id: "llm_1",
+        version: 3,
+        last_modification_timestamp: 1000,
+        general_prompt: "remote prompt",
+        states: [
+          {
+            name: "greet",
+            state_prompt: "remote state text",
+            tools: [{ type: "end_call", name: "end" }],
+          } as any,
+        ],
+      },
+    });
+
+    await updatePromptsCommand(agentId, { source: baseDir });
+
+    expect(mockClient.llm.update).toHaveBeenCalledWith(
+      "llm_1",
+      expect.objectContaining({
+        states: [
+          {
+            name: "greet",
+            state_prompt: "local state text",
+            tools: [{ type: "end_call", name: "end" }],
+          },
+        ],
+      }),
+    );
   });
 
   it("refuses with REMOTE_CHANGED when the remote was modified after pull", async () => {

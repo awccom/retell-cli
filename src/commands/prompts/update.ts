@@ -249,6 +249,45 @@ async function ensureDraft(
 }
 
 /**
+ * Report a failed write. If this command already created a draft, say so in
+ * the error so the user knows it exists (a retry reuses it).
+ */
+function failAfterDraft(
+  error: unknown,
+  draftInfo: {
+    draft_created?: { base_version: number };
+    agent_version?: number;
+  },
+): never {
+  if (draftInfo.draft_created) {
+    return handleSdkError(error, {
+      ...draftInfo,
+      note: "A new draft was created before the write failed; re-running 'prompts update' will write to that draft.",
+    });
+  }
+  return handleSdkError(error);
+}
+
+/**
+ * Local state files only carry name + prompt text, but Retell stores tools,
+ * edges, and other settings inside each state and replaces the whole array on
+ * update. Start from the current remote state (same name) and replace only
+ * state_prompt so that configuration is preserved.
+ */
+export function mergeStates(
+  localStates: Array<{ name: string; state_prompt: string }> | undefined,
+  remoteStates: Array<{ name: string; [key: string]: unknown }> | undefined,
+): Array<Record<string, unknown>> | undefined {
+  if (!localStates) return undefined;
+  const remoteByName = new Map((remoteStates ?? []).map((s) => [s.name, s]));
+  return localStates.map((local) => ({
+    ...(remoteByName.get(local.name) ?? {}),
+    name: local.name,
+    state_prompt: local.state_prompt,
+  }));
+}
+
+/**
  * Update prompts for an agent from local files
  *
  * @param agentId The unique agent ID to update prompts for
@@ -399,10 +438,17 @@ export async function updatePromptsCommand(
       promptSource.type === "retell-llm" &&
       localPrompts.type === "retell-llm"
     ) {
-      const updated = await client.llm.update(promptSource.llmId, {
-        ...(localPrompts.prompts as any),
-        ...versionParam,
-      });
+      const states = mergeStates(
+        localPrompts.prompts.states,
+        promptSource.prompts.states as any,
+      );
+      const updated = await client.llm
+        .update(promptSource.llmId, {
+          ...(localPrompts.prompts as any),
+          ...(states && { states }),
+          ...versionParam,
+        })
+        .catch((error: unknown) => failAfterDraft(error, draftInfo));
       const warning = recordRemoteState(
         metadataPath,
         metadata,
@@ -425,10 +471,12 @@ export async function updatePromptsCommand(
       promptSource.type === "conversation-flow" &&
       localPrompts.type === "conversation-flow"
     ) {
-      const updated = await client.conversationFlow.update(
-        promptSource.flowId,
-        { ...(localPrompts.prompts as any), ...versionParam },
-      );
+      const updated = await client.conversationFlow
+        .update(promptSource.flowId, {
+          ...(localPrompts.prompts as any),
+          ...versionParam,
+        })
+        .catch((error: unknown) => failAfterDraft(error, draftInfo));
       const warning = recordRemoteState(
         metadataPath,
         metadata,

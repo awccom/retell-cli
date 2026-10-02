@@ -222,6 +222,44 @@ describe.skipIf(!API_KEY)("prompts workflow (live Retell API)", () => {
       );
     });
 
+    it("editing a state prompt keeps the state's tools configured in Retell", async () => {
+      await client.llm.update(llmId, {
+        starting_state: "greeting",
+        states: [
+          {
+            name: "greeting",
+            state_prompt: "Greet the caller.",
+            tools: [
+              {
+                type: "end_call",
+                name: "end_call",
+                description: "End the call when done.",
+              },
+            ],
+          },
+        ],
+      });
+
+      const pull = cli(["prompts", "pull", agentId, "--output", baseDir]);
+      expect(pull.status, pull.stderr).toBe(0);
+      const statePath = join(agentDir, "states", "greeting.md");
+      expect(readFileSync(statePath, "utf-8")).toContain("Greet the caller.");
+
+      writeFileSync(
+        statePath,
+        "# State: greeting\n\nGreet the caller warmly by name.",
+      );
+      const r = cli(["prompts", "update", agentId, "--source", baseDir]);
+      expect(r.status, r.stderr).toBe(0);
+
+      const remote = await client.llm.retrieve(llmId);
+      const state = remote.states?.find((s) => s.name === "greeting");
+      expect(state?.state_prompt).toBe("Greet the caller warmly by name.");
+      expect(state?.tools).toEqual([
+        expect.objectContaining({ type: "end_call", name: "end_call" }),
+      ]);
+    });
+
     it("re-pull picks up remote changes and removes stale local files", async () => {
       await client.llm.update(llmId, {
         general_prompt: "You are a test agent. Final remote prompt.",
