@@ -1206,6 +1206,11 @@ npm run build
 # Run tests
 npm test
 
+# Optional: live end-to-end test against a real Retell account.
+# Creates throwaway agents/LLMs/flows named retell-cli-e2e-* and deletes them
+# afterwards. Skipped unless RETELL_E2E_API_KEY is set.
+RETELL_E2E_API_KEY=key_... npm run test:e2e
+
 # Link for local development
 npm link
 retell --version

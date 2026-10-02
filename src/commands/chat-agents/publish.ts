@@ -30,13 +30,17 @@ export async function publishChatAgentCommand(
             "chat agent",
           );
 
-    await client.chatAgent.publish(agentId, {
-      version,
-      ...(options.description
-        ? { version_description: options.description }
-        : {}),
-      ...(options.title ? { version_title: options.title } : {}),
-    });
+    // See agent/publish.ts: publish returns an empty JSON-labelled body, so
+    // skip parsing it. HTTP errors still throw.
+    await client.chatAgent
+      .publish(agentId, {
+        version,
+        ...(options.description
+          ? { version_description: options.description }
+          : {}),
+        ...(options.title ? { version_title: options.title } : {}),
+      })
+      .asResponse();
 
     outputJson({
       message: "Chat agent published successfully",

@@ -13,6 +13,28 @@ vi.mock("../../services/output-formatter", async () => {
   };
 });
 
+/**
+ * Mimic the SDK's APIPromise for Retell's publish endpoint, which returns 200
+ * with an empty body labelled application/json. Awaiting the promise directly
+ * parses that body and throws; asResponse() returns the raw Response.
+ */
+function publishPromise() {
+  const parsed = Promise.reject(
+    new SyntaxError("Unexpected end of JSON input"),
+  );
+  parsed.catch(() => {}); // avoid unhandled-rejection noise when unused
+  return Object.assign(parsed, {
+    asResponse: () => Promise.resolve(new Response(null, { status: 200 })),
+  });
+}
+
+/** An APIPromise whose request fails (both await and asResponse reject). */
+function failingPromise(error: Error) {
+  const rejected = Promise.reject(error);
+  rejected.catch(() => {});
+  return Object.assign(rejected, { asResponse: () => rejected });
+}
+
 describe("publishChatAgentCommand", () => {
   let mockClient: any;
 
@@ -30,7 +52,7 @@ describe("publishChatAgentCommand", () => {
         }),
       },
       chatAgent: {
-        publish: vi.fn().mockResolvedValue(undefined),
+        publish: vi.fn(() => publishPromise()),
       },
     };
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
@@ -82,8 +104,11 @@ describe("publishChatAgentCommand", () => {
   });
 
   it("routes SDK errors through handleSdkError", async () => {
-    mockClient.chatAgent.publish.mockRejectedValue(new Error("api"));
+    const apiError = new Error("api");
+    mockClient.chatAgent.publish.mockImplementation(() =>
+      failingPromise(apiError),
+    );
     await publishChatAgentCommand("ca_1", { version: "1" });
-    expect(outputFormatter.handleSdkError).toHaveBeenCalled();
+    expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(apiError);
   });
 });
