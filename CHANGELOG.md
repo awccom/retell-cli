@@ -5,11 +5,11 @@ All notable changes to the Retell AI CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-10-02
 
 ### Added
 
-- `prompts update` now refuses to overwrite remote prompts that changed after the last `prompts pull` (`REMOTE_CHANGED`), using the remote modification timestamp recorded in `metadata.json`. Pass `--force` to overwrite; `--dry-run` reports the conflict as `remote_conflict`. Directories pulled by older releases fall back to version comparison.
+- `prompts update` now refuses to overwrite remote prompts that changed after the last `prompts pull` (`REMOTE_CHANGED`). Pass `--force` to overwrite; `--dry-run` reports the conflict as `remote_conflict`. An agent repointed to a different LLM or conversation flow is reported as `REMOTE_CHANGED` with reason `resource_changed`. Directories pulled by older releases fall back to timestamp and version comparison.
 - `prompts update` never modifies a published version. If the agent's latest version is published, it creates a new draft from it and writes there (`draft_created`, `agent_version` in the output; `would_create_draft` in `--dry-run`). Previously this failed with Retell's "Cannot update published LLM".
 - Conflict detection compares a fingerprint of the prompt content (stored as `remote_prompt_hash` in `metadata.json`), so publishing or creating a draft copy is not reported as `REMOTE_CHANGED`.
 - Opt-in live end-to-end test for the prompt workflow (`npm run test:e2e`, requires `RETELL_E2E_API_KEY`).
