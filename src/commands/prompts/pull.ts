@@ -87,6 +87,11 @@ export async function pullPromptsCommand(
 
     // Save prompts based on type
     try {
+      // Drop the old sync baseline first. If any write below fails, the
+      // directory has no metadata.json, so `prompts update` refuses to upload
+      // a partially refreshed copy instead of treating it as in sync.
+      rmSync(join(agentDir, "metadata.json"), { force: true });
+
       if (promptSource.type === "retell-llm") {
         saveRetellLlmPrompts(agentDir, promptSource);
       } else if (promptSource.type === "conversation-flow") {

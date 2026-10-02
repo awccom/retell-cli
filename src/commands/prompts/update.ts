@@ -211,7 +211,7 @@ export async function updatePromptsCommand(
     const metadataPath = join(agentDir, "metadata.json");
     if (!existsSync(metadataPath)) {
       outputError(
-        `metadata.json not found in ${agentDir}. Directory may be corrupted.`,
+        `metadata.json not found in ${agentDir}. The directory may be corrupted or a previous pull failed partway. Run 'retell prompts pull ${agentId}' to resync.`,
         "METADATA_NOT_FOUND",
       );
       return;

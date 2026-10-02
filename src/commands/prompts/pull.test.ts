@@ -74,7 +74,7 @@ describe("pullPromptsCommand", () => {
     );
   });
 
-  it("does not advance the metadata baseline when a prompt file write fails", async () => {
+  it("leaves no sync baseline when a prompt file write fails", async () => {
     mkdirSync(agentDir, { recursive: true });
     const oldMetadata = JSON.stringify({
       llm_id: "llm_1",
@@ -99,9 +99,9 @@ describe("pullPromptsCommand", () => {
 
     await pullPromptsCommand(agentId, { output: baseDir });
 
-    expect(readFileSync(join(agentDir, "metadata.json"), "utf-8")).toBe(
-      oldMetadata,
-    );
+    // Old baseline removed and no new one written, so update will refuse
+    expect(existsSync(join(agentDir, "metadata.json"))).toBe(false);
+    expect(oldMetadata).toContain("llm_1");
   });
 
   it("removes the states directory when the remote has no states", async () => {
