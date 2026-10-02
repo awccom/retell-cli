@@ -523,10 +523,10 @@ const prompts = program.command("prompts").description("Manage agent prompts");
 
 prompts
   .command("pull <agent_id>")
-  .description("Download agent prompts to a local file")
+  .description("Download agent prompts to local files")
   .option(
-    "-o, --output <path>",
-    "Output file path (default: .retell-prompts/<agent_id>.json)",
+    "-o, --output <dir>",
+    "Base directory; prompts are written to <dir>/<agent_id>/",
     ".retell-prompts",
   )
   .addHelpText(
@@ -534,7 +534,7 @@ prompts
     `
 Examples:
   $ retell prompts pull agent_123abc
-  $ retell prompts pull agent_123abc --output my-prompts.json
+  $ retell prompts pull agent_123abc --output ./my-prompts
   `,
   )
   .action(async (agentId, options) => {
@@ -545,8 +545,8 @@ prompts
   .command("diff <agent_id>")
   .description("Show differences between local and remote prompts")
   .option(
-    "-s, --source <path>",
-    "Source directory path (default: .retell-prompts)",
+    "-s, --source <dir>",
+    "Base directory containing <agent_id>/ from a previous pull",
     ".retell-prompts",
   )
   .option("-f, --fields <fields>", "Comma-separated list of fields to return")
@@ -565,10 +565,10 @@ Examples:
 
 prompts
   .command("update <agent_id>")
-  .description("Update agent prompts from a local file")
+  .description("Update agent prompts from local files")
   .option(
-    "-s, --source <path>",
-    "Source file path (default: .retell-prompts/<agent_id>.json)",
+    "-s, --source <dir>",
+    "Base directory containing <agent_id>/ from a previous pull",
     ".retell-prompts",
   )
   .option("--dry-run", "Preview changes without applying them", false)
@@ -584,8 +584,9 @@ Fails with REMOTE_CHANGED if the remote prompts were modified after the last
 pull. Pull again (or diff) to sync, or pass --force to overwrite.
 
 Examples:
-  $ retell prompts update agent_123abc --source my-prompts.json --dry-run
-  $ retell prompts update agent_123abc --source my-prompts.json
+  $ retell prompts update agent_123abc --dry-run
+  $ retell prompts update agent_123abc --source ./my-prompts
+  $ retell prompts update agent_123abc --force
   # Remember to publish: retell agents publish agent_123abc
   `,
   )
