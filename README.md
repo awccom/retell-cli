@@ -1032,8 +1032,9 @@ done
 # Update all agents
 for dir in ./prompts/*/; do
   agent_id=$(basename "$dir")
-  retell prompts update $agent_id --source ./prompts
-  retell agents publish $agent_id
+  # Only publish if the update succeeded (e.g. not refused with REMOTE_CHANGED)
+  retell prompts update $agent_id --source ./prompts \
+    && retell agents publish $agent_id
 done
 ```
 

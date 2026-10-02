@@ -26,35 +26,57 @@ vi.mock("../../services/output-formatter", async () => {
 });
 
 describe("detectRemoteConflict", () => {
+  const local = { llm_id: "llm_1", version: 3, remote_modified_at: 1000 };
+  const remote = {
+    resource_id: "llm_1",
+    version: 3,
+    last_modification_timestamp: 1000,
+  };
+
   it("flags a newer remote modification timestamp even when version is unchanged", () => {
     expect(
-      detectRemoteConflict(
-        { version: 3, remote_modified_at: 1000 },
-        { version: 3, last_modification_timestamp: 2000 },
-      ),
+      detectRemoteConflict(local, {
+        ...remote,
+        last_modification_timestamp: 2000,
+      }),
     ).toMatchObject({ reason: "remote_modified" });
   });
 
-  it("returns null when the timestamp matches", () => {
+  it("returns null when timestamp, version, and resource all match", () => {
+    expect(detectRemoteConflict(local, remote)).toBeNull();
+  });
+
+  it("flags a newer remote version even when timestamps match", () => {
     expect(
-      detectRemoteConflict(
-        { version: 3, remote_modified_at: 1000 },
-        { version: 3, last_modification_timestamp: 1000 },
-      ),
-    ).toBeNull();
+      detectRemoteConflict(local, { ...remote, version: 4 }),
+    ).toMatchObject({ reason: "remote_version_newer" });
+  });
+
+  it("flags a repointed agent (different resource id) even if it looks older", () => {
+    expect(
+      detectRemoteConflict(local, {
+        resource_id: "llm_2",
+        version: 1,
+        last_modification_timestamp: 500,
+      }),
+    ).toMatchObject({
+      reason: "resource_changed",
+      local_resource_id: "llm_1",
+      remote_resource_id: "llm_2",
+    });
   });
 
   it("falls back to version comparison for legacy metadata without a timestamp", () => {
     expect(
       detectRemoteConflict(
-        { version: 3 },
-        { version: 4, last_modification_timestamp: 2000 },
+        { llm_id: "llm_1", version: 3 },
+        { ...remote, version: 4, last_modification_timestamp: 2000 },
       ),
     ).toMatchObject({ reason: "remote_version_newer" });
     expect(
       detectRemoteConflict(
-        { version: 4 },
-        { version: 4, last_modification_timestamp: 2000 },
+        { llm_id: "llm_1", version: 4 },
+        { ...remote, version: 4, last_modification_timestamp: 2000 },
       ),
     ).toBeNull();
   });
@@ -81,13 +103,13 @@ describe("updatePromptsCommand", () => {
     );
   }
 
-  function mockRemote(version: number, ts: number) {
+  function mockRemote(version: number, ts: number, llmId = "llm_1") {
     vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue({
       type: "retell-llm",
-      llmId: "llm_1",
+      llmId,
       agentName: "Support",
       prompts: {
-        llm_id: "llm_1",
+        llm_id: llmId,
         version,
         last_modification_timestamp: ts,
         general_prompt: "remote prompt",
@@ -147,6 +169,42 @@ describe("updatePromptsCommand", () => {
       expect.objectContaining({ reason: "remote_modified" }),
     );
     expect(mockClient.llm.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the agent now points at a different LLM", async () => {
+    mockRemote(1, 500, "llm_2");
+    vi.mocked(outputFormatter.outputError).mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    await updatePromptsCommand(agentId, { source: baseDir }).catch(() => {});
+
+    expect(outputFormatter.outputError).toHaveBeenCalledWith(
+      expect.stringContaining("llm_2"),
+      "REMOTE_CHANGED",
+      expect.objectContaining({ reason: "resource_changed" }),
+    );
+    expect(mockClient.llm.update).not.toHaveBeenCalled();
+  });
+
+  it("reports (but does not fail on) a metadata refresh failure and keeps metadata intact", async () => {
+    mockRemote(3, 1000);
+    const metadataPath = join(agentDir, "metadata.json");
+    const before = readFileSync(metadataPath, "utf-8");
+    // A directory at the temp path makes the atomic write fail
+    mkdirSync(`${metadataPath}.tmp`);
+
+    await updatePromptsCommand(agentId, { source: baseDir });
+
+    expect(outputFormatter.outputError).not.toHaveBeenCalled();
+    expect(mockClient.llm.update).toHaveBeenCalled();
+    expect(outputFormatter.outputJson).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Prompts updated successfully (draft version)",
+        warning: expect.stringContaining("could not be refreshed"),
+      }),
+    );
+    expect(readFileSync(metadataPath, "utf-8")).toBe(before);
   });
 
   it("overwrites the remote when --force is set", async () => {

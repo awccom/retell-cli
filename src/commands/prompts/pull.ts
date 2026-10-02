@@ -7,7 +7,7 @@
  * - conversation-flow: global_prompt.md, nodes.json
  */
 
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { resolvePromptSource } from "../../services/prompt-resolver";
 import {
@@ -155,14 +155,19 @@ function saveRetellLlmPrompts(
     prompts.general_prompt || "",
   );
 
-  // Save begin message if present
+  // Save begin message if present; remove a stale copy from an earlier pull
+  // so it isn't later re-uploaded as a local addition.
+  const beginMessagePath = join(agentDir, "begin_message.txt");
   if (prompts.begin_message) {
-    writeFileSync(join(agentDir, "begin_message.txt"), prompts.begin_message);
+    writeFileSync(beginMessagePath, prompts.begin_message);
+  } else {
+    rmSync(beginMessagePath, { force: true });
   }
 
-  // Save states if present
+  // Replace states/ wholesale so states removed remotely don't linger locally
+  const statesDir = join(agentDir, "states");
+  rmSync(statesDir, { recursive: true, force: true });
   if (prompts.states && prompts.states.length > 0) {
-    const statesDir = join(agentDir, "states");
     mkdirSync(statesDir, { recursive: true });
 
     prompts.states.forEach((state) => {
