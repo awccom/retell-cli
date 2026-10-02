@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `prompts update` now refuses to overwrite remote prompts that changed after the last `prompts pull` (`REMOTE_CHANGED`), using the remote modification timestamp recorded in `metadata.json`. Pass `--force` to overwrite; `--dry-run` reports the conflict as `remote_conflict`. Directories pulled by older releases fall back to version comparison.
+- `prompts update` never modifies a published version. If the agent's latest version is published, it creates a new draft from it and writes there (`draft_created`, `agent_version` in the output; `would_create_draft` in `--dry-run`). Previously this failed with Retell's "Cannot update published LLM".
+- Conflict detection compares a fingerprint of the prompt content (stored as `remote_prompt_hash` in `metadata.json`), so publishing or creating a draft copy is not reported as `REMOTE_CHANGED`.
 - Opt-in live end-to-end test for the prompt workflow (`npm run test:e2e`, requires `RETELL_E2E_API_KEY`).
 
 ### Fixed
 
+- `prompts update` no longer wipes tools, edges, and other settings stored inside Retell LLM states. Local state files only hold the prompt text, so the CLI used to send states with just `name` and `state_prompt`, and Retell replaced the whole state. It now merges each local state prompt into the current remote state.
+- `prompts pull`, `prompts diff`, and `prompts update` read the LLM or conversation-flow version the agent is actually pinned to, rather than the latest version of that resource (which can differ when several agents share an LLM).
 - `agents publish`, `agent-publish`, and `chat-agents publish` no longer fail with "Unexpected end of JSON input". Retell returns an empty body labelled `application/json` for publish, which the SDK tried to parse; the publish itself succeeded, but the command reported an error and exited 1. Broken since 2.0.0.
 - `prompts pull`, `prompts diff`, and `prompts update` help and README now describe `--output`/`--source` as a base directory (`<dir>/<agent_id>/`), not a `.json` file.
 

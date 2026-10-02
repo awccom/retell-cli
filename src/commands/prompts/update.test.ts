@@ -8,7 +8,11 @@ import {
 } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { updatePromptsCommand, detectRemoteConflict } from "./update";
+import {
+  updatePromptsCommand,
+  detectRemoteConflict,
+  mergeStates,
+} from "./update";
 import * as retellClient from "../../services/retell-client";
 import * as promptResolver from "../../services/prompt-resolver";
 import * as outputFormatter from "../../services/output-formatter";
@@ -66,6 +70,39 @@ describe("detectRemoteConflict", () => {
     });
   });
 
+  it("ignores timestamp/version bumps when the prompt content fingerprint is unchanged", () => {
+    // Publishing or creating a draft copy bumps both without changing prompts
+    expect(
+      detectRemoteConflict(
+        { ...local, remote_prompt_hash: "abc" },
+        {
+          ...remote,
+          version: 4,
+          last_modification_timestamp: 9000,
+          prompt_hash: "abc",
+        },
+      ),
+    ).toBeNull();
+  });
+
+  it("flags a changed prompt content fingerprint even if timestamps match", () => {
+    expect(
+      detectRemoteConflict(
+        { ...local, remote_prompt_hash: "abc" },
+        { ...remote, prompt_hash: "def" },
+      ),
+    ).toMatchObject({ reason: "remote_modified" });
+  });
+
+  it("still flags a repointed agent when fingerprints are present", () => {
+    expect(
+      detectRemoteConflict(
+        { ...local, remote_prompt_hash: "abc" },
+        { ...remote, resource_id: "llm_2", prompt_hash: "abc" },
+      ),
+    ).toMatchObject({ reason: "resource_changed" });
+  });
+
   it("falls back to version comparison for legacy metadata without a timestamp", () => {
     expect(
       detectRemoteConflict(
@@ -79,6 +116,42 @@ describe("detectRemoteConflict", () => {
         { ...remote, version: 4, last_modification_timestamp: 2000 },
       ),
     ).toBeNull();
+  });
+});
+
+describe("mergeStates", () => {
+  it("keeps remote tools/edges and replaces only state_prompt", () => {
+    const merged = mergeStates(
+      [{ name: "greet", state_prompt: "new text" }],
+      [
+        {
+          name: "greet",
+          state_prompt: "old text",
+          tools: [{ type: "end_call", name: "end" }],
+          edges: [{ destination_state_name: "next", description: "go" }],
+        },
+      ],
+    );
+    expect(merged).toEqual([
+      {
+        name: "greet",
+        state_prompt: "new text",
+        tools: [{ type: "end_call", name: "end" }],
+        edges: [{ destination_state_name: "next", description: "go" }],
+      },
+    ]);
+  });
+
+  it("adds new local states and drops states removed locally", () => {
+    const merged = mergeStates(
+      [{ name: "added", state_prompt: "a" }],
+      [{ name: "removed", state_prompt: "r", tools: [] }],
+    );
+    expect(merged).toEqual([{ name: "added", state_prompt: "a" }]);
+  });
+
+  it("returns undefined when there are no local states", () => {
+    expect(mergeStates(undefined, [{ name: "x" }])).toBeUndefined();
   });
 });
 
@@ -103,11 +176,17 @@ describe("updatePromptsCommand", () => {
     );
   }
 
-  function mockRemote(version: number, ts: number, llmId = "llm_1") {
+  function mockRemote(
+    version: number,
+    ts: number,
+    llmId = "llm_1",
+    agent?: { version: number; isPublished: boolean; engineVersion?: number },
+  ) {
     vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue({
       type: "retell-llm",
       llmId,
       agentName: "Support",
+      ...(agent && { agent }),
       prompts: {
         llm_id: llmId,
         version,
@@ -129,6 +208,13 @@ describe("updatePromptsCommand", () => {
         update: vi
           .fn()
           .mockResolvedValue({ version: 3, last_modification_timestamp: 5000 }),
+      },
+      agent: {
+        createVersion: vi.fn().mockResolvedValue({
+          version: 8,
+          is_published: false,
+          response_engine: { type: "retell-llm", llm_id: "llm_1", version: 4 },
+        }),
       },
     };
     vi.mocked(retellClient.getRetellClient).mockReturnValue(mockClient);
@@ -152,6 +238,163 @@ describe("updatePromptsCommand", () => {
       readFileSync(join(agentDir, "metadata.json"), "utf-8"),
     );
     expect(metadata.remote_modified_at).toBe(5000);
+  });
+
+  describe("published agents", () => {
+    it("creates a draft from the published version and writes to it", async () => {
+      mockRemote(3, 1000, "llm_1", {
+        version: 7,
+        isPublished: true,
+        engineVersion: 3,
+      });
+      mockClient.llm.update.mockResolvedValue({
+        version: 4,
+        last_modification_timestamp: 6000,
+        general_prompt: "local prompt",
+      });
+
+      await updatePromptsCommand(agentId, { source: baseDir });
+
+      expect(outputFormatter.outputError).not.toHaveBeenCalled();
+      expect(mockClient.agent.createVersion).toHaveBeenCalledWith(agentId, {
+        base_version: 7,
+      });
+      // Writes target the new draft's LLM version, never the published one
+      expect(mockClient.llm.update).toHaveBeenCalledWith(
+        "llm_1",
+        expect.objectContaining({ general_prompt: "local prompt", version: 4 }),
+      );
+      expect(outputFormatter.outputJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agent_version: 8,
+          draft_created: { base_version: 7 },
+        }),
+      );
+      const metadata = JSON.parse(
+        readFileSync(join(agentDir, "metadata.json"), "utf-8"),
+      );
+      expect(metadata).toMatchObject({ version: 4, remote_modified_at: 6000 });
+      expect(typeof metadata.remote_prompt_hash).toBe("string");
+    });
+
+    it("reports the created draft when the write fails afterwards", async () => {
+      mockRemote(3, 1000, "llm_1", {
+        version: 7,
+        isPublished: true,
+        engineVersion: 3,
+      });
+      const apiError = new Error("write failed");
+      mockClient.llm.update.mockReturnValue(Promise.reject(apiError));
+
+      await updatePromptsCommand(agentId, { source: baseDir }).catch(() => {});
+
+      expect(mockClient.agent.createVersion).toHaveBeenCalled();
+      expect(outputFormatter.handleSdkError).toHaveBeenCalledWith(
+        apiError,
+        expect.objectContaining({
+          draft_created: { base_version: 7 },
+          agent_version: 8,
+          note: expect.stringContaining("re-running"),
+        }),
+      );
+    });
+
+    it("does not create a draft when the latest version is already a draft", async () => {
+      mockRemote(3, 1000, "llm_1", {
+        version: 7,
+        isPublished: false,
+        engineVersion: 3,
+      });
+
+      await updatePromptsCommand(agentId, { source: baseDir });
+
+      expect(mockClient.agent.createVersion).not.toHaveBeenCalled();
+      expect(mockClient.llm.update).toHaveBeenCalledWith(
+        "llm_1",
+        expect.objectContaining({ version: 3 }),
+      );
+      expect(outputFormatter.outputJson).toHaveBeenCalledWith(
+        expect.not.objectContaining({ draft_created: expect.anything() }),
+      );
+    });
+
+    it("does not create a draft when the update is refused for a conflict", async () => {
+      mockRemote(3, 2000, "llm_1", {
+        version: 7,
+        isPublished: true,
+        engineVersion: 3,
+      });
+      vi.mocked(outputFormatter.outputError).mockImplementation(() => {
+        throw new Error("exit");
+      });
+
+      await updatePromptsCommand(agentId, { source: baseDir }).catch(() => {});
+
+      expect(outputFormatter.outputError).toHaveBeenCalledWith(
+        expect.any(String),
+        "REMOTE_CHANGED",
+        expect.anything(),
+      );
+      expect(mockClient.agent.createVersion).not.toHaveBeenCalled();
+      expect(mockClient.llm.update).not.toHaveBeenCalled();
+    });
+
+    it("reports would_create_draft in dry-run without creating one", async () => {
+      mockRemote(3, 1000, "llm_1", {
+        version: 7,
+        isPublished: true,
+        engineVersion: 3,
+      });
+
+      await updatePromptsCommand(agentId, { source: baseDir, dryRun: true });
+
+      expect(mockClient.agent.createVersion).not.toHaveBeenCalled();
+      expect(mockClient.llm.update).not.toHaveBeenCalled();
+      expect(outputFormatter.outputJson).toHaveBeenCalledWith(
+        expect.objectContaining({ would_create_draft: true }),
+      );
+    });
+  });
+
+  it("preserves remote state tools and edges when updating state prompts", async () => {
+    mkdirSync(join(agentDir, "states"));
+    writeFileSync(
+      join(agentDir, "states", "greet.md"),
+      "# State: greet\n\nlocal state text",
+    );
+    vi.mocked(promptResolver.resolvePromptSource).mockResolvedValue({
+      type: "retell-llm",
+      llmId: "llm_1",
+      agentName: "Support",
+      prompts: {
+        llm_id: "llm_1",
+        version: 3,
+        last_modification_timestamp: 1000,
+        general_prompt: "remote prompt",
+        states: [
+          {
+            name: "greet",
+            state_prompt: "remote state text",
+            tools: [{ type: "end_call", name: "end" }],
+          } as any,
+        ],
+      },
+    });
+
+    await updatePromptsCommand(agentId, { source: baseDir });
+
+    expect(mockClient.llm.update).toHaveBeenCalledWith(
+      "llm_1",
+      expect.objectContaining({
+        states: [
+          {
+            name: "greet",
+            state_prompt: "local state text",
+            tools: [{ type: "end_call", name: "end" }],
+          },
+        ],
+      }),
+    );
   });
 
   it("refuses with REMOTE_CHANGED when the remote was modified after pull", async () => {

@@ -50,6 +50,19 @@ export type FlowPrompts = {
 };
 
 /**
+ * Version state of the agent's latest version, used to decide whether a new
+ * draft must be created before prompts can be edited.
+ */
+export interface AgentVersionState {
+  /** Latest agent version number */
+  version?: number;
+  /** Whether the latest agent version is published (published = read-only) */
+  isPublished: boolean;
+  /** LLM / conversation flow version the latest agent version points at */
+  engineVersion?: number;
+}
+
+/**
  * Union type representing all possible prompt sources
  */
 export type PromptSource =
@@ -57,12 +70,14 @@ export type PromptSource =
       type: "retell-llm";
       llmId: string;
       agentName: string;
+      agent?: AgentVersionState;
       prompts: RetellLlmPrompts;
     }
   | {
       type: "conversation-flow";
       flowId: string;
       agentName: string;
+      agent?: AgentVersionState;
       prompts: FlowPrompts;
     }
   | { type: "custom-llm"; error: string };
@@ -96,15 +111,32 @@ export async function resolvePromptSource(
   // Step 1: Get agent to determine response_engine type
   const agent = await client.agent.retrieve(agentId);
 
+  const agentState: AgentVersionState = {
+    version: agent.version,
+    isPublished: agent.is_published === true,
+    engineVersion:
+      "version" in agent.response_engine &&
+      typeof agent.response_engine.version === "number"
+        ? agent.response_engine.version
+        : undefined,
+  };
+
   // Step 2: Branch based on response engine type
   if (agent.response_engine.type === "retell-llm") {
-    // Fetch Retell LLM configuration
-    const llm = await client.llm.retrieve(agent.response_engine.llm_id);
+    // Fetch the LLM version this agent version actually uses, so reads and
+    // writes (which target agentState.engineVersion) see the same version.
+    const llm = await client.llm.retrieve(
+      agent.response_engine.llm_id,
+      agentState.engineVersion !== undefined
+        ? { version: agentState.engineVersion }
+        : undefined,
+    );
 
     return {
       type: "retell-llm",
       llmId: llm.llm_id!,
       agentName: agent.agent_name!,
+      agent: agentState,
       prompts: {
         llm_id: llm.llm_id!,
         version: llm.version!,
@@ -120,12 +152,16 @@ export async function resolvePromptSource(
     // Fetch Conversation Flow configuration
     const flow = await client.conversationFlow.retrieve(
       agent.response_engine.conversation_flow_id,
+      agentState.engineVersion !== undefined
+        ? { version: agentState.engineVersion }
+        : undefined,
     );
 
     return {
       type: "conversation-flow",
       flowId: flow.conversation_flow_id!,
       agentName: agent.agent_name!,
+      agent: agentState,
       prompts: {
         conversation_flow_id: flow.conversation_flow_id!,
         version: flow.version!,

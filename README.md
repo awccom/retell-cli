@@ -407,6 +407,8 @@ Update agent prompts from the local files written by `prompts pull`.
 
 If the remote prompts were modified after your last pull (for example, edited in the Retell dashboard), `update` fails with `REMOTE_CHANGED` instead of overwriting them. Run `prompts diff` to compare, `prompts pull` to sync (this overwrites local files), or pass `--force` to overwrite the remote. `--dry-run` reports the conflict as `remote_conflict`. The agent being repointed to a different LLM or conversation flow is also reported as `REMOTE_CHANGED` (reason `resource_changed`). Retell has no compare-and-set, so an edit made in the moment between the check and the write can still be overwritten.
 
+Published versions are never modified. If the agent's latest version is published, `update` first creates a new draft from it and writes your changes there; the output includes `draft_created` and the new `agent_version`. Later updates reuse that draft until you publish again. `--dry-run` reports `would_create_draft: true` without creating anything. Publishing (or creating a draft copy) does not count as a remote change: conflict detection compares the prompt content itself.
+
 **Examples:**
 ```bash
 # Dry run first (recommended)

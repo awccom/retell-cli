@@ -17,6 +17,7 @@ import {
 } from "../../services/output-formatter";
 import { DEFAULT_PROMPTS_DIR, PROMPT_FILES } from "../../services/prompt-files";
 import { outputFsError } from "../../services/fs-errors";
+import { hashFlowPrompts, hashLlmPrompts } from "../../services/prompt-hash";
 
 /**
  * Options for the pull command
@@ -165,6 +166,7 @@ function saveRetellLlmPrompts(
     llm_id: llmId,
     version: prompts.version,
     remote_modified_at: prompts.last_modification_timestamp,
+    remote_prompt_hash: hashLlmPrompts(prompts),
     pulled_at: new Date().toISOString(),
   });
 }
@@ -211,6 +213,7 @@ function saveConversationFlowPrompts(
     conversation_flow_id: flowId,
     version: prompts.version,
     remote_modified_at: prompts.last_modification_timestamp,
+    remote_prompt_hash: hashFlowPrompts(prompts),
     pulled_at: new Date().toISOString(),
   });
 }

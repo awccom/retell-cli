@@ -230,39 +230,48 @@ function apiErrorDetails(error: InstanceType<typeof Retell.APIError>) {
  * error messages with appropriate error codes.
  *
  * @param error Unknown error (typically from a catch block)
+ * @param extra Optional fields merged into the JSON error output
  */
-export function handleSdkError(error: unknown): never {
+export function handleSdkError(
+  error: unknown,
+  extra?: Record<string, unknown>,
+): never {
   // Handle Retell SDK errors
   if (error instanceof Retell.NotFoundError) {
-    outputError("Resource not found", "NOT_FOUND", apiErrorDetails(error));
+    outputError("Resource not found", "NOT_FOUND", {
+      ...apiErrorDetails(error),
+      ...extra,
+    });
   }
 
   if (error instanceof Retell.AuthenticationError) {
     outputError(
       "Authentication failed. Invalid API key. Please run `retell login` to authenticate.",
       "AUTH_ERROR",
-      apiErrorDetails(error),
+      { ...apiErrorDetails(error), ...extra },
     );
   }
 
   if (error instanceof Retell.BadRequestError) {
     const message = error.message || "Invalid request parameters";
-    outputError(message, "BAD_REQUEST", apiErrorDetails(error));
+    outputError(message, "BAD_REQUEST", {
+      ...apiErrorDetails(error),
+      ...extra,
+    });
   }
 
   if (error instanceof Retell.RateLimitError) {
-    outputError(
-      "Rate limit exceeded. Please try again later.",
-      "RATE_LIMIT",
-      apiErrorDetails(error),
-    );
+    outputError("Rate limit exceeded. Please try again later.", "RATE_LIMIT", {
+      ...apiErrorDetails(error),
+      ...extra,
+    });
   }
 
   if (error instanceof Retell.PermissionDeniedError) {
     outputError(
       "Permission denied. Check your API key permissions.",
       "PERMISSION_DENIED",
-      apiErrorDetails(error),
+      { ...apiErrorDetails(error), ...extra },
     );
   }
 
@@ -270,7 +279,7 @@ export function handleSdkError(error: unknown): never {
     outputError(
       "Retell API server error. Please try again later.",
       "SERVER_ERROR",
-      apiErrorDetails(error),
+      { ...apiErrorDetails(error), ...extra },
     );
   }
 
@@ -279,6 +288,7 @@ export function handleSdkError(error: unknown): never {
     outputError(
       "Request to Retell API timed out. Please try again.",
       "TIMEOUT_ERROR",
+      extra,
     );
   }
 
@@ -286,31 +296,32 @@ export function handleSdkError(error: unknown): never {
     outputError(
       "Failed to connect to Retell API. Check your network connection.",
       "CONNECTION_ERROR",
+      extra,
     );
   }
 
   if (error instanceof Retell.APIError) {
     // Generic API error
     const message = error.message || "An API error occurred";
-    outputError(message, "API_ERROR", apiErrorDetails(error));
+    outputError(message, "API_ERROR", { ...apiErrorDetails(error), ...extra });
   }
 
   // Non-SDK errors
   if (error instanceof Error) {
     // Check if it's a ValidationError (by name, to avoid circular dependencies)
     if (error.name === "ValidationError") {
-      outputError(error.message, "VALIDATION_ERROR");
+      outputError(error.message, "VALIDATION_ERROR", extra);
     }
     // ConfigError carries its own code (NO_CONFIG, INVALID_CONFIG, ...)
     const code = (error as { code?: unknown }).code;
     if (error.name === "ConfigError" && typeof code === "string") {
-      outputError(error.message, code);
+      outputError(error.message, code, extra);
     }
-    outputError(error.message, "UNKNOWN_ERROR");
+    outputError(error.message, "UNKNOWN_ERROR", extra);
   }
 
   // Completely unknown error type
-  outputError("An unexpected error occurred", "UNKNOWN_ERROR");
+  outputError("An unexpected error occurred", "UNKNOWN_ERROR", extra);
 }
 
 /**

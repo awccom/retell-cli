@@ -222,6 +222,44 @@ describe.skipIf(!API_KEY)("prompts workflow (live Retell API)", () => {
       );
     });
 
+    it("editing a state prompt keeps the state's tools configured in Retell", async () => {
+      await client.llm.update(llmId, {
+        starting_state: "greeting",
+        states: [
+          {
+            name: "greeting",
+            state_prompt: "Greet the caller.",
+            tools: [
+              {
+                type: "end_call",
+                name: "end_call",
+                description: "End the call when done.",
+              },
+            ],
+          },
+        ],
+      });
+
+      const pull = cli(["prompts", "pull", agentId, "--output", baseDir]);
+      expect(pull.status, pull.stderr).toBe(0);
+      const statePath = join(agentDir, "states", "greeting.md");
+      expect(readFileSync(statePath, "utf-8")).toContain("Greet the caller.");
+
+      writeFileSync(
+        statePath,
+        "# State: greeting\n\nGreet the caller warmly by name.",
+      );
+      const r = cli(["prompts", "update", agentId, "--source", baseDir]);
+      expect(r.status, r.stderr).toBe(0);
+
+      const remote = await client.llm.retrieve(llmId);
+      const state = remote.states?.find((s) => s.name === "greeting");
+      expect(state?.state_prompt).toBe("Greet the caller warmly by name.");
+      expect(state?.tools).toEqual([
+        expect.objectContaining({ type: "end_call", name: "end_call" }),
+      ]);
+    });
+
     it("re-pull picks up remote changes and removes stale local files", async () => {
       await client.llm.update(llmId, {
         general_prompt: "You are a test agent. Final remote prompt.",
@@ -251,6 +289,69 @@ describe.skipIf(!API_KEY)("prompts workflow (live Retell API)", () => {
         (v) => v.version === r.json.published_version,
       );
       expect(published?.is_published).toBe(true);
+    });
+
+    it("after publish, update creates a new draft and leaves the published version unchanged", async () => {
+      const before = await client.agent.retrieve(agentId);
+      expect(before.is_published).toBe(true);
+      const publishedAgentVersion = before.version!;
+      const publishedLlmVersion = (before.response_engine as any).version;
+      const publishedPrompt = (
+        await client.llm.retrieve(llmId, { version: publishedLlmVersion })
+      ).general_prompt;
+
+      // Local copy is in sync (pulled before publish); publishing alone must
+      // not be treated as a remote change.
+      writeFileSync(
+        join(agentDir, "general_prompt.md"),
+        "You are a test agent. Edited after publish.",
+      );
+      const dry = cli([
+        "prompts",
+        "update",
+        agentId,
+        "--source",
+        baseDir,
+        "--dry-run",
+      ]);
+      expect(dry.status, dry.stderr).toBe(0);
+      expect(dry.json.would_create_draft).toBe(true);
+      expect(dry.json.remote_conflict).toBeUndefined();
+
+      const r = cli(["prompts", "update", agentId, "--source", baseDir]);
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.json.draft_created).toEqual({
+        base_version: publishedAgentVersion,
+      });
+      expect(r.json.agent_version).toBeGreaterThan(publishedAgentVersion);
+
+      // Published version is untouched
+      const published = await client.llm.retrieve(llmId, {
+        version: publishedLlmVersion,
+      });
+      expect(published.general_prompt).toBe(publishedPrompt);
+      expect(published.is_published).toBe(true);
+
+      // The edit landed in the new draft
+      const after = await client.agent.retrieve(agentId);
+      expect(after.version).toBe(r.json.agent_version);
+      expect(after.is_published).toBe(false);
+      const draftLlm = await client.llm.retrieve(llmId, {
+        version: (after.response_engine as any).version,
+      });
+      expect(draftLlm.general_prompt).toBe(
+        "You are a test agent. Edited after publish.",
+      );
+
+      // A second update writes to the same draft; no extra draft is created
+      writeFileSync(
+        join(agentDir, "general_prompt.md"),
+        "You are a test agent. Second draft edit.",
+      );
+      const again = cli(["prompts", "update", agentId, "--source", baseDir]);
+      expect(again.status, again.stderr).toBe(0);
+      expect(again.json.draft_created).toBeUndefined();
+      expect(again.json.agent_version).toBe(r.json.agent_version);
     });
   });
 
