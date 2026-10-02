@@ -53,13 +53,18 @@ export async function publishAgentCommand(
             "agent",
           );
 
-    await client.agent.publish(agentId, {
-      version: publishedVersion,
-      ...(options.description
-        ? { version_description: options.description }
-        : {}),
-      ...(options.title ? { version_title: options.title } : {}),
-    });
+    // Retell answers publish with 200 and an empty body labelled
+    // application/json, which the SDK fails to parse ("Unexpected end of JSON
+    // input"). asResponse() skips body parsing; HTTP errors still throw.
+    await client.agent
+      .publish(agentId, {
+        version: publishedVersion,
+        ...(options.description
+          ? { version_description: options.description }
+          : {}),
+        ...(options.title ? { version_title: options.title } : {}),
+      })
+      .asResponse();
   } catch (error) {
     handleSdkError(error);
     return;

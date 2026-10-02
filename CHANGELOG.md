@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `prompts update` now refuses to overwrite remote prompts that changed after the last `prompts pull` (`REMOTE_CHANGED`), using the remote modification timestamp recorded in `metadata.json`. Pass `--force` to overwrite; `--dry-run` reports the conflict as `remote_conflict`. Directories pulled by older releases fall back to version comparison.
+- Opt-in live end-to-end test for the prompt workflow (`npm run test:e2e`, requires `RETELL_E2E_API_KEY`).
 
 ### Fixed
 
+- `agents publish`, `agent-publish`, and `chat-agents publish` no longer fail with "Unexpected end of JSON input". Retell returns an empty body labelled `application/json` for publish, which the SDK tried to parse; the publish itself succeeded, but the command reported an error and exited 1. Broken since 2.0.0.
 - `prompts pull`, `prompts diff`, and `prompts update` help and README now describe `--output`/`--source` as a base directory (`<dir>/<agent_id>/`), not a `.json` file.
 
 ## [2.0.0] - 2026-10-01
