@@ -171,6 +171,22 @@ describe("updatePromptsCommand", () => {
     expect(mockClient.llm.update).not.toHaveBeenCalled();
   });
 
+  it("refuses with METADATA_NOT_FOUND and a resync hint when metadata.json is missing", async () => {
+    rmSync(join(agentDir, "metadata.json"));
+    vi.mocked(outputFormatter.outputError).mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    await updatePromptsCommand(agentId, { source: baseDir }).catch(() => {});
+
+    expect(outputFormatter.outputError).toHaveBeenCalledWith(
+      expect.stringContaining(`retell prompts pull ${agentId}`),
+      "METADATA_NOT_FOUND",
+    );
+    expect(promptResolver.resolvePromptSource).not.toHaveBeenCalled();
+    expect(mockClient.llm.update).not.toHaveBeenCalled();
+  });
+
   it("refuses when the agent now points at a different LLM", async () => {
     mockRemote(1, 500, "llm_2");
     vi.mocked(outputFormatter.outputError).mockImplementation(() => {

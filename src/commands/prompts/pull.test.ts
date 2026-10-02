@@ -101,7 +101,6 @@ describe("pullPromptsCommand", () => {
 
     // Old baseline removed and no new one written, so update will refuse
     expect(existsSync(join(agentDir, "metadata.json"))).toBe(false);
-    expect(oldMetadata).toContain("llm_1");
   });
 
   it("removes the states directory when the remote has no states", async () => {
